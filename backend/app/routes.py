@@ -12,14 +12,20 @@ from app.models import (
     Config,
     CorrectionCreated,
     CorrectionRequest,
+    CredentialState,
     Health,
     InboxItem,
     InvoiceCreated,
     InvoiceRequest,
     ModeState,
     ModeUpdate,
+    PersonaState,
+    RecipientState,
     RecordListing,
+    SettingsState,
+    SettingsUpdate,
     SimulateRequest,
+    SystemState,
     TransmissionWait,
     UapiSchemaRequest,
     UapiSchemaResult,
@@ -27,6 +33,7 @@ from app.models import (
     XsdResult,
 )
 from app.recorder import CallRecord
+from app.session import BASE_URLS
 from app.settings import COUNTRIES, PERSONAS
 from app.validate import SCHEMAS
 from app.workflow import (
@@ -43,6 +50,7 @@ from app.workflow import (
 
 router = APIRouter(prefix="/api")
 UPSTREAM_HEADERS = ("X-Trace-Identifier", "X-Api-Version", "X-Idempotency-Replayed")
+CREDENTIAL_TARGETS = (*PERSONAS, "all")
 
 
 def current_mode(app):
@@ -51,26 +59,141 @@ def current_mode(app):
 
 @router.get("/health", response_model=Health)
 async def health(request: Request):
-    settings = request.app.state.settings
     return Health(
-        status="ok", mode=current_mode(request.app), api_version=settings.uapi_api_version
+        status="ok",
+        mode=current_mode(request.app),
+        api_version=request.app.state.store.api_version,
     )
 
 
 @router.get("/config", response_model=Config)
 async def config(request: Request):
-    settings = request.app.state.settings
+    store = request.app.state.store
     personas = {}
     for name in PERSONAS:
-        systems = settings.persona(name).systems
+        systems = store.persona(name).systems
         personas[name] = {country: system for country, system in systems.items() if system}
     return Config(
         mode=current_mode(request.app),
-        environment=settings.environment,
-        api_version=settings.uapi_api_version,
-        reception_mode=settings.reception_mode,
+        environment=store.environment,
+        api_version=store.api_version,
+        reception_mode=store.reception_mode,
         personas=personas,
     )
+
+
+def settings_state(app):
+    store = app.state.store
+    personas = {}
+    for name in PERSONAS:
+        systems = store.persona(name).systems
+        personas[name] = PersonaState(
+            credentials=CredentialState(**store.credential_state(name)),
+            systems={country: SystemState(**(system or {})) for country, system in systems.items()},
+            recipients=RecipientState(**store.recipients(name)),
+        )
+    return SettingsState(
+        mode=current_mode(app),
+        environment=store.environment,
+        base_url=store.base_url,
+        api_version=store.api_version,
+        reception_mode=store.reception_mode,
+        personas=personas,
+    )
+
+
+def persona_updates(personas):
+    updates = {}
+    for name, update in (personas or {}).items():
+        if name not in PERSONAS:
+            raise HTTPException(400, f"unknown persona {name!r}; expected one of {PERSONAS}")
+        api_key = (update.api_key or "").strip() or None
+        api_secret = (update.api_secret or "").strip() or None
+        if bool(api_key) != bool(api_secret):
+            raise HTTPException(
+                400,
+                f"persona {name!r}: api_key and api_secret must be set together",
+            )
+        systems = {}
+        for country, system in (update.systems or {}).items():
+            if country.upper() not in COUNTRIES:
+                raise HTTPException(
+                    400, f"unknown country {country!r}; expected one of {COUNTRIES}"
+                )
+            systems[country.upper()] = system
+        updates[name] = update.model_copy(
+            update={"api_key": api_key, "api_secret": api_secret, "systems": systems}
+        )
+    return updates
+
+
+def credentials_after(store, name, updates):
+    update = updates.get(name)
+    if update and update.api_key:
+        return True
+    return not store.persona(name).missing_credentials
+
+
+async def apply_mode(app, mode):
+    if mode == current_mode(app):
+        return
+    transport = None if mode == "live" else MockTransport()
+    for client in app.state.clients.values():
+        await client.use(transport)
+
+
+@router.get("/settings", response_model=SettingsState)
+async def get_settings(request: Request):
+    return settings_state(request.app)
+
+
+@router.put("/settings", response_model=SettingsState)
+async def put_settings(body: SettingsUpdate, request: Request):
+    app = request.app
+    store = app.state.store
+    updates = persona_updates(body.personas)
+    if body.environment == "live" and not body.confirm_live:
+        raise HTTPException(
+            409,
+            f"refusing to target the live environment ({BASE_URLS['live']}) without "
+            f"confirm_live=true",
+        )
+    if body.mode == "live":
+        for name in PERSONAS:
+            if not credentials_after(store, name, updates):
+                raise HTTPException(
+                    409, f"cannot switch mode to live: no API credentials for persona {name!r}"
+                )
+    for name, update in updates.items():
+        if update.api_key:
+            store.set_credentials(name, update.api_key, update.api_secret)
+        if update.systems:
+            store.set_systems(name, {c: s.model_dump() for c, s in update.systems.items()})
+        if update.recipients:
+            store.set_recipients(name, update.recipients.model_dump())
+    if body.environment:
+        store.set_environment(body.environment)
+    if body.reception_mode:
+        store.set_reception_mode(body.reception_mode)
+    for client in app.state.clients.values():
+        await client.sync()
+    if body.mode:
+        await apply_mode(app, body.mode)
+    return settings_state(app)
+
+
+@router.delete("/settings/credentials", response_model=SettingsState)
+async def delete_settings_credentials(request: Request, persona: str = "all"):
+    if persona not in CREDENTIAL_TARGETS:
+        raise HTTPException(
+            400, f"unknown persona {persona!r}; expected one of {CREDENTIAL_TARGETS}"
+        )
+    store = request.app.state.store
+    for name in PERSONAS if persona == "all" else (persona,):
+        store.clear_credentials(name)
+    for client in request.app.state.clients.values():
+        await client.sync()
+    return settings_state(request.app)
 
 
 def live_available(app):
@@ -84,17 +207,17 @@ async def get_mode(request: Request):
 
 @router.put("/mode", response_model=ModeState)
 async def put_mode(body: ModeUpdate, request: Request):
-    state = request.app.state
-    if body.mode != current_mode(request.app):
+    app = request.app
+    if body.mode != current_mode(app):
         missing = [
-            name for client in state.clients.values() for name in client.persona.missing_credentials
+            name
+            for client in app.state.clients.values()
+            for name in client.persona.missing_credentials
         ]
         if body.mode == "live" and missing:
             raise HTTPException(409, f"cannot switch to live: {', '.join(missing)} missing in .env")
-        transport = None if body.mode == "live" else MockTransport()
-        for client in state.clients.values():
-            await client.use(transport)
-    return ModeState(mode=body.mode, live_available=live_available(request.app))
+        await apply_mode(app, body.mode)
+    return ModeState(mode=body.mode, live_available=live_available(app))
 
 
 @router.get("/calls", response_model=list[CallRecord])
@@ -160,7 +283,7 @@ def mock_system_id(persona, country):
 def system_for(app, persona, country):
     if country not in COUNTRIES:
         raise HTTPException(400, f"unknown country {country!r}; expected one of {COUNTRIES}")
-    system = app.state.settings.persona(persona).systems.get(country)
+    system = app.state.store.persona(persona).systems.get(country)
     if system and system["system_id"]:
         return system["system_id"]
     if app.state.clients[persona].mode == "mock":
@@ -242,7 +365,7 @@ async def inbox_listing(
     request: Request, persona: str = "buyer", country: str = "IT", since: str | None = None
 ):
     client = client_for(request.app, persona)
-    settings = request.app.state.settings
+    store = request.app.state.store
     items = [
         item for item in request.app.state.simulated_inbox if after(item["received_at"], since)
     ]
@@ -250,7 +373,7 @@ async def inbox_listing(
     if system_id:
         entries = await list_inbox(client, system_id, since)
         items += await asyncio.gather(*(get_inbox_item(client, entry["id"]) for entry in entries))
-    elif settings.reception_mode == "live":
+    elif store.reception_mode == "live":
         raise HTTPException(
             409, f"{persona.upper()}_SYSTEM_ID_{country} is not set in .env; cannot list receptions"
         )

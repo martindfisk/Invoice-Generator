@@ -9,13 +9,11 @@ import { store, useStore } from "./store";
 import {
   fetchArtifact,
   fetchRecordFiles,
-  getConfig,
   POLL_DELAY_MS,
   sendInvoice,
   SEND_COUNTRIES,
   waitForTransmission,
   type ArtifactKind,
-  type Config,
   type TransmissionWait,
   type Transport,
 } from "./uapi-client";
@@ -134,21 +132,12 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
     if (store.getState().workflow.send.phase === "idle") store.clearCalls();
   }, []);
 
-  const [config, setConfig] = useState<Config | null>(null);
+  // Read from the store, not fetched here: saving a system id in Settings has to reach this
+  // preflight without a reload.
+  const config = useStore((state) => state.config);
+  const settings = useStore((state) => state.settings);
   const [filesError, setFilesError] = useState<string | null>(null);
   const [showReceipt, setShowReceipt] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    void getConfig()
-      .then((loaded) => {
-        if (!cancelled) setConfig(loaded);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const meta = listPresets().find((candidate) => candidate.id === presetId);
   const country = meta?.country ?? "";
@@ -287,6 +276,8 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
           channelLabel={meta?.channel}
           systemId={systemId}
           config={config}
+          credentials={settings?.personas?.[persona]?.credentials}
+          mode={mode}
           stages={stages}
           operation={operation}
         />

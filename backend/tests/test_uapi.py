@@ -7,6 +7,7 @@ import pytest
 import respx
 
 from app.recorder import Recorder
+from app.session import SessionStore
 from app.uapi import UapiClient
 from tests.conftest import SELLER_KEY, SELLER_SECRET, make_settings
 
@@ -41,9 +42,13 @@ def recorder():
 
 
 @pytest.fixture
-def uapi(recorder):
-    settings = make_settings()
-    return UapiClient(settings.persona("seller"), settings, recorder)
+def store():
+    return SessionStore(make_settings())
+
+
+@pytest.fixture
+def uapi(store, recorder):
+    return UapiClient("seller", store, recorder)
 
 
 @pytest.fixture

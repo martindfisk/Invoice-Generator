@@ -9,6 +9,7 @@ import pytest
 import respx
 
 from app.recorder import Recorder
+from app.session import SessionStore
 from app.uapi import UapiClient
 from app.workflow import (
     ArtifactMissing,
@@ -64,8 +65,8 @@ def recorder():
 
 @pytest.fixture
 def client(recorder):
-    settings = make_settings(poll_interval_s=0.0, poll_timeout_s=5.0)
-    return UapiClient(settings.persona("seller"), settings, recorder)
+    store = SessionStore(make_settings(poll_interval_s=0.0, poll_timeout_s=5.0))
+    return UapiClient("seller", store, recorder)
 
 
 @pytest.fixture

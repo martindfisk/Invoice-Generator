@@ -2,18 +2,68 @@ import { toApiCall, type ApiCall, type CallMode, type Persona } from "./api-log"
 
 export type BackendMode = "live" | "mock";
 
+export type Environment = "test" | "live";
+
+export type SettingsCountry = "IT" | "BE";
+
 export type CountryConfig = { system_id: string; taxpayer_id: string; peppol_id?: string };
 export type PersonaConfig = { IT?: CountryConfig; BE?: CountryConfig };
 
 export type Config = {
   mode: BackendMode;
-  environment: "test" | "live";
+  environment: Environment;
   api_version: string;
   reception_mode: "live" | "simulated";
   personas: { seller: PersonaConfig; buyer: PersonaConfig };
 };
 
 export type ModeState = { mode: BackendMode; live_available: boolean };
+
+export type CredentialSource = "session" | "env" | "none";
+
+// Never a key or a secret: `configured` plus a masked `fingerprint` is everything the browser
+// is allowed to know about a credential it posted.
+export type CredentialState = {
+  configured: boolean;
+  source: CredentialSource;
+  fingerprint?: string | null;
+};
+
+export type SettingsSystem = { system_id?: string | null; taxpayer_id?: string | null };
+
+export type SettingsRecipients = {
+  sdi_destination_code?: string | null;
+  peppol_id?: string | null;
+};
+
+export type PersonaSettings = {
+  credentials: CredentialState;
+  systems?: Partial<Record<SettingsCountry, SettingsSystem>>;
+  recipients?: SettingsRecipients | null;
+};
+
+export type Settings = {
+  mode: BackendMode;
+  environment: Environment;
+  base_url: string;
+  api_version: string;
+  reception_mode: "live" | "simulated";
+  personas: Record<Persona, PersonaSettings>;
+};
+
+export type PersonaPatch = {
+  api_key?: string;
+  api_secret?: string;
+  systems?: Partial<Record<SettingsCountry, SettingsSystem>>;
+  recipients?: SettingsRecipients;
+};
+
+export type SettingsPatch = {
+  mode?: BackendMode;
+  environment?: Environment;
+  confirm_live?: boolean;
+  personas?: Partial<Record<Persona, PersonaPatch>>;
+};
 
 export type RecordLog = { severity?: string; message?: string; code?: string };
 
@@ -180,6 +230,21 @@ export function getMode(): Promise<ModeState> {
 
 export function setMode(mode: BackendMode): Promise<ModeState> {
   return request("PUT", "/api/mode", { mode });
+}
+
+export function getSettings(): Promise<Settings> {
+  return request("GET", "/api/settings");
+}
+
+// The request body carries the secrets; the response never does. Nothing here is persisted
+// browser-side — the caller hands the answer straight to the store and drops its own copy.
+export function updateSettings(patch: SettingsPatch): Promise<Settings> {
+  return request("PUT", "/api/settings", patch);
+}
+
+export function clearCredentials(persona: Persona | "all"): Promise<Settings> {
+  const query = new URLSearchParams({ persona });
+  return request("DELETE", `/api/settings/credentials?${query}`);
 }
 
 export async function listCalls(): Promise<ApiCall[]> {

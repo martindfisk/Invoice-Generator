@@ -22,6 +22,7 @@ class Persona:
     api_key: str | None
     api_secret: str | None
     systems: dict
+    source: str = "env"
 
     @property
     def missing_credentials(self):
@@ -83,14 +84,14 @@ class Settings(BaseSettings):
             systems[country] = (
                 {"system_id": system_id, "taxpayer_id": taxpayer_id} if system_id else None
             )
-        persona = Persona(
+        return Persona(
             name, getattr(self, f"{name}_api_key"), getattr(self, f"{name}_api_secret"), systems
         )
-        if self.uapi_mode == "live" and persona.missing_credentials:
-            missing = ", ".join(persona.missing_credentials)
-            raise ValueError(f"UAPI_MODE=live but {missing} missing in .env")
-        return persona
 
     def validate_live(self):
+        if self.uapi_mode != "live":
+            return
         for name in PERSONAS:
-            self.persona(name)
+            missing = self.persona(name).missing_credentials
+            if missing:
+                raise ValueError(f"UAPI_MODE=live but {', '.join(missing)} missing in .env")

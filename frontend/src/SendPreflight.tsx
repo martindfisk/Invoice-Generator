@@ -3,7 +3,8 @@ import { JsonView } from "./JsonView";
 import type { Channel } from "./model";
 import type { Persona } from "./api-log";
 import { CORRECTION_PENDING_NOTE } from "./uapi-json";
-import type { Config } from "./uapi-client";
+import type { Mode } from "./store";
+import type { Config, CredentialState } from "./uapi-client";
 import { countBySeverity, type StageResult } from "./validation";
 import type { OperationView } from "./workflow";
 
@@ -62,6 +63,8 @@ export type SendPreflightProps = {
   channelLabel?: string;
   systemId?: string;
   config: Config | null;
+  credentials?: CredentialState;
+  mode?: Mode;
   stages: StageResult[];
   operation: OperationView;
 };
@@ -74,6 +77,8 @@ export function SendPreflight({
   channelLabel,
   systemId,
   config,
+  credentials,
+  mode,
   stages,
   operation,
 }: SendPreflightProps) {
@@ -97,7 +102,27 @@ export function SendPreflight({
             <span className="font-mono">{systemId}</span>
           ) : (
             <span className="text-warning-ink">
-              {persona.toUpperCase()}_SYSTEM_ID_{country || "?"} is not set in .env
+              No system id for {country || "this country"} — set it under Settings → Identifiers, or
+              as{" "}
+              <span className="font-mono">{`${persona.toUpperCase()}_SYSTEM_ID_${country || "?"}`}</span>{" "}
+              in .env
+            </span>
+          )}
+        </Row>
+        <Row label="Credentials">
+          {credentials?.configured ? (
+            <span className="font-mono">
+              {credentials.source} · {credentials.fingerprint ?? "no fingerprint"}
+            </span>
+          ) : credentials ? (
+            <span className="text-warning-ink">
+              No API key for the {persona} — set one under Settings → Credentials, or as{" "}
+              <span className="font-mono">{persona.toUpperCase()}_API_KEY</span> in .env
+              {mode === "LIVE" ? ". LIVE mode cannot call fiskaly without it." : ""}
+            </span>
+          ) : (
+            <span className="text-muted">
+              unknown — the backend did not report the credential state
             </span>
           )}
         </Row>

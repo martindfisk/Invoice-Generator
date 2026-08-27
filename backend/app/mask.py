@@ -8,6 +8,10 @@ BASE64_LIMIT = 2048
 TOKEN_PLACEHOLDER = "Bearer $FISKALY_TOKEN"
 
 
+def mask_key(value):
+    return f"{value[:4]}***" if len(value) > 8 else "***"
+
+
 def mask_headers(headers):
     return {
         name: _mask_authorization(value) if name.lower() == "authorization" else value
@@ -25,7 +29,7 @@ def mask_json(value, key=None):
         return [mask_json(item, key) for item in value]
     if isinstance(value, str):
         if key == "key":
-            return f"{value[:4]}***" if len(value) > 8 else "***"
+            return mask_key(value)
         if len(value) > BASE64_LIMIT and BASE64_RE.match(value):
             return f"<base64 {len(value) * 3 // 4 - value.count('=')} bytes>"
     return value

@@ -8,6 +8,7 @@ import respx
 
 from app.inbox import get_inbox_item, list_inbox, read_xml, simulate_delivery
 from app.recorder import Recorder
+from app.session import SessionStore
 from app.uapi import UapiClient
 from tests.conftest import api_for, invoice_operation, make_settings
 from tests.test_uapi import BASE_URL, token_json
@@ -44,8 +45,8 @@ def recorder():
 
 @pytest.fixture
 def client(recorder):
-    settings = make_settings(poll_interval_s=0.0)
-    return UapiClient(settings.persona("buyer"), settings, recorder)
+    store = SessionStore(make_settings(poll_interval_s=0.0))
+    return UapiClient("buyer", store, recorder)
 
 
 @pytest.fixture

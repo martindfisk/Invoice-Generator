@@ -8,6 +8,7 @@ import pytest
 from app.inbox import list_inbox
 from app.mock import MockTransport
 from app.recorder import Recorder
+from app.session import SessionStore
 from app.uapi import UapiClient
 from app.workflow import (
     ArtifactMissing,
@@ -37,12 +38,9 @@ def transport():
 
 @pytest.fixture
 def clients(transport):
-    settings = make_settings(poll_interval_s=0.0, buyer_system_id_it=BUYER_IT)
+    store = SessionStore(make_settings(poll_interval_s=0.0, buyer_system_id_it=BUYER_IT))
     recorder = Recorder(200)
-    return {
-        name: UapiClient(settings.persona(name), settings, recorder, transport)
-        for name in ("seller", "buyer")
-    }
+    return {name: UapiClient(name, store, recorder, transport) for name in ("seller", "buyer")}
 
 
 async def send(clients, system_id=SELLER_IT, **kwargs):

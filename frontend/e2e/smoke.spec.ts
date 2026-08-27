@@ -642,3 +642,52 @@ test.describe("api log lifecycle", () => {
     await expect.poll(async () => log.locator("[data-group]").count()).toBeGreaterThanOrEqual(sent);
   });
 });
+
+test.describe("settings", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/");
+  });
+
+  test("opens from the top bar, holds every section and closes on Esc", async ({ page }) => {
+    const trigger = page.getByRole("button", { name: "Settings" });
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await trigger.click();
+
+    const dialog = page.getByRole("dialog", { name: "Settings" });
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toHaveAttribute("aria-modal", "true");
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+
+    for (const name of ["Environment", "Mode", "Credentials", "Identifiers", "Local preferences"]) {
+      await expect(dialog.getByRole("region", { name })).toBeVisible();
+    }
+    await expect(dialog.getByRole("region", { name: "Mode" }).getByRole("radio")).toHaveCount(2);
+    await expect(
+      dialog.getByRole("region", { name: "Mode" }).getByRole("radio", { name: /^MOCK/ }),
+    ).toBeChecked();
+
+    // Secrets are write-only: the fields start empty and only a fingerprint is ever shown back.
+    const seller = dialog.getByRole("group", { name: "Seller credentials" });
+    await expect(seller.getByLabel("API key")).toHaveValue("");
+    await expect(seller.getByLabel("API secret")).toHaveAttribute("type", "password");
+    await expect(
+      dialog.getByRole("group", { name: "Buyer identifiers" }).getByLabel("SDI destination code"),
+    ).toBeVisible();
+
+    // LIVE is guarded: picking it is not applying it.
+    const environment = dialog.getByRole("region", { name: "Environment" });
+    await environment.getByRole("radio", { name: /^LIVE/ }).check();
+    await expect(environment.getByRole("button", { name: "Apply environment" })).toBeDisabled();
+    await expect(environment.getByRole("checkbox")).not.toBeChecked();
+
+    // Nothing behind the dialog is reachable by Tab: focus never leaves the panel.
+    for (let press = 0; press < 30; press += 1) {
+      await page.keyboard.press("Tab");
+      await expect(dialog.locator(":focus")).toHaveCount(1);
+    }
+
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+  });
+});

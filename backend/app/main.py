@@ -9,8 +9,9 @@ from fastapi.responses import JSONResponse
 from app.mock import MockTransport
 from app.recorder import Recorder
 from app.routes import UPSTREAM_HEADERS, router
+from app.session import SessionStore
 from app.settings import COUNTRIES, PERSONAS, Settings
-from app.uapi import UapiClient
+from app.uapi import MissingCredentials, UapiClient
 from app.validate import UapiSchemaValidator, XsdValidator
 from app.workflow import ArtifactMissing, UpstreamError
 
@@ -22,10 +23,10 @@ async def lifespan(app):
     app.state.validator = XsdValidator(settings.vendor_dir)
     app.state.uapi_schema = UapiSchemaValidator(settings.spec_dir)
     app.state.simulated_inbox = []
+    app.state.store = SessionStore(settings)
     transport = None if settings.uapi_mode == "live" else MockTransport()
     app.state.clients = {
-        name: UapiClient(settings.persona(name), settings, app.state.recorder, transport)
-        for name in PERSONAS
+        name: UapiClient(name, app.state.store, app.state.recorder, transport) for name in PERSONAS
     }
     app.state.warmup = asyncio.create_task(warm_schemas(app.state.uapi_schema))
     yield
@@ -52,6 +53,10 @@ async def artifact_missing(request, exc):
     return JSONResponse(status_code=409, content={"detail": str(exc)})
 
 
+async def missing_credentials(request, exc):
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+
 def create_app(settings=None):
     settings = settings or Settings()
     settings.validate_live()
@@ -67,6 +72,7 @@ def create_app(settings=None):
     )
     app.add_exception_handler(UpstreamError, upstream_error)
     app.add_exception_handler(ArtifactMissing, artifact_missing)
+    app.add_exception_handler(MissingCredentials, missing_credentials)
     app.include_router(router)
     return app
 

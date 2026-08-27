@@ -1,4 +1,4 @@
-from app.mask import mask_headers, mask_json, to_curl
+from app.mask import mask_headers, mask_json, mask_key, to_curl
 
 
 def test_mask_headers_masks_authorization_case_insensitively():
@@ -56,3 +56,10 @@ def test_to_curl_uses_token_placeholder_and_quotes_body():
 
 def test_mask_json_masks_key_values_inside_lists():
     assert mask_json({"key": ["abcd-efgh-ijkl", "short"]}) == {"key": ["abcd***", "***"]}
+
+
+def test_mask_key_keeps_only_a_four_character_prefix():
+    assert mask_key("session-seller-key-9f3a") == "sess***"
+    assert mask_key("123456789") == "1234***"
+    assert mask_key("12345678") == "***"
+    assert mask_key("") == "***"

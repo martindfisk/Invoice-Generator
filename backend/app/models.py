@@ -4,6 +4,9 @@ from pydantic import BaseModel, Field
 
 Mode = Literal["live", "mock"]
 ArtifactKind = Literal["compliance", "receipt"]
+Environment = Literal["test", "live"]
+ReceptionMode = Literal["live", "simulated"]
+CredentialSource = Literal["session", "env", "none"]
 
 
 class Health(BaseModel):
@@ -23,6 +26,52 @@ class Config(BaseModel):
     api_version: str
     reception_mode: Literal["live", "simulated"]
     personas: dict[str, dict[str, SystemRef]]
+
+
+class SystemState(BaseModel):
+    system_id: str | None = None
+    taxpayer_id: str | None = None
+
+
+class RecipientState(BaseModel):
+    sdi_destination_code: str | None = None
+    peppol_id: str | None = None
+
+
+class CredentialState(BaseModel):
+    configured: bool
+    source: CredentialSource
+    fingerprint: str | None = None
+
+
+class PersonaState(BaseModel):
+    credentials: CredentialState
+    systems: dict[str, SystemState]
+    recipients: RecipientState
+
+
+class SettingsState(BaseModel):
+    mode: Mode
+    environment: Environment
+    base_url: str
+    api_version: str
+    reception_mode: ReceptionMode
+    personas: dict[str, PersonaState]
+
+
+class PersonaUpdate(BaseModel):
+    api_key: str | None = None
+    api_secret: str | None = None
+    systems: dict[str, SystemState] | None = None
+    recipients: RecipientState | None = None
+
+
+class SettingsUpdate(BaseModel):
+    mode: Mode | None = None
+    environment: Environment | None = None
+    confirm_live: bool = False
+    reception_mode: ReceptionMode | None = None
+    personas: dict[str, PersonaUpdate] | None = None
 
 
 class ModeState(BaseModel):
