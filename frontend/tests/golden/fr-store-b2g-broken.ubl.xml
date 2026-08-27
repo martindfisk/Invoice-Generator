@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2" xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+  <cbc:CustomizationID>urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0</cbc:CustomizationID>
+  <cbc:ProfileID>urn:fdc:peppol.eu:2017:poacc:billing:01:1.0</cbc:ProfileID>
+  <cbc:ID>FR-LY-2026-0358</cbc:ID>
+  <cbc:IssueDate>2026-08-26</cbc:IssueDate>
+  <cbc:DueDate>2026-09-25</cbc:DueDate>
+  <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>
+  <cbc:Note>Fourniture de peinture de sol - marche 2026-TR-014</cbc:Note>
+  <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
+  <cac:OrderReference>
+    <cbc:ID>EJ-2026-004531</cbc:ID>
+  </cac:OrderReference>
+  <cac:ContractDocumentReference>
+    <cbc:ID>2026-TR-014</cbc:ID>
+  </cac:ContractDocumentReference>
+  <cac:ProjectReference>
+    <cbc:ID>GYMNASE-2026</cbc:ID>
+  </cac:ProjectReference>
+  <cac:AccountingSupplierParty>
+    <cac:Party>
+      <cbc:EndpointID schemeID="0009">92180334100017</cbc:EndpointID>
+      <cac:PartyName>
+        <cbc:Name>Rhone Materiaux</cbc:Name>
+      </cac:PartyName>
+      <cac:PostalAddress>
+        <cbc:StreetName>Rue de la Villette</cbc:StreetName>
+        <cbc:AdditionalStreetName>42</cbc:AdditionalStreetName>
+        <cbc:CityName>Lyon</cbc:CityName>
+        <cbc:PostalZone>69003</cbc:PostalZone>
+        <cbc:CountrySubentity>Auvergne-Rhone-Alpes</cbc:CountrySubentity>
+        <cac:Country>
+          <cbc:IdentificationCode>FR</cbc:IdentificationCode>
+        </cac:Country>
+      </cac:PostalAddress>
+      <cac:PartyLegalEntity>
+        <cbc:RegistrationName>Quincaillerie Rhone Materiaux SARL</cbc:RegistrationName>
+        <cbc:CompanyID schemeID="0002">92180334100017</cbc:CompanyID>
+      </cac:PartyLegalEntity>
+      <cac:Contact>
+        <cbc:Name>Service facturation</cbc:Name>
+        <cbc:Telephone>+33 4 72550140</cbc:Telephone>
+        <cbc:ElectronicMail>facturation@rhone-materiaux.example</cbc:ElectronicMail>
+      </cac:Contact>
+    </cac:Party>
+  </cac:AccountingSupplierParty>
+  <cac:AccountingCustomerParty>
+    <cac:Party>
+      <cbc:EndpointID schemeID="0009">21690204400013</cbc:EndpointID>
+      <cac:PostalAddress>
+        <cbc:StreetName>Avenue Clemenceau</cbc:StreetName>
+        <cbc:AdditionalStreetName>106</cbc:AdditionalStreetName>
+        <cbc:CityName>Saint-Genis-Laval</cbc:CityName>
+        <cbc:PostalZone>69230</cbc:PostalZone>
+        <cbc:CountrySubentity>Auvergne-Rhone-Alpes</cbc:CountrySubentity>
+        <cac:Country>
+          <cbc:IdentificationCode>FR</cbc:IdentificationCode>
+        </cac:Country>
+      </cac:PostalAddress>
+      <cac:PartyLegalEntity>
+        <cbc:RegistrationName>Commune de Saint-Genis-Laval</cbc:RegistrationName>
+        <cbc:CompanyID schemeID="0002">21690204400013</cbc:CompanyID>
+      </cac:PartyLegalEntity>
+      <cac:Contact>
+        <cbc:Name>Service technique</cbc:Name>
+        <cbc:ElectronicMail>technique@saint-genis-laval.example</cbc:ElectronicMail>
+      </cac:Contact>
+    </cac:Party>
+  </cac:AccountingCustomerParty>
+  <cac:PaymentMeans>
+    <cbc:PaymentMeansCode name="Virement SEPA">58</cbc:PaymentMeansCode>
+    <cbc:PaymentID>FR-LY-2026-0358</cbc:PaymentID>
+    <cac:PayeeFinancialAccount>
+      <cbc:ID>FR7630006000011234567890189</cbc:ID>
+      <cbc:Name>Quincaillerie Rhone Materiaux SARL</cbc:Name>
+      <cac:FinancialInstitutionBranch>
+        <cbc:ID>BNPAFRPPXXX</cbc:ID>
+      </cac:FinancialInstitutionBranch>
+    </cac:PayeeFinancialAccount>
+  </cac:PaymentMeans>
+  <cac:PaymentTerms>
+    <cbc:Note>Paiement a 30 jours - delai reglementaire des collectivites territoriales</cbc:Note>
+  </cac:PaymentTerms>
+  <cac:TaxTotal>
+    <cbc:TaxAmount currencyID="EUR">598.80</cbc:TaxAmount>
+    <cac:TaxSubtotal>
+      <cbc:TaxableAmount currencyID="EUR">2994.00</cbc:TaxableAmount>
+      <cbc:TaxAmount currencyID="EUR">598.80</cbc:TaxAmount>
+      <cac:TaxCategory>
+        <cbc:ID>S</cbc:ID>
+        <cbc:Percent>20.00</cbc:Percent>
+        <cac:TaxScheme>
+          <cbc:ID>VAT</cbc:ID>
+        </cac:TaxScheme>
+      </cac:TaxCategory>
+    </cac:TaxSubtotal>
+  </cac:TaxTotal>
+  <cac:LegalMonetaryTotal>
+    <cbc:LineExtensionAmount currencyID="EUR">2994.00</cbc:LineExtensionAmount>
+    <cbc:TaxExclusiveAmount currencyID="EUR">2994.00</cbc:TaxExclusiveAmount>
+    <cbc:TaxInclusiveAmount currencyID="EUR">3592.80</cbc:TaxInclusiveAmount>
+    <cbc:PayableAmount currencyID="EUR">3592.80</cbc:PayableAmount>
+  </cac:LegalMonetaryTotal>
+  <cac:InvoiceLine>
+    <cbc:ID>1</cbc:ID>
+    <cbc:InvoicedQuantity unitCode="H87">24.00</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="EUR">2304.00</cbc:LineExtensionAmount>
+    <cac:Item>
+      <cbc:Name>Peinture de sol sportif - bidon 20 L</cbc:Name>
+      <cac:ClassifiedTaxCategory>
+        <cbc:ID>S</cbc:ID>
+        <cbc:Percent>20.00</cbc:Percent>
+        <cac:TaxScheme>
+          <cbc:ID>VAT</cbc:ID>
+        </cac:TaxScheme>
+      </cac:ClassifiedTaxCategory>
+    </cac:Item>
+    <cac:Price>
+      <cbc:PriceAmount currencyID="EUR">96.00</cbc:PriceAmount>
+    </cac:Price>
+  </cac:InvoiceLine>
+  <cac:InvoiceLine>
+    <cbc:ID>2</cbc:ID>
+    <cbc:InvoicedQuantity unitCode="C62">12.00</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="EUR">540.00</cbc:LineExtensionAmount>
+    <cac:Item>
+      <cbc:Name>Bandes de marquage sportif - rouleau 50 m</cbc:Name>
+      <cac:ClassifiedTaxCategory>
+        <cbc:ID>S</cbc:ID>
+        <cbc:Percent>20.00</cbc:Percent>
+        <cac:TaxScheme>
+          <cbc:ID>VAT</cbc:ID>
+        </cac:TaxScheme>
+      </cac:ClassifiedTaxCategory>
+    </cac:Item>
+    <cac:Price>
+      <cbc:PriceAmount currencyID="EUR">45.00</cbc:PriceAmount>
+    </cac:Price>
+  </cac:InvoiceLine>
+  <cac:InvoiceLine>
+    <cbc:ID>3</cbc:ID>
+    <cbc:InvoicedQuantity unitCode="C62">1.00</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="EUR">150.00</cbc:LineExtensionAmount>
+    <cac:Item>
+      <cbc:Name>Livraison sur chantier</cbc:Name>
+      <cac:ClassifiedTaxCategory>
+        <cbc:ID>S</cbc:ID>
+        <cbc:Percent>20.00</cbc:Percent>
+        <cac:TaxScheme>
+          <cbc:ID>VAT</cbc:ID>
+        </cac:TaxScheme>
+      </cac:ClassifiedTaxCategory>
+    </cac:Item>
+    <cac:Price>
+      <cbc:PriceAmount currencyID="EUR">150.00</cbc:PriceAmount>
+    </cac:Price>
+  </cac:InvoiceLine>
+</Invoice>

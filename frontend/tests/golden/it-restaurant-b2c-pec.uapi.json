@@ -1,0 +1,171 @@
+{
+  "type": "INVOICE",
+  "document": {
+    "number": "IT-RM-2026-0133",
+    "issued_at": "2026-08-25T00:00:00+00:00",
+    "payment_terms": "Pagamento contestuale con carta di credito al tavolo"
+  },
+  "entries": [
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Cena alla carta - menu di pesce",
+        "unit": {
+          "quantity": "2.00",
+          "measure": "C62",
+          "factor": "1",
+          "price": {
+            "exclusive": "42.00",
+            "inclusive": "46.20"
+          }
+        },
+        "value": {
+          "base": "84.00"
+        },
+        "vat": {
+          "type": "VAT_RATE",
+          "code": "REDUCED_1",
+          "percentage": "10.00",
+          "amount": "8.40",
+          "exclusive": "84.00",
+          "inclusive": "92.40"
+        }
+      },
+      "details": {
+        "concept": "GOOD",
+        "description": "2 coperti, sala Traiano",
+        "number": "1"
+      }
+    },
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Vino bianco fermo - bottiglia 0,75 l",
+        "unit": {
+          "quantity": "1.00",
+          "measure": "C62",
+          "factor": "1",
+          "price": {
+            "exclusive": "18.00",
+            "inclusive": "19.80"
+          }
+        },
+        "value": {
+          "base": "18.00"
+        },
+        "vat": {
+          "type": "VAT_RATE",
+          "code": "REDUCED_1",
+          "percentage": "10.00",
+          "amount": "1.80",
+          "exclusive": "18.00",
+          "inclusive": "19.80"
+        }
+      },
+      "details": {
+        "concept": "GOOD",
+        "number": "2"
+      }
+    },
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Coperto",
+        "unit": {
+          "quantity": "2.00",
+          "measure": "C62",
+          "factor": "1",
+          "price": {
+            "exclusive": "3.00",
+            "inclusive": "3.30"
+          }
+        },
+        "value": {
+          "base": "6.00"
+        },
+        "vat": {
+          "type": "VAT_RATE",
+          "code": "REDUCED_1",
+          "percentage": "10.00",
+          "amount": "0.60",
+          "exclusive": "6.00",
+          "inclusive": "6.60"
+        }
+      },
+      "details": {
+        "concept": "GOOD",
+        "number": "3"
+      }
+    }
+  ],
+  "recipients": [
+    {
+      "type": "CONSUMER",
+      "name": {
+        "gender": "FEMALE",
+        "forename": "Giulia",
+        "surname": "Bianchi"
+      },
+      "address": {
+        "line": {
+          "type": "STREET_NUMBER",
+          "street": "Via dei Serpenti",
+          "number": "42"
+        },
+        "code": "00184",
+        "city": "Roma",
+        "country": "IT",
+        "region": "RM"
+      },
+      "identification": {
+        "type": "TAX",
+        "number": "BNCGLI85E41H501P"
+      },
+      "invoicing": {
+        "type": "SDI",
+        "destination_code": "0000000",
+        "pec": "giulia.bianchi@pec.example.it"
+      }
+    }
+  ],
+  "payments": [
+    {
+      "type": "OUTSTANDING",
+      "details": {
+        "amount": "118.80",
+        "currency": "EUR",
+        "date": "2026-08-25"
+      },
+      "concept": "INVOICE",
+      "instruction": {
+        "type": "UNKNOWN",
+        "text": "IT-RM-2026-0133"
+      }
+    }
+  ],
+  "breakdown": [
+    {
+      "type": "VAT_RATE",
+      "code": "REDUCED_1",
+      "percentage": "10.00",
+      "amount": "10.80",
+      "exclusive": "108.00",
+      "inclusive": "118.80"
+    }
+  ],
+  "totals": {
+    "vat": {
+      "amount": "10.80",
+      "exclusive": "108.00",
+      "inclusive": "118.80"
+    }
+  },
+  "seller": {
+    "name": "Amministrazione",
+    "phone": "+39065550188",
+    "email": "amministrazione@trattoriadelcolosseo.example"
+  }
+}

@@ -1,0 +1,3035 @@
+{
+  "info": {
+    "_postman_id": "0ce7a08e-1ab4-4f3d-b445-bce6effae9b6",
+    "name": "fiskaly E-INVOICE IT 2026-06-01",
+    "description": "This postman collection consists the basic workflow of E-INVOICE IT (Version 2026-06-01) including SDI/FatturaPA e-invoicing. Further information is provided in the [developer documentation](https://workspace.fiskaly.com/unified-api/api-spec/?v=2026-06-01&c=IT_EI).\n\nWhen this collection is executed with Postman, important parts of the results will be stored in the current selected Postman environment.\n\n**Key Features:**\n\n- E-Invoicing System setup for Italy (IT)\n    \n- System commissioning workflow\n    \n- E-Invoice transmission with SDI recipients\n    \n- E-Invoice correction transmission",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "52737818",
+    "_collection_link": "https://go.postman.co/collection/52737818-0ce7a08e-1ab4-4f3d-b445-bce6effae9b6?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "tokens (management)",
+      "item": [
+        {
+          "name": "Create a Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    pm.environment.set(\"apiBearerToken\", data.content.authentication.bearer);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "(Required) Idempotency key"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": {\n    \"type\": \"API_KEY\",\n    \"key\": \"{{apiKey}}\",\n    \"secret\": \"{{apiSecret}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{apiBaseUrl}}/tokens",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "tokens"
+              ]
+            },
+            "description": "Create a token for API authentication"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "organizations",
+      "item": [
+        {
+          "name": "Create an Organization",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    pm.environment.set(\"organizationId\", data.content.id);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{apiBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "(Required) Idempotency key"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": {\n    \"type\": \"UNIT\",\n    \"name\": \"{{$randomCompanyName}}\"\n  },\n  \"metadata\": {\n    \"key\": \"value\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{apiBaseUrl}}/organizations",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "organizations"
+              ]
+            },
+            "description": "Create an Organization for E-Invoicing"
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve an Organization",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{apiBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/organizations/{{organizationId}}",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                "{{organizationId}}"
+              ]
+            },
+            "description": "Retrieve an Organization by ID"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "subjects",
+      "item": [
+        {
+          "name": "Create a Subject::API_KEY",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    pm.environment.set(\"subjectId\", data.content.id);",
+                  "    pm.environment.set(\"subjectApiKey\", data.content.credentials.key);",
+                  "    pm.environment.set(\"subjectApiSecret\", data.content.credentials.secret);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{apiBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "(Required) Idempotency key"
+              },
+              {
+                "key": "X-Scope-Identifier",
+                "value": "{{organizationId}}",
+                "description": "Scope identifier for the subject"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": {\n    \"type\": \"API_KEY\",\n    \"name\": \"e-invoice-api-key-{{$timestamp}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{apiBaseUrl}}/subjects",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "subjects"
+              ]
+            },
+            "description": "Create a Subject with API_KEY type for E-Invoicing operations"
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve a Subject::API_KEY",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{apiBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/subjects/{{subjectId}}",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "subjects",
+                "{{subjectId}}"
+              ]
+            },
+            "description": "Retrieve a Subject by ID"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "tokens (operation)",
+      "item": [
+        {
+          "name": "Create a Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    pm.environment.set(\"subjectBearerToken\", data.content.authentication.bearer);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "(Required) Idempotency key"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": {\n    \"type\": \"API_KEY\",\n    \"key\": \"{{subjectApiKey}}\",\n    \"secret\": \"{{subjectApiSecret}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{apiBaseUrl}}/tokens",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "tokens"
+              ]
+            },
+            "description": "Create a token using Subject API credentials"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "taxpayers",
+      "item": [
+        {
+          "name": "Create a Taxpayer::COMPANY (IT)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const digits = [];",
+                  "",
+                  "for (let i = 0; i < 10; i++) {",
+                  "    digits[i] = Math.floor(Math.random() * 10);",
+                  "}",
+                  "",
+                  "let sum = 0;",
+                  "",
+                  "for (let i = 0; i < 10; i++) {",
+                  "    let digit = digits[i];",
+                  "",
+                  "    if ((i + 1) % 2 === 0) {",
+                  "        digit *= 2;",
+                  "",
+                  "        if (digit > 9) {",
+                  "            digit -= 9;",
+                  "        }",
+                  "    }",
+                  "",
+                  "    sum += digit;",
+                  "}",
+                  "",
+                  "digits[10] = (10 - (sum % 10)) % 10;",
+                  "",
+                  "pm.variables.set(\"itVatId\", digits.join(\"\"));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    pm.environment.set(\"taxpayerId\", data.content.id);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "(Required) Idempotency key"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": {\n    \"type\": \"COMPANY\",\n    \"name\": {\n      \"legal\": \"Azienda Fatture S.r.l.\",\n      \"trade\": \"Invio Brand\"\n    },\n    \"address\": {\n      \"line\": {\n        \"type\": \"STREET_NUMBER\",\n        \"street\": \"Via Milano\",\n        \"number\": \"42\"\n      },\n      \"code\": \"20121\",\n      \"city\": \"Milan\",\n      \"country\": \"IT\",\n      \"region\": \"MI\"\n    },\n    \"fiscalization\": {\n      \"type\": \"IT\",\n      \"tax_id_number\": \"{{itVatId}}\",\n      \"vat_id_number\": \"{{itVatId}}\",\n      \"credentials\": {\n        \"type\": \"FISCONLINE\",\n        \"pin\": \"1234567890\",\n        \"password\": \"0123456789\",\n        \"tax_id_number\": \"JPGQDJ23T28M105V\"\n      },\n      \"registration\": {\n        \"company_id\": \"MI12345678901234567\",\n        \"office\": \"MI\",\n        \"entry\": \"1234567\",\n        \"legal_form\": \"LIMITED_LIABILITY_COMPANY\",\n        \"capital\": \"10000.00\",\n        \"shareholder_status\": \"SOLE_SHAREHOLDER\",\n        \"liquidation_status\": \"NOT_IN_LIQUIDATION\",\n        \"tax_regime\": \"ORDINARY\"\n      }\n    }\n  },\n  \"metadata\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{apiBaseUrl}}/taxpayers",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "taxpayers"
+              ]
+            },
+            "description": "Create a `Taxpayer::COMPANY` with Italian fiscalization."
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve a Taxpayer::COMPANY",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/taxpayers/{{taxpayerId}}",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "taxpayers",
+                "{{taxpayerId}}"
+              ]
+            },
+            "description": "Retrieve a Taxpayer by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Update a Taxpayer::COMPANY (Commission)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    pm.test(\"State is COMMISSIONED\", function () {",
+                  "        pm.expect(data.content.state).to.eql(\"COMMISSIONED\");",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "(Required) Idempotency key"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": {\n    \"state\": \"COMMISSIONED\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{apiBaseUrl}}/taxpayers/{{taxpayerId}}",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "taxpayers",
+                "{{taxpayerId}}"
+              ]
+            },
+            "description": "Commission a Taxpayer (required before creating E-Invoice System)"
+          },
+          "response": []
+        },
+        {
+          "name": "List Taxpayers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/taxpayers",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "taxpayers"
+              ]
+            },
+            "description": "Retrieve a list of Taxpayers"
+          },
+          "response": []
+        }
+      ],
+      "description": "Create a `Taxpayer::COMPANY` with Italian fiscalization"
+    },
+    {
+      "name": "systems (E_INVOICE_SERVICE)",
+      "item": [
+        {
+          "name": "Create a System::E_INVOICE_SERVICE",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    pm.environment.set(\"eInvoiceSystemId\", data.content.id);",
+                  "    pm.test(\"Type is E_INVOICE_SERVICE\", function () {",
+                  "        pm.expect(data.content.type).to.eql(\"E_INVOICE_SERVICE\");",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "(Required) Idempotency key"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": {\n    \"type\": \"E_INVOICE_SERVICE\",\n    \"location\": {\n      \"id\": \"{{taxpayerId}}\"\n    },\n    \"software\": {\n      \"name\": \"E-Invoice App\",\n      \"version\": \"v1.0.0\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{apiBaseUrl}}/systems",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "systems"
+              ]
+            },
+            "description": "This system is used for transmitting e-invoices through SDI.  \nNote: Only one `E_INVOICE_SERVICE` system is allowed per Taxpayer."
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve a System::E_INVOICE_SERVICE",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    pm.test(\"Type is E_INVOICE_SERVICE\", function () {",
+                  "        pm.expect(data.content.type).to.eql(\"E_INVOICE_SERVICE\");",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/systems/{{eInvoiceSystemId}}",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "systems",
+                "{{eInvoiceSystemId}}"
+              ]
+            },
+            "description": "Retrieve an E-Invoice System by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Commission System",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    pm.test(\"State is COMMISSIONED\", function () {",
+                  "        pm.expect(data.content.state).to.eql(\"COMMISSIONED\");",
+                  "    });",
+                  "    pm.test(\"Mode is OPERATIVE\", function () {",
+                  "        pm.expect(data.content.mode).to.eql(\"OPERATIVE\");",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "(Required) Idempotency key"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": {\n    \"state\": \"COMMISSIONED\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{apiBaseUrl}}/systems/{{eInvoiceSystemId}}",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "systems",
+                "{{eInvoiceSystemId}}"
+              ]
+            },
+            "description": "Expected outcome: System goes straight to `state=COMMISSIONED, mode=OPERATIVE` — invoices can be sent right away. To also receive invoices, complete the one-time AdE registration.  \n**From here on, Records created in the LIVE environment are legally valid** — they must  \nrepresent real business transactions."
+          },
+          "response": []
+        },
+        {
+          "name": "List Systems",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/systems?taxpayer_id={{taxpayerId}}",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "systems"
+              ],
+              "query": [
+                {
+                  "key": "taxpayer_id",
+                  "value": "{{taxpayerId}}"
+                }
+              ]
+            },
+            "description": "List Systems filtered by Taxpayer ID"
+          },
+          "response": []
+        }
+      ],
+      "description": "This system is used for transmitting e-invoices through SDI.  \nNote: Only one `E_INVOICE_SERVICE` system is allowed per Taxpayer."
+    },
+    {
+      "name": "records (B2B E-Invoice Transmission with SDI recipient)",
+      "item": [
+        {
+          "name": "Create INTENTION::TRANSACTION",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    pm.environment.set(\"invoiceIntentionId\", data.content.id);",
+                  "    pm.test(\"Type is INTENTION::TRANSACTION\", function () {",
+                  "        pm.expect(data.content.type).to.eql(\"INTENTION::TRANSACTION\");",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "(Required) Idempotency key"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": {\n    \"type\": \"INTENTION\",\n    \"system\": {\n      \"id\": \"{{eInvoiceSystemId}}\"\n    },\n    \"operation\": {\n      \"type\": \"TRANSACTION\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{apiBaseUrl}}/records",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records"
+              ]
+            },
+            "description": "Create an intention for an e-invoice transaction.  \n**Note:** if the Taxpayer also uses receipt fiscalization (e.g. SIGN IT),  \ncreate the INTENTION and TRANSACTION on a `FISCAL_DEVICE` System instead (any  \none on the same Taxpayer) — it takes precedence. The `E_INVOICE_SERVICE`  \nSystem still transmits the e-invoice."
+          },
+          "response": []
+        },
+        {
+          "name": "Create TRANSACTION::INVOICE",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    pm.environment.set(\"eInvoiceId\", data.content.id);",
+                  "    pm.test(\"Type is TRANSACTION::INVOICE\", function () {",
+                  "        pm.expect(data.content.type).to.eql(\"TRANSACTION::INVOICE\");",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "(Required) Idempotency key"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"content\": {\n        \"type\": \"TRANSACTION\",\n        \"record\": {\n            \"id\": \"{{invoiceIntentionId}}\"\n        },\n        \"operation\": {\n            \"type\": \"INVOICE\",\n            \"document\": {\n                \"number\": \"IT-INV-0001\"\n            },\n            \"entries\": [\n                {\n                    \"type\": \"SALE\",\n                    \"data\": {\n                        \"type\": \"ITEM\",\n                        \"text\": \"Coffee\",\n                        \"unit\": {\n                            \"quantity\": \"3\",\n                            \"measure\": \"cups\",\n                            \"factor\": \"1\",\n                            \"price\": {\n                                \"inclusive\": \"2.50\",\n                                \"exclusive\": \"2.05\"\n                            }\n                        },\n                        \"value\": {\n                            \"base\": \"7.50\",\n                            \"discount\": \"0.150\",\n                            \"surcharge\": \"0.075\"\n                        },\n                        \"vat\": {\n                            \"type\": \"VAT_RATE\",\n                            \"code\": \"STANDARD\",\n                            \"percentage\": \"22.00\",\n                            \"amount\": \"1.339\",\n                            \"exclusive\": \"6.086\",\n                            \"inclusive\": \"7.425\"\n                        }\n                    },\n                    \"details\": {\n                        \"concept\": \"GOOD\"\n                    }\n                }\n            ],\n            \"recipients\": [\n                {\n                    \"type\": \"BUSINESS\",\n                    \"name\": \"Test Business S.r.l.\",\n                    \"address\": {\n                        \"line\": {\n                            \"type\": \"STREET_NUMBER\",\n                            \"street\": \"Via Nazionale\",\n                            \"number\": \"1\"\n                        },\n                        \"code\": \"00184\",\n                        \"city\": \"Rome\",\n                        \"country\": \"IT\",\n                        \"region\": \"RM\"\n                    },\n                    \"identification\": {\n                        \"type\": \"VAT\",\n                        \"number\": \"31122336964\"\n                    },\n                    \"invoicing\": {\n                        \"type\": \"SDI\",\n                        \"destination_code\": \"9R2K7QZ\"\n                    }\n                }\n            ],\n            \"breakdown\": [\n                {\n                    \"type\": \"VAT_RATE\",\n                    \"code\": \"STANDARD\",\n                    \"percentage\": \"22.00\",\n                    \"amount\": \"1.34\",\n                    \"exclusive\": \"6.09\",\n                    \"inclusive\": \"7.43\"\n                }\n            ],\n            \"totals\": {\n                \"vat\": {\n                    \"amount\": \"1.34\",\n                    \"exclusive\": \"6.09\",\n                    \"inclusive\": \"7.43\"\n                }\n            },\n            \"payments\": [\n                {\n                    \"type\": \"CARD\",\n                    \"details\": {\n                        \"amount\": \"7.43\",\n                        \"currency\": \"EUR\",\n                        \"date\": \"2026-05-28\"\n                    },\n                    \"number\": \"***************1234\",\n                    \"kind\": \"CREDIT\"\n                }\n            ]\n        }\n    }\n}\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{apiBaseUrl}}/records",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records"
+              ]
+            },
+            "description": "Create an e-invoice with an SDI recipient.  \n_Important:_\n\n- The `E_INVOICE_SERVICE` system must be in `COMMISSIONED/OPERATIVE` state\n    \n- The recipient needs `invoicing.type: SDI` with a valid 7-character  \n    `destination_code` (_Codice Destinatario_)\n    \n- The invoice is transmitted through SDI, which returns acceptance or an `NS`  \n    rejection"
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve INTENTION::TRANSACTION",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/records/{{invoiceIntentionId}}",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records",
+                "{{invoiceIntentionId}}"
+              ]
+            },
+            "description": "Retrieve the e-invoice record with compliance information"
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve TRANSACTION::INVOICE",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    if (data.content.used_in && data.content.used_in.id) {",
+                  "        pm.environment.set(\"transmissionId\", data.content.used_in.id);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/records/{{eInvoiceId}}",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records",
+                "{{eInvoiceId}}"
+              ]
+            },
+            "description": "Retrieve the e-invoice record with compliance information"
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve E_INVOICE::TRANSMISSION",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/records/{{transmissionId}}?compliance-artifact",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records",
+                "{{transmissionId}}"
+              ],
+              "query": [
+                {
+                  "key": "compliance-artifact",
+                  "value": null
+                }
+              ]
+            },
+            "description": "Retrieve the SDI transmission record for the IT invoice / B2C flow after the invoice record exposes used_in.id."
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve invoice files (.zip)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/octet-stream"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/files/{{transmissionId}}.zip",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "files",
+                "{{transmissionId}}.zip"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve XML (invoice)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const base64 = pm.response.json()?.content?.compliance?.artifact?.data;",
+                  "const file_type = pm.response.json()?.content?.compliance?.artifact?.type;",
+                  "",
+                  "if (base64) {",
+                  "    const link = `data:${file_type};base64,${base64}`;",
+                  "    pm.visualizer.set(`",
+                  "        <html>",
+                  "          <body>",
+                  "            <h3>📄 File Base64 Link</h3>",
+                  "            <p>Open that link in your browser:</p>",
+                  "            <textarea style=\"width:100%;height:120px;font-size:14px;\" readonly>${link}</textarea>",
+                  "          </body>",
+                  "        </html>",
+                  "    `);",
+                  "} else {",
+                  "    pm.visualizer.set(`<p style=\"color:red;\">⚠️ No file Base64 data found.</p>`);",
+                  "}",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/xml"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/records/{{transmissionId}}?compliance-artifact",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records",
+                "{{transmissionId}}"
+              ],
+              "query": [
+                {
+                  "key": "compliance-artifact",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve the Receipt of Transmission",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    pm.test(\"Archive artifact is present\", function () {",
+                  "        pm.expect(data.content.compliance.archive.data).to.exist;",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/records/{{transmissionId}}?archive-artifact",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records",
+                "{{transmissionId}}"
+              ],
+              "query": [
+                {
+                  "key": "archive-artifact",
+                  "value": null
+                }
+              ]
+            },
+            "description": "Retrieve the preservation receipt of transmission for the transmitted invoice  \nas a base64-encoded string in `content.compliance.archive.data`."
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve XML (receipt of transmission)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const base64 = pm.response.json()?.content?.compliance?.archive?.data;",
+                  "const file_type = pm.response.json()?.content?.compliance?.archive?.type;",
+                  "",
+                  "if (base64) {",
+                  "    const link = `data:${file_type};base64,${base64}`;",
+                  "    pm.visualizer.set(`",
+                  "        <html>",
+                  "          <body>",
+                  "            <h3>📄 File Base64 Link</h3>",
+                  "            <p>Open that link in your browser:</p>",
+                  "            <textarea style=\"width:100%;height:120px;font-size:14px;\" readonly>${link}</textarea>",
+                  "          </body>",
+                  "        </html>",
+                  "    `);",
+                  "} else {",
+                  "    pm.visualizer.set(`<p style=\"color:red;\">⚠️ No file Base64 data found.</p>`);",
+                  "}",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/xml"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/records/{{transmissionId}}?archive-artifact",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records",
+                "{{transmissionId}}"
+              ],
+              "query": [
+                {
+                  "key": "archive-artifact",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create INTENTION::TRANSACTION Correction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    pm.environment.set(\"eInvoiceCorrectionIntentionId\", data.content.id);",
+                  "    pm.test(\"Type is INTENTION::TRANSACTION\", function () {",
+                  "        pm.expect(data.content.type).to.eql(\"INTENTION::TRANSACTION\");",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "(Required) Idempotency key"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": {\n    \"type\": \"INTENTION\",\n    \"system\": {\n      \"id\": \"{{eInvoiceSystemId}}\"\n    },\n    \"operation\": {\n      \"type\": \"TRANSACTION\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{apiBaseUrl}}/records",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records"
+              ]
+            },
+            "description": "Create an intention for an e-invoice transaction"
+          },
+          "response": []
+        },
+        {
+          "name": "Create TRANSACTION::CORRECTION INVOICE",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    pm.environment.set(\"eInvoiceCorrectionId\", data.content.id);",
+                  "    pm.test(\"Type is TRANSACTION::INVOICE\", function () {",
+                  "        pm.expect(data.content.type).to.eql(\"TRANSACTION::CORRECTION\");",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "(Required) Idempotency key"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"content\": {\n        \"type\": \"TRANSACTION\",\n        \"record\": {\n            \"id\": \"{{eInvoiceCorrectionIntentionId}}\"\n        },\n        \"operation\": {\n            \"type\": \"CORRECTION\",\n            \"record\": {\n                \"id\": \"{{eInvoiceId}}\"\n            },\n            \"reason\": \"incorrect invoice was sent, and a credit_note is necessary\",\n            \"data\": {\n                \"type\": \"INVOICE\",\n                \"document\": {\n                    \"number\": \"IT-CINV-0001\"\n                },\n                \"entries\": [\n                    {\n                        \"type\": \"SALE\",\n                        \"data\": {\n                            \"type\": \"ITEM\",\n                            \"text\": \"Coffee\",\n                            \"unit\": {\n                                \"quantity\": \"3\",\n                                \"measure\": \"cups\",\n                                \"factor\": \"1\",\n                                \"price\": {\n                                    \"inclusive\": \"2.50\",\n                                    \"exclusive\": \"2.05\"\n                                }\n                            },\n                            \"value\": {\n                                \"base\": \"7.50\",\n                                \"discount\": \"0.150\",\n                                \"surcharge\": \"0.075\"\n                            },\n                            \"vat\": {\n                                \"type\": \"VAT_RATE\",\n                                \"code\": \"STANDARD\",\n                                \"percentage\": \"22.00\",\n                                \"amount\": \"1.339\",\n                                \"exclusive\": \"6.086\",\n                                \"inclusive\": \"7.425\"\n                            }\n                        },\n                        \"details\": {\n                            \"concept\": \"GOOD\"\n                        }\n                    }\n                ],\n                \"recipients\": [\n                    {\n                        \"type\": \"BUSINESS\",\n                        \"name\": \"Test Business S.r.l.\",\n                        \"address\": {\n                            \"line\": {\n                                \"type\": \"STREET_NUMBER\",\n                                \"street\": \"Via Nazionale\",\n                                \"number\": \"1\"\n                            },\n                            \"code\": \"00184\",\n                            \"city\": \"Rome\",\n                            \"country\": \"IT\",\n                            \"region\": \"RM\"\n                        },\n                        \"identification\": {\n                            \"type\": \"VAT\",\n                            \"number\": \"31122336964\"\n                        },\n                        \"invoicing\": {\n                            \"type\": \"SDI\",\n                            \"destination_code\": \"9R2K7QZ\"\n                        }\n                    }\n                ],\n                \"breakdown\": [\n                    {\n                        \"type\": \"VAT_RATE\",\n                        \"code\": \"STANDARD\",\n                        \"percentage\": \"22.00\",\n                        \"amount\": \"1.34\",\n                        \"exclusive\": \"6.09\",\n                        \"inclusive\": \"7.43\"\n                    }\n                ],\n                \"totals\": {\n                    \"vat\": {\n                        \"amount\": \"1.34\",\n                        \"exclusive\": \"6.09\",\n                        \"inclusive\": \"7.43\"\n                    }\n                },\n                \"payments\": [\n                    {\n                        \"type\": \"CARD\",\n                        \"details\": {\n                            \"amount\": \"7.43\",\n                            \"currency\": \"EUR\",\n                            \"date\": \"2026-05-28\"\n                        },\n                        \"number\": \"***************1234\",\n                        \"kind\": \"CREDIT\"\n                    }\n                ]\n            }\n        }\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{apiBaseUrl}}/records",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records"
+              ]
+            },
+            "description": "Create the correction (credit note) for the invoice referenced in  \n`operation.record.id`.  \nImportant:\n\n- The E_INVOICE_SERVICE system must be in COMMISSIONED/OPERATIVE state\n    \n- The recipient needs `invoicing.type: SDI` with a valid `destination_code`\n    \n- The correction is transmitted through SDI as a separate document, which  \n    returns acceptance or an `NS` rejection"
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve INTENTION::TRANSACTION Correction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/records/{{eInvoiceCorrectionIntentionId}}",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records",
+                "{{eInvoiceCorrectionIntentionId}}"
+              ]
+            },
+            "description": "Retrieve the e-invoice record with compliance information"
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve TRANSACTION::CORRECTION",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    if (data.content.used_in && data.content.used_in.id) {",
+                  "        pm.environment.set(\"correctionTransmissionId\", data.content.used_in.id);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/records/{{eInvoiceCorrectionId}}",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records",
+                "{{eInvoiceCorrectionId}}"
+              ]
+            },
+            "description": "Retrieve the e-invoice record with compliance information"
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve E_INVOICE::TRANSMISSION Correction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/records/{{correctionTransmissionId}}",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records",
+                "{{correctionTransmissionId}}"
+              ]
+            },
+            "description": "Retrieve the SDI transmission record for the correction invoice, once the  \ncorrection record exposes `used_in.id`."
+          },
+          "response": []
+        },
+        {
+          "name": "List Invoices",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/records?type=TRANSACTION::INVOICE",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "TRANSACTION::INVOICE"
+                }
+              ]
+            },
+            "description": "List all invoice records filtered by type"
+          },
+          "response": []
+        }
+      ],
+      "description": "E-Invoice transmission workflow: the invoice is sent to SDI, which validates it and returns either acceptance or an `NS` rejection."
+    },
+    {
+      "name": "records (B2C E-Invoice Transmission with pec recipient)",
+      "item": [
+        {
+          "name": "Create INTENTION::TRANSACTION",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    pm.environment.set(\"invoiceb2cIntentionId\", data.content.id);",
+                  "    pm.test(\"Type is INTENTION::TRANSACTION\", function () {",
+                  "        pm.expect(data.content.type).to.eql(\"INTENTION::TRANSACTION\");",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "(Required) Idempotency key"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": {\n    \"type\": \"INTENTION\",\n    \"system\": {\n      \"id\": \"{{eInvoiceSystemId}}\"\n    },\n    \"operation\": {\n      \"type\": \"TRANSACTION\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{apiBaseUrl}}/records",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records"
+              ]
+            },
+            "description": "Create an intention for an e-invoice transaction.  \n**Note:** if the Taxpayer also uses receipt fiscalization (e.g. SIGN IT),  \ncreate the INTENTION and TRANSACTION on a `FISCAL_DEVICE` System instead (any  \none on the same Taxpayer) — it takes precedence. The `E_INVOICE_SERVICE`  \nSystem still transmits the e-invoice."
+          },
+          "response": []
+        },
+        {
+          "name": "Create TRANSACTION::INVOICE",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    pm.environment.set(\"b2ceInvoiceId\", data.content.id);",
+                  "    pm.test(\"Type is TRANSACTION::INVOICE\", function () {",
+                  "        pm.expect(data.content.type).to.eql(\"TRANSACTION::INVOICE\");",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "(Required) Idempotency key"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"content\": {\n        \"type\": \"TRANSACTION\",\n        \"record\": {\n            \"id\": \"{{invoiceb2cIntentionId}}\"\n        },\n        \"operation\": {\n            \"type\": \"INVOICE\",\n            \"document\": {\n                \"number\": \"IT-INVC-0001\"\n            },\n            \"entries\": [\n                {\n                    \"type\": \"SALE\",\n                    \"data\": {\n                        \"type\": \"ITEM\",\n                        \"text\": \"Coffee\",\n                        \"unit\": {\n                            \"quantity\": \"3\",\n                            \"measure\": \"cups\",\n                            \"factor\": \"1\",\n                            \"price\": {\n                                \"inclusive\": \"2.50\",\n                                \"exclusive\": \"2.05\"\n                            }\n                        },\n                        \"value\": {\n                            \"base\": \"7.50\",\n                            \"discount\": \"0.150\",\n                            \"surcharge\": \"0.075\"\n                        },\n                        \"vat\": {\n                            \"type\": \"VAT_RATE\",\n                            \"code\": \"STANDARD\",\n                            \"percentage\": \"22.00\",\n                            \"amount\": \"1.339\",\n                            \"exclusive\": \"6.086\",\n                            \"inclusive\": \"7.425\"\n                        }\n                    },\n                    \"details\": {\n                        \"concept\": \"GOOD\"\n                    }\n                }\n            ],\n            \"recipients\": [\n                {\n                    \"type\": \"CONSUMER\",\n                    \"name\": {\n                        \"forename\": \"Mario\",\n                        \"surname\": \"Rossi\",\n                        \"gender\": \"MALE\"\n                    },\n                    \"address\": {\n                        \"line\": {\n                            \"type\": \"STREET_NUMBER\",\n                            \"street\": \"Via Nazionale\",\n                            \"number\": \"1\"\n                        },\n                        \"code\": \"00184\",\n                        \"city\": \"Rome\",\n                        \"country\": \"IT\",\n                        \"region\": \"RM\"\n                    },\n                    \"identification\": {\n                        \"type\": \"TAX\",\n                        \"number\": \"RSSMRA85M01H501Q\"\n                    },\n                    \"invoicing\": {\n                        \"type\": \"SDI\",\n                        \"destination_code\": \"0000000\",\n                        \"pec\": \"example@pec.it\"\n                    }\n                }\n            ],\n            \"breakdown\": [\n                {\n                    \"type\": \"VAT_RATE\",\n                    \"code\": \"STANDARD\",\n                    \"percentage\": \"22.00\",\n                    \"amount\": \"1.34\",\n                    \"exclusive\": \"6.09\",\n                    \"inclusive\": \"7.43\"\n                }\n            ],\n            \"totals\": {\n                \"vat\": {\n                    \"amount\": \"1.34\",\n                    \"exclusive\": \"6.09\",\n                    \"inclusive\": \"7.43\"\n                }\n            },\n            \"payments\": [\n                {\n                    \"type\": \"CARD\",\n                    \"details\": {\n                        \"amount\": \"7.43\",\n                        \"currency\": \"EUR\",\n                        \"date\": \"2026-05-28\"\n                    },\n                    \"number\": \"***************1234\",\n                    \"kind\": \"CREDIT\"\n                }\n            ]\n        }\n    }\n}\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{apiBaseUrl}}/records",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records"
+              ]
+            },
+            "description": "Create an e-invoice with an SDI recipient.  \n_Important:_\n\n- The `E_INVOICE_SERVICE` system must be in `COMMISSIONED/OPERATIVE` state\n    \n- The recipient needs `invoicing.type: SDI` with a valid 7-character  \n    `destination_code` (_Codice Destinatario_)\n    \n- The invoice is transmitted through SDI, which returns acceptance or an `NS`  \n    rejection"
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve INTENTION::TRANSACTION",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/records/{{invoiceb2cIntentionId}}",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records",
+                "{{invoiceb2cIntentionId}}"
+              ]
+            },
+            "description": "Retrieve the e-invoice record with compliance information"
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve TRANSACTION::INVOICE",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    if (data.content.used_in && data.content.used_in.id) {",
+                  "        pm.environment.set(\"b2ctransmissionId\", data.content.used_in.id);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/records/{{b2ceInvoiceId}}",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records",
+                "{{b2ceInvoiceId}}"
+              ]
+            },
+            "description": "Retrieve the e-invoice record with compliance information"
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve E_INVOICE::TRANSMISSION",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/records/{{b2ctransmissionId}}?compliance-artifact",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records",
+                "{{b2ctransmissionId}}"
+              ],
+              "query": [
+                {
+                  "key": "compliance-artifact",
+                  "value": null
+                }
+              ]
+            },
+            "description": "Retrieve the email transmission record for the DE invoice after the invoice record exposes used_in.id."
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve invoice files (.zip)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/octet-stream"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/files/{{b2ctransmissionId}}.zip",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "files",
+                "{{b2ctransmissionId}}.zip"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve XML (invoice)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const base64 = pm.response.json()?.content?.compliance?.artifact?.data;",
+                  "const file_type = pm.response.json()?.content?.compliance?.artifact?.type;",
+                  "",
+                  "if (base64) {",
+                  "    const link = `data:${file_type};base64,${base64}`;",
+                  "    pm.visualizer.set(`",
+                  "        <html>",
+                  "          <body>",
+                  "            <h3>📄 File Base64 Link</h3>",
+                  "            <p>Open that link in your browser:</p>",
+                  "            <textarea style=\"width:100%;height:120px;font-size:14px;\" readonly>${link}</textarea>",
+                  "          </body>",
+                  "        </html>",
+                  "    `);",
+                  "} else {",
+                  "    pm.visualizer.set(`<p style=\"color:red;\">⚠️ No file Base64 data found.</p>`);",
+                  "}",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/xml"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/records/{{b2ctransmissionId}}?compliance-artifact",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records",
+                "{{b2ctransmissionId}}"
+              ],
+              "query": [
+                {
+                  "key": "compliance-artifact",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve the Receipt of Transmission",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    pm.test(\"Archive artifact is present\", function () {",
+                  "        pm.expect(data.content.compliance.archive.data).to.exist;",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/records/{{b2ctransmissionId}}?archive-artifact",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records",
+                "{{b2ctransmissionId}}"
+              ],
+              "query": [
+                {
+                  "key": "archive-artifact",
+                  "value": null
+                }
+              ]
+            },
+            "description": "Retrieve the preservation receipt of transmission for the transmitted invoice  \nas a base64-encoded string in `content.compliance.archive.data`."
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve XML (receipt of transmission)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const base64 = pm.response.json()?.content?.compliance?.archive?.data;",
+                  "const file_type = pm.response.json()?.content?.compliance?.archive?.type;",
+                  "",
+                  "if (base64) {",
+                  "    const link = `data:${file_type};base64,${base64}`;",
+                  "    pm.visualizer.set(`",
+                  "        <html>",
+                  "          <body>",
+                  "            <h3>📄 File Base64 Link</h3>",
+                  "            <p>Open that link in your browser:</p>",
+                  "            <textarea style=\"width:100%;height:120px;font-size:14px;\" readonly>${link}</textarea>",
+                  "          </body>",
+                  "        </html>",
+                  "    `);",
+                  "} else {",
+                  "    pm.visualizer.set(`<p style=\"color:red;\">⚠️ No file Base64 data found.</p>`);",
+                  "}",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/xml"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/records/{{b2ctransmissionId}}?archive-artifact",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records",
+                "{{b2ctransmissionId}}"
+              ],
+              "query": [
+                {
+                  "key": "archive-artifact",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Invoices",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/records?type=TRANSACTION::INVOICE",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "TRANSACTION::INVOICE"
+                }
+              ]
+            },
+            "description": "List all invoice records filtered by type"
+          },
+          "response": []
+        }
+      ],
+      "description": "E-Invoice transmission workflow: the invoice is sent to SDI, which validates it and returns either acceptance or an `NS` rejection."
+    },
+    {
+      "name": "records (E-Invoice Reception)",
+      "item": [
+        {
+          "name": "List Records by Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    if (data.results && data.results.length > 0) {",
+                  "        pm.environment.set(\"eInvoiceReceptionId\", data.results[0].content.id);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/records?type=E_INVOICE::RECEPTION",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "E_INVOICE::RECEPTION"
+                }
+              ]
+            },
+            "description": "List records filtered by `type=E_INVOICE::RECEPTION` to look up invoices received automatically via SDI/FatturaPA.\n\n**Note:** Reception records are created by fiskaly when SDI delivers an invoice, not by the integrator — there is no corresponding create request in this collection."
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve a Record::E_INVOICE::RECEPTION",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    pm.test(\"Type is E_INVOICE::RECEPTION\", function () {",
+                  "        pm.expect(data.content.type).to.eql(\"E_INVOICE::RECEPTION\");",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/records/{{eInvoiceReceptionId}}",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records",
+                "{{eInvoiceReceptionId}}"
+              ]
+            },
+            "description": "Retrieve the `E_INVOICE::RECEPTION` record created automatically when an invoice is received via SDI"
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve invoice files (.zip)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/octet-stream"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/files/{{eInvoiceReceptionId}}.zip",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "files",
+                "{{eInvoiceReceptionId}}.zip"
+              ]
+            },
+            "description": "Retrieve a Receipt as PDF by setting Accept header to application/pdf"
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve XML (invoice)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const base64 = pm.response.json()?.content?.compliance?.artifact?.data;",
+                  "const file_type = pm.response.json()?.content?.compliance?.artifact?.type;",
+                  "",
+                  "if (base64) {",
+                  "    const link = `data:${file_type};base64,${base64}`;",
+                  "    pm.visualizer.set(`",
+                  "        <html>",
+                  "          <body>",
+                  "            <h3>📄 File Base64 Link</h3>",
+                  "            <p>Open that link in your browser:</p>",
+                  "            <textarea style=\"width:100%;height:120px;font-size:14px;\" readonly>${link}</textarea>",
+                  "          </body>",
+                  "        </html>",
+                  "    `);",
+                  "} else {",
+                  "    pm.visualizer.set(`<p style=\"color:red;\">⚠️ No file Base64 data found.</p>`);",
+                  "}",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/xml"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/records/{{eInvoiceReceptionId}}?compliance-artifact",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records",
+                "{{eInvoiceReceptionId}}"
+              ],
+              "query": [
+                {
+                  "key": "compliance-artifact",
+                  "value": null
+                }
+              ]
+            },
+            "description": "Retrieve a Receipt as PDF by setting Accept header to application/pdf"
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve the Received Invoice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    pm.test(\"Compliance artifact is present\", function () {",
+                  "        pm.expect(data.content.compliance.artifact.data).to.exist;",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/records/{{eInvoiceReceptionId}}?compliance-artifact",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records",
+                "{{eInvoiceReceptionId}}"
+              ],
+              "query": [
+                {
+                  "key": "compliance-artifact",
+                  "value": null
+                }
+              ]
+            },
+            "description": "Retrieve the signed FatturaPA XML of the received invoice as a base64-encoded string in `content.compliance.artifact.data`"
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve the Receipt of Transmission",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    pm.test(\"Archive artifact is present\", function () {",
+                  "        pm.expect(data.content.compliance.archive.data).to.exist;",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/records/{{eInvoiceReceptionId}}?archive-artifact",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records",
+                "{{eInvoiceReceptionId}}"
+              ],
+              "query": [
+                {
+                  "key": "archive-artifact",
+                  "value": null
+                }
+              ]
+            },
+            "description": "Retrieve the preservation receipt of transmission for the received invoice as a base64-encoded string in `content.compliance.archive.data`"
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve XML (receipt of transmission)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const base64 = pm.response.json()?.content?.compliance?.archive?.data;",
+                  "const file_type = pm.response.json()?.content?.compliance?.archive?.type;",
+                  "",
+                  "if (base64) {",
+                  "    const link = `data:${file_type};base64,${base64}`;",
+                  "    pm.visualizer.set(`",
+                  "        <html>",
+                  "          <body>",
+                  "            <h3>📄 File Base64 Link</h3>",
+                  "            <p>Open that link in your browser:</p>",
+                  "            <textarea style=\"width:100%;height:120px;font-size:14px;\" readonly>${link}</textarea>",
+                  "          </body>",
+                  "        </html>",
+                  "    `);",
+                  "} else {",
+                  "    pm.visualizer.set(`<p style=\"color:red;\">⚠️ No file Base64 data found.</p>`);",
+                  "}",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{subjectBearerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/xml"
+              },
+              {
+                "key": "X-Api-Version",
+                "value": "{{apiVersion}}",
+                "description": "API version"
+              }
+            ],
+            "url": {
+              "raw": "{{apiBaseUrl}}/records/{{eInvoiceReceptionId}}?archive-artifact",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "records",
+                "{{eInvoiceReceptionId}}"
+              ],
+              "query": [
+                {
+                  "key": "archive-artifact",
+                  "value": null
+                }
+              ]
+            },
+            "description": "Retrieve a Receipt as PDF by setting Accept header to application/pdf"
+          },
+          "response": []
+        }
+      ],
+      "description": "E-Invoice reception workflow: when an invoice is sent via SDI to one of your commissioned taxpayers, fiskaly receives it automatically, creates an `E_INVOICE::RECEPTION` record, and stores the signed XML and the receipt of transmission against that record. This folder shows how to look up incoming invoices and retrieve their XML and receipt of transmission."
+    }
+  ]
+}

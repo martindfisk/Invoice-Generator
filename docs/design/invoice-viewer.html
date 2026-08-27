@@ -1,0 +1,1794 @@
+<!doctype html>
+<html lang="en" data-theme-mode="system">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Invoice viewer &amp; findings — visual spec</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ===================================================================
+         TOKENS — copied VERBATIM from frontend/src/theme.css (:root block).
+         Do not edit here. Edit theme.css and re-copy so the two cannot drift.
+         =================================================================== */
+      :root {
+        --fsk-blue-100: #b5dcfb;
+        --fsk-blue-300: #5caeed;
+        --fsk-blue-500: #1264a3;
+        --fsk-blue-900: #053357;
+        --fsk-bunker: #0f181b;
+        --fsk-gray-100: #fcfcfc;
+        --fsk-gray-200: #f6f6f7;
+        --fsk-gray-300: #eff1f3;
+        --fsk-gray-400: #d7dbe1;
+        --fsk-gray-500: #9ca3af;
+        --fsk-gray-600: #6b7280;
+        --fsk-gray-700: #545b6f;
+        --fsk-gray-800: #232a30;
+        --fsk-gray-900: #0f181b;
+        --fsk-green-300: #99f6e4;
+        --fsk-green-500: #2dd4bf;
+        --fsk-green-700: #14b8a6;
+        --fsk-green-900: #11806d;
+        --fsk-radius-l: 8px;
+        --fsk-radius-m: 4px;
+        --fsk-radius-xl: 16px;
+        --fsk-red-100: #ffe5dc;
+        --fsk-red-500: #ff5050;
+        --fsk-shadow-l: 0 8px 20px rgba(107, 120, 155, 0.25);
+        --fsk-shadow-s: 0 0 10px rgba(107, 120, 155, 0.25);
+        --fsk-white: #ffffff;
+        --fsk-yellow-100: #f9ffd0;
+        --fsk-yellow-300: #edfb8a;
+        --fsk-yellow-500: #fddd00;
+
+        --fsk-canvas: var(--fsk-gray-200);
+        --fsk-surface: var(--fsk-white);
+        --fsk-surface-raised: var(--fsk-gray-100);
+        --fsk-line: var(--fsk-gray-400);
+        --fsk-ink: var(--fsk-gray-900);
+        --fsk-ink-muted: var(--fsk-gray-600);
+        --fsk-brand: var(--fsk-green-700);
+        --fsk-brand-soft: var(--fsk-green-300);
+        --fsk-brand-ink: var(--fsk-bunker);
+        --fsk-severity-fatal: color-mix(in srgb, var(--fsk-red-500) 70%, var(--fsk-bunker));
+        --fsk-severity-error: var(--fsk-red-500);
+        --fsk-severity-warning: color-mix(in srgb, var(--fsk-yellow-500) 60%, var(--fsk-red-500));
+        --fsk-severity-info: var(--fsk-blue-500);
+        --fsk-severity-success: var(--fsk-green-900);
+        color-scheme: light;
+      }
+
+      [data-theme="dark"] {
+        --fsk-canvas: var(--fsk-bunker);
+        --fsk-surface: var(--fsk-gray-800);
+        --fsk-surface-raised: color-mix(in srgb, var(--fsk-gray-800) 80%, var(--fsk-gray-700));
+        --fsk-line: var(--fsk-gray-700);
+        --fsk-ink: var(--fsk-gray-100);
+        --fsk-ink-muted: var(--fsk-gray-500);
+        --fsk-brand: var(--fsk-green-500);
+        --fsk-brand-soft: color-mix(in srgb, var(--fsk-green-700) 30%, var(--fsk-bunker));
+        --fsk-shadow-l: 0 8px 20px rgba(0, 0, 0, 0.45);
+        --fsk-shadow-s: 0 0 10px rgba(0, 0, 0, 0.45);
+        --fsk-severity-fatal: color-mix(in srgb, var(--fsk-red-500) 80%, var(--fsk-white));
+        --fsk-severity-info: var(--fsk-blue-300);
+        --fsk-severity-success: var(--fsk-green-500);
+        color-scheme: dark;
+      }
+
+      /* End verbatim copy. ------------------------------------------------ */
+
+      /* System dark: mirror of the [data-theme="dark"] block above.
+         Keep in sync when theme.css changes. The app itself always stamps
+         data-theme (main.tsx), so this branch only exists for the mockup and
+         for viewers who never touch the toggle. */
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]):not([data-theme="dark"]) {
+          --fsk-canvas: var(--fsk-bunker);
+          --fsk-surface: var(--fsk-gray-800);
+          --fsk-surface-raised: color-mix(in srgb, var(--fsk-gray-800) 80%, var(--fsk-gray-700));
+          --fsk-line: var(--fsk-gray-700);
+          --fsk-ink: var(--fsk-gray-100);
+          --fsk-ink-muted: var(--fsk-gray-500);
+          --fsk-brand: var(--fsk-green-500);
+          --fsk-brand-soft: color-mix(in srgb, var(--fsk-green-700) 30%, var(--fsk-bunker));
+          --fsk-shadow-l: 0 8px 20px rgba(0, 0, 0, 0.45);
+          --fsk-shadow-s: 0 0 10px rgba(0, 0, 0, 0.45);
+          --fsk-severity-fatal: color-mix(in srgb, var(--fsk-red-500) 80%, var(--fsk-white));
+          --fsk-severity-info: var(--fsk-blue-300);
+          --fsk-severity-success: var(--fsk-green-500);
+          color-scheme: dark;
+        }
+      }
+
+      /* Fonts — same values theme.css puts in its Tailwind @theme block. */
+      :root {
+        --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+        --font-mono: "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      /* PROPOSED tokens — not yet in theme.css.
+         See docs/design/viewer-spec.md § "Tokens to add". */
+      :root {
+        --fsk-select-bg: color-mix(in srgb, var(--fsk-brand) 14%, transparent);
+        --fsk-severity-fatal-soft: color-mix(in srgb, var(--fsk-severity-fatal) 12%, var(--fsk-surface));
+        --fsk-severity-error-soft: color-mix(in srgb, var(--fsk-severity-error) 12%, var(--fsk-surface));
+        --fsk-severity-warning-soft: color-mix(in srgb, var(--fsk-severity-warning) 16%, var(--fsk-surface));
+        --fsk-severity-info-soft: color-mix(in srgb, var(--fsk-severity-info) 12%, var(--fsk-surface));
+        --fsk-severity-error-ink: color-mix(in srgb, var(--fsk-severity-error) 72%, var(--fsk-bunker));
+        --fsk-severity-warning-ink: color-mix(in srgb, var(--fsk-severity-warning) 55%, var(--fsk-bunker));
+      }
+      [data-theme="dark"] {
+        --fsk-select-bg: color-mix(in srgb, var(--fsk-brand) 22%, transparent);
+        --fsk-severity-fatal-soft: color-mix(in srgb, var(--fsk-severity-fatal) 22%, var(--fsk-surface));
+        --fsk-severity-error-soft: color-mix(in srgb, var(--fsk-severity-error) 22%, var(--fsk-surface));
+        --fsk-severity-warning-soft: color-mix(in srgb, var(--fsk-severity-warning) 24%, var(--fsk-surface));
+        --fsk-severity-info-soft: color-mix(in srgb, var(--fsk-severity-info) 22%, var(--fsk-surface));
+        --fsk-severity-error-ink: var(--fsk-severity-error);
+        --fsk-severity-warning-ink: var(--fsk-severity-warning);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]):not([data-theme="dark"]) {
+          --fsk-select-bg: color-mix(in srgb, var(--fsk-brand) 22%, transparent);
+          --fsk-severity-fatal-soft: color-mix(in srgb, var(--fsk-severity-fatal) 22%, var(--fsk-surface));
+          --fsk-severity-error-soft: color-mix(in srgb, var(--fsk-severity-error) 22%, var(--fsk-surface));
+          --fsk-severity-warning-soft: color-mix(in srgb, var(--fsk-severity-warning) 24%, var(--fsk-surface));
+          --fsk-severity-info-soft: color-mix(in srgb, var(--fsk-severity-info) 22%, var(--fsk-surface));
+          --fsk-severity-error-ink: var(--fsk-severity-error);
+          --fsk-severity-warning-ink: var(--fsk-severity-warning);
+        }
+      }
+
+      /* ===================================================================
+         BASE
+         =================================================================== */
+      *,
+      *::before,
+      *::after { box-sizing: border-box; }
+      html { -webkit-text-size-adjust: 100%; }
+      body {
+        margin: 0;
+        background: var(--fsk-canvas);
+        color: var(--fsk-ink);
+        font-family: var(--font-sans);
+        font-size: 14px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+      :focus-visible {
+        outline: 2px solid var(--fsk-brand);
+        outline-offset: 2px;
+      }
+      button { font: inherit; color: inherit; }
+      table { border-collapse: collapse; width: 100%; }
+      h1, h2, h3, h4, p, ul, ol, dl, figure { margin: 0; }
+      ul, ol { list-style: none; padding: 0; }
+
+      /* ===================================================================
+         DOC CHROME — mockup page furniture only, not part of the app.
+         =================================================================== */
+      .doc { max-width: 1560px; margin: 0 auto; padding: 0 20px 96px; }
+      .doc__bar {
+        position: sticky; top: 0; z-index: 20;
+        display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+        margin: 0 -20px 20px; padding: 12px 20px;
+        background: var(--fsk-surface);
+        border-bottom: 1px solid var(--fsk-line);
+      }
+      .doc__title { font-size: 14px; font-weight: 700; }
+      .doc__sub { font-size: 12px; color: var(--fsk-ink-muted); }
+      .doc__bar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+      .doc__nav { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 28px; }
+      .doc__nav a {
+        font-size: 12px; text-decoration: none; color: var(--fsk-ink-muted);
+        border: 1px solid var(--fsk-line); border-radius: var(--fsk-radius-m);
+        padding: 4px 10px; background: var(--fsk-surface);
+      }
+      .doc__nav a:hover { color: var(--fsk-ink); border-color: var(--fsk-brand); }
+      .doc section { margin-bottom: 48px; scroll-margin-top: 72px; }
+      .doc__h2 {
+        font-size: 13px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.06em; color: var(--fsk-ink-muted);
+        padding-bottom: 6px; border-bottom: 1px solid var(--fsk-line); margin-bottom: 6px;
+      }
+      .doc__note { font-size: 12px; color: var(--fsk-ink-muted); margin-bottom: 14px; max-width: 92ch; }
+      .doc__note code, .doc__inline-code {
+        font-family: var(--font-mono); font-size: 0.92em;
+        background: var(--fsk-surface-raised); border: 1px solid var(--fsk-line);
+        border-radius: var(--fsk-radius-m); padding: 0 4px;
+      }
+      .doc__scroll { overflow-x: auto; padding-bottom: 4px; }
+      .doc__grid2 { display: grid; gap: 20px; grid-template-columns: 1fr; }
+      @media (min-width: 1100px) { .doc__grid2 { grid-template-columns: 1fr 1fr; } }
+      .doc__caption { font-size: 11px; color: var(--fsk-ink-muted); margin-top: 6px; font-family: var(--font-mono); }
+
+      /* ===================================================================
+         SHARED PRIMITIVES
+         =================================================================== */
+      .btn {
+        display: inline-flex; align-items: center; gap: 6px;
+        border: 1px solid var(--fsk-line); background: var(--fsk-surface);
+        border-radius: var(--fsk-radius-m); padding: 5px 10px;
+        font-size: 12px; font-weight: 500; color: var(--fsk-ink-muted); cursor: pointer;
+      }
+      .btn:hover { border-color: var(--fsk-brand); color: var(--fsk-ink); }
+      .btn--primary {
+        background: var(--fsk-brand); border-color: var(--fsk-brand);
+        color: var(--fsk-brand-ink); font-weight: 600;
+      }
+      .btn--primary:hover { color: var(--fsk-brand-ink); }
+
+      .chip {
+        display: inline-flex; align-items: center; gap: 5px;
+        border: 1px solid var(--fsk-line); border-radius: var(--fsk-radius-m);
+        padding: 2px 7px; font-size: 11px; color: var(--fsk-ink-muted);
+        background: var(--fsk-surface);
+      }
+      .chip--mono { font-family: var(--font-mono); }
+      .chip--mock { background: var(--fsk-brand-soft); color: var(--fsk-brand-ink); border-color: transparent; font-weight: 600; }
+
+      /* Field-mapping badges: BT (EN 16931) outline, FPA (FatturaPA) filled-soft. */
+      .badge {
+        font-family: var(--font-mono); font-size: 10px; line-height: 1.5;
+        border-radius: var(--fsk-radius-m); padding: 0 4px; white-space: nowrap; cursor: help;
+      }
+      .badge--bt { border: 1px solid var(--fsk-brand); color: var(--fsk-brand); background: transparent; }
+      .badge--fpa { border: 1px solid transparent; color: var(--fsk-ink-muted); background: var(--fsk-surface-raised); }
+      [data-theme="dark"] .badge--fpa { background: var(--fsk-canvas); }
+
+      .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+      .trunc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .trunc-mid { display: inline-flex; min-width: 0; max-width: 100%; }
+      .trunc-mid > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .trunc-mid > span:last-child { flex: none; white-space: nowrap; }
+
+      /* ===================================================================
+         VIEWER FRAME  (InvoiceViewer.tsx)
+         =================================================================== */
+      .viewer {
+        display: flex; flex-direction: column;
+        background: var(--fsk-surface);
+        border: 1px solid var(--fsk-line);
+        border-radius: var(--fsk-radius-l);
+        box-shadow: var(--fsk-shadow-s);
+        overflow: hidden;
+      }
+      .viewer__toolbar {
+        display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+        padding: 8px 12px; border-bottom: 1px solid var(--fsk-line);
+        background: var(--fsk-surface);
+      }
+      .viewer__toolbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+      .viewer__body { display: grid; min-height: 0; }
+      .viewer__body--split { grid-template-columns: 1fr 1px 1fr; }
+      .viewer__body--single { grid-template-columns: 1fr; }
+      .viewer__divider { background: var(--fsk-line); }
+      .viewer__pane { min-width: 0; display: flex; flex-direction: column; }
+
+      /* Segmented control XML | Human | Split (shadcn tabs) */
+      .seg {
+        display: inline-flex; gap: 2px; padding: 2px;
+        background: var(--fsk-canvas); border: 1px solid var(--fsk-line);
+        border-radius: var(--fsk-radius-m);
+      }
+      .seg__btn {
+        border: 0; background: transparent; cursor: pointer;
+        border-radius: var(--fsk-radius-m); padding: 3px 10px;
+        font-size: 12px; font-weight: 500; color: var(--fsk-ink-muted);
+      }
+      .seg__btn:hover { color: var(--fsk-ink); }
+      .seg__btn[aria-selected="true"] {
+        background: var(--fsk-surface); color: var(--fsk-ink); box-shadow: var(--fsk-shadow-s);
+      }
+
+      /* Validity pill in the toolbar */
+      .pill {
+        display: inline-flex; align-items: center; gap: 6px;
+        border-radius: var(--fsk-radius-m); padding: 2px 8px;
+        font-size: 11px; font-weight: 600; border: 1px solid transparent;
+      }
+      .pill--ok { color: var(--fsk-severity-success); border-color: var(--fsk-severity-success); }
+      .pill--bad { color: var(--fsk-severity-error-ink); border-color: var(--fsk-severity-error); background: var(--fsk-severity-error-soft); }
+
+      /* ===================================================================
+         HUMAN VIEW  (HumanView.tsx / Field.tsx)
+         =================================================================== */
+      .human { padding: 14px; overflow: auto; display: flex; flex-direction: column; gap: 12px; background: var(--fsk-canvas); }
+      .card {
+        background: var(--fsk-surface); border: 1px solid var(--fsk-line);
+        border-radius: var(--fsk-radius-l); overflow: hidden;
+      }
+      .card__head {
+        display: flex; align-items: center; gap: 8px;
+        padding: 7px 12px; border-bottom: 1px solid var(--fsk-line);
+        font-size: 11px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.06em; color: var(--fsk-ink-muted);
+        background: var(--fsk-surface-raised);
+      }
+      .card__body { padding: 6px; }
+      .card__grid { display: grid; grid-template-columns: 1fr; gap: 2px; }
+      @media (min-width: 560px) { .card__grid--2 { grid-template-columns: 1fr 1fr; } }
+
+      .field {
+        display: grid; grid-template-columns: 1fr auto; align-items: baseline;
+        gap: 2px 10px; width: 100%; text-align: left;
+        border: 2px solid transparent; border-radius: var(--fsk-radius-m);
+        background: transparent; padding: 5px 8px; cursor: pointer;
+      }
+      .field:hover { background: var(--fsk-surface-raised); }
+      .field__label {
+        grid-column: 1; font-size: 11px; color: var(--fsk-ink-muted);
+      }
+      .field__badges { grid-column: 2; grid-row: 1 / span 2; display: flex; gap: 4px; align-self: center; }
+      .field__value { grid-column: 1; font-size: 13px; color: var(--fsk-ink); min-width: 0; }
+      .field__value--mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+      .field__value--empty { color: var(--fsk-ink-muted); }
+      .field--selected {
+        border-color: var(--fsk-brand);
+        background: var(--fsk-select-bg);
+      }
+      .field--selected .field__label { color: var(--fsk-ink); font-weight: 600; }
+      .field--flagged { box-shadow: inset 3px 0 0 var(--fsk-severity-error); }
+
+      .disclaimer {
+        font-size: 11px; color: var(--fsk-ink-muted);
+        border-top: 1px dashed var(--fsk-line); padding-top: 8px; margin-top: 2px;
+      }
+
+      /* Tables inside the human view (lines, VAT breakdown, totals) */
+      .tbl { font-size: 12px; }
+      .tbl th {
+        text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.05em; color: var(--fsk-ink-muted);
+        padding: 6px 8px; border-bottom: 1px solid var(--fsk-line); white-space: nowrap;
+      }
+      .tbl td { padding: 6px 8px; border-bottom: 1px solid var(--fsk-line); vertical-align: top; }
+      .tbl tr:last-child td { border-bottom: 0; }
+      .tbl .num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+      .tbl__row--sel td { background: var(--fsk-select-bg); }
+      .totals td:first-child { color: var(--fsk-ink-muted); }
+      .totals tr.totals__grand td { font-weight: 700; font-size: 14px; color: var(--fsk-ink); }
+      .totals tr.totals__grand td:first-child { color: var(--fsk-ink); }
+
+      /* ===================================================================
+         XML VIEW  (XmlView.tsx — CodeMirror in the real app)
+         Row anatomy: gutter number (::before) + gutter marker (::after) + code.
+         =================================================================== */
+      .xmlv {
+        background: var(--fsk-surface); overflow: auto;
+        font-family: var(--font-mono); font-size: 12px; line-height: 1.65;
+        padding: 8px 0;
+      }
+      .xmlv__rows { counter-reset: ln var(--xmlv-start, 0); min-width: max-content; }
+      .xmlv__row { position: relative; padding: 0 12px 0 58px; }
+      .xmlv__row::before {
+        counter-increment: ln; content: counter(ln);
+        position: absolute; left: 0; width: 34px; text-align: right;
+        color: var(--fsk-gray-500); font-size: 11px; user-select: none;
+      }
+      .xmlv__row::after {
+        content: ""; position: absolute; left: 42px; width: 10px; text-align: center;
+        font-size: 11px; font-weight: 700; user-select: none;
+      }
+      .xmlv__code { display: block; white-space: pre; color: var(--fsk-ink); }
+      .xmlv__tag { color: var(--fsk-severity-info); }
+      .xmlv__attr { color: var(--fsk-ink-muted); }
+      .xmlv__decl { color: var(--fsk-gray-500); }
+
+      /* Selection: brand rail + tint + 2 px underline on the glyphs. */
+      .xmlv__row--sel { background: var(--fsk-select-bg); box-shadow: inset 2px 0 0 var(--fsk-brand); }
+      .xmlv__row--sel::after { content: "\25B8"; color: var(--fsk-brand); }
+      .xmlv__row--sel .xmlv__code {
+        text-decoration: underline;
+        text-decoration-color: var(--fsk-brand);
+        text-decoration-thickness: 2px;
+        text-underline-offset: 3px;
+      }
+      /* Findings: severity rail + tint + wavy underline. */
+      .xmlv__row--fatal { background: var(--fsk-severity-fatal-soft); box-shadow: inset 2px 0 0 var(--fsk-severity-fatal); }
+      .xmlv__row--error { background: var(--fsk-severity-error-soft); box-shadow: inset 2px 0 0 var(--fsk-severity-error); }
+      .xmlv__row--warning { background: var(--fsk-severity-warning-soft); box-shadow: inset 2px 0 0 var(--fsk-severity-warning); }
+      .xmlv__row--info { background: var(--fsk-severity-info-soft); box-shadow: inset 2px 0 0 var(--fsk-severity-info); }
+      .xmlv__row--fatal::after { content: "\25A0"; color: var(--fsk-severity-fatal); }
+      .xmlv__row--error::after { content: "\25CF"; color: var(--fsk-severity-error); }
+      .xmlv__row--warning::after { content: "\25B2"; color: var(--fsk-severity-warning); }
+      .xmlv__row--info::after { content: "\25CB"; color: var(--fsk-severity-info); }
+      .xmlv__row--fatal .xmlv__code,
+      .xmlv__row--error .xmlv__code,
+      .xmlv__row--warning .xmlv__code,
+      .xmlv__row--info .xmlv__code {
+        text-decoration: underline wavy;
+        text-decoration-thickness: 1px;
+        text-underline-offset: 3px;
+      }
+      .xmlv__row--fatal .xmlv__code { text-decoration-color: var(--fsk-severity-fatal); }
+      .xmlv__row--error .xmlv__code { text-decoration-color: var(--fsk-severity-error); }
+      .xmlv__row--warning .xmlv__code { text-decoration-color: var(--fsk-severity-warning); }
+      .xmlv__row--info .xmlv__code { text-decoration-color: var(--fsk-severity-info); }
+      /* Gutter marker only — the finding is elsewhere in the doc, not on screen. */
+      .xmlv__row--mark-error::after { content: "\25CF"; color: var(--fsk-severity-error); }
+      .xmlv__row--mark-warning::after { content: "\25B2"; color: var(--fsk-severity-warning); }
+      /* Diff row states */
+      .xmlv__row--add { background: color-mix(in srgb, var(--fsk-severity-success) 14%, var(--fsk-surface)); box-shadow: inset 2px 0 0 var(--fsk-severity-success); }
+      .xmlv__row--del { background: var(--fsk-severity-error-soft); box-shadow: inset 2px 0 0 var(--fsk-severity-error); }
+      .xmlv__row--chg { background: var(--fsk-severity-info-soft); box-shadow: inset 2px 0 0 var(--fsk-severity-info); }
+      .xmlv__row--add::after { content: "+"; color: var(--fsk-severity-success); }
+      .xmlv__row--del::after { content: "\2212"; color: var(--fsk-severity-error); }
+      .xmlv__row--chg::after { content: "~"; color: var(--fsk-severity-info); }
+      .xmlv__row--gap { color: var(--fsk-gray-500); }
+      .xmlv__row--gap::before { content: ""; counter-increment: none; }
+
+      .xmlv--h360 { max-height: 360px; }
+      .xmlv--h560 { max-height: 560px; }
+      .xmlv--h220 { max-height: 220px; }
+
+      /* ===================================================================
+         FINDINGS PANEL  (FindingsPanel.tsx)
+         =================================================================== */
+      .findings { display: flex; flex-direction: column; min-height: 0; background: var(--fsk-surface); }
+      .findings__head {
+        display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+        padding: 8px 12px; border-bottom: 1px solid var(--fsk-line);
+      }
+      .findings__title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fsk-ink-muted); }
+      .findings__filters { display: flex; gap: 4px; margin-left: auto; flex-wrap: wrap; }
+      .fchip {
+        display: inline-flex; align-items: center; gap: 5px; cursor: pointer;
+        border: 1px solid var(--fsk-line); border-radius: var(--fsk-radius-m);
+        padding: 2px 7px; font-size: 11px; background: var(--fsk-surface); color: var(--fsk-ink-muted);
+      }
+      .fchip[aria-pressed="true"] { border-color: var(--fsk-brand); color: var(--fsk-ink); background: var(--fsk-select-bg); }
+      .fchip__n { font-family: var(--font-mono); font-weight: 600; }
+
+      .stages { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--fsk-line); }
+      .stage { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--fsk-ink-muted); border: 1px solid var(--fsk-line); border-radius: var(--fsk-radius-m); padding: 2px 7px; }
+      .stage__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--fsk-gray-500); }
+      .stage--pass .stage__dot { background: var(--fsk-severity-success); }
+      .stage--fail .stage__dot { background: var(--fsk-severity-error); }
+      .stage--skip { opacity: 0.65; }
+
+      .findings__list { overflow: auto; }
+      .finding {
+        display: grid; grid-template-columns: 14px 1fr; gap: 0 10px;
+        width: 100%; text-align: left; cursor: pointer;
+        padding: 8px 12px; border: 0; border-bottom: 1px solid var(--fsk-line);
+        background: transparent;
+      }
+      .finding:hover { background: var(--fsk-surface-raised); }
+      .finding[aria-selected="true"] {
+        background: var(--fsk-select-bg);
+        box-shadow: inset 3px 0 0 var(--fsk-brand);
+      }
+      .finding__mark { grid-row: 1 / span 3; margin-top: 4px; font-size: 11px; line-height: 1; }
+      .finding__top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+      .finding__sev {
+        font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+        border-radius: var(--fsk-radius-m); padding: 0 5px;
+      }
+      .finding__rule { font-family: var(--font-mono); font-size: 11px; color: var(--fsk-ink-muted); }
+      .finding__msg { font-size: 12px; color: var(--fsk-ink); margin-top: 2px; }
+      .finding__loc { font-family: var(--font-mono); font-size: 10px; color: var(--fsk-ink-muted); margin-top: 3px; }
+      .finding__src { font-size: 10px; color: var(--fsk-ink-muted); }
+
+      /* fatal = filled badge, error/warning/info = tinted badge — shape as well as
+         hue, so severity survives greyscale and colour-vision deficiency. */
+      .sev--fatal .finding__mark { color: var(--fsk-severity-fatal); }
+      .sev--error .finding__mark { color: var(--fsk-severity-error); }
+      .sev--warning .finding__mark { color: var(--fsk-severity-warning); }
+      .sev--info .finding__mark { color: var(--fsk-severity-info); }
+      .sev--fatal .finding__sev { background: var(--fsk-severity-fatal); color: var(--fsk-white); }
+      .sev--error .finding__sev { background: var(--fsk-severity-error-soft); color: var(--fsk-severity-error-ink); border: 1px solid var(--fsk-severity-error); }
+      .sev--warning .finding__sev { background: var(--fsk-severity-warning-soft); color: var(--fsk-severity-warning-ink); border: 1px solid var(--fsk-severity-warning); }
+      .sev--info .finding__sev { background: var(--fsk-severity-info-soft); color: var(--fsk-severity-info); border: 1px solid var(--fsk-severity-info); }
+
+      /* ===================================================================
+         DIFF VIEW  (DiffView.tsx)
+         =================================================================== */
+      .diff { display: flex; flex-direction: column; background: var(--fsk-surface); border: 1px solid var(--fsk-line); border-radius: var(--fsk-radius-l); overflow: hidden; box-shadow: var(--fsk-shadow-s); }
+      .diff__head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 12px; border-bottom: 1px solid var(--fsk-line); }
+      .diff__meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 12px; border-bottom: 1px solid var(--fsk-line); font-size: 11px; color: var(--fsk-ink-muted); background: var(--fsk-surface-raised); }
+      .norm { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 8px 12px; border-bottom: 1px solid var(--fsk-line); }
+      .norm__label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fsk-ink-muted); margin-right: 2px; }
+      .toggle { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; border: 1px solid var(--fsk-line); border-radius: var(--fsk-radius-m); padding: 3px 8px; font-size: 11px; color: var(--fsk-ink-muted); background: var(--fsk-surface); }
+      .toggle input { accent-color: var(--fsk-brand); margin: 0; }
+      .toggle:has(input:checked) { border-color: var(--fsk-brand); color: var(--fsk-ink); background: var(--fsk-select-bg); }
+      .norm__summary { margin-left: auto; font-size: 11px; color: var(--fsk-ink-muted); font-family: var(--font-mono); }
+
+      .diff__panes { display: grid; grid-template-columns: 1fr 1px 1fr; }
+      .diff__pane { min-width: 0; display: flex; flex-direction: column; }
+      .diff__pane-head { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-bottom: 1px solid var(--fsk-line); font-size: 11px; font-weight: 600; color: var(--fsk-ink-muted); background: var(--fsk-surface-raised); }
+
+      .changes { border-top: 1px solid var(--fsk-line); }
+      .changes__head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fsk-ink-muted); }
+      .change {
+        display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 2px 10px;
+        padding: 8px 12px; border-top: 1px solid var(--fsk-line); width: 100%;
+        text-align: left; background: transparent; border-left: 0; border-right: 0; border-bottom: 0; cursor: pointer;
+      }
+      .change:hover { background: var(--fsk-surface-raised); }
+      .change__kind {
+        grid-row: 1 / span 3; align-self: start; margin-top: 1px;
+        font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+        border-radius: var(--fsk-radius-m); padding: 1px 6px; text-align: center;
+      }
+      .change--added .change__kind { background: color-mix(in srgb, var(--fsk-severity-success) 16%, var(--fsk-surface)); color: var(--fsk-severity-success); border: 1px solid var(--fsk-severity-success); }
+      .change--removed .change__kind { background: var(--fsk-severity-error-soft); color: var(--fsk-severity-error-ink); border: 1px solid var(--fsk-severity-error); }
+      .change--changed .change__kind { background: var(--fsk-severity-info-soft); color: var(--fsk-severity-info); border: 1px solid var(--fsk-severity-info); }
+      .change__path { display: flex; align-items: center; gap: 6px; min-width: 0; font-family: var(--font-mono); font-size: 11px; color: var(--fsk-ink); }
+      .change__vals { font-family: var(--font-mono); font-size: 11px; margin-top: 2px; }
+      .change__from { color: var(--fsk-severity-error-ink); text-decoration: line-through; }
+      .change__to { color: var(--fsk-severity-success); }
+      .change__why { font-size: 11px; color: var(--fsk-ink-muted); margin-top: 2px; }
+
+      /* ===================================================================
+         STATES  (empty / loading / error / polling)
+         =================================================================== */
+      .state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 40px 24px; min-height: 260px; }
+      .state__title { font-size: 14px; font-weight: 600; }
+      .state__body { font-size: 12px; color: var(--fsk-ink-muted); max-width: 46ch; }
+      .skel { background: var(--fsk-surface-raised); border-radius: var(--fsk-radius-m); height: 10px; }
+      .skel--title { height: 14px; width: 40%; }
+      .skel--pane { display: flex; flex-direction: column; gap: 8px; padding: 14px; }
+
+      .errbox { border-left: 3px solid var(--fsk-severity-error); background: var(--fsk-severity-error-soft); border-radius: var(--fsk-radius-m); padding: 10px 12px; text-align: left; width: 100%; }
+      .errbox__top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+      .errbox__code { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--fsk-severity-error-ink); }
+      .errbox__msg { font-size: 12px; margin-top: 4px; }
+      .errbox__trace { font-family: var(--font-mono); font-size: 11px; color: var(--fsk-ink-muted); margin-top: 6px; display: flex; gap: 6px; align-items: center; }
+
+      .poll { text-align: left; width: 100%; display: flex; flex-direction: column; gap: 10px; }
+      .poll__steps { display: flex; flex-direction: column; gap: 2px; }
+      .pollstep { display: grid; grid-template-columns: 18px 1fr auto; gap: 8px; align-items: center; padding: 5px 8px; border-radius: var(--fsk-radius-m); font-size: 12px; }
+      .pollstep--done { color: var(--fsk-ink-muted); }
+      .pollstep--done .pollstep__ico { color: var(--fsk-severity-success); }
+      .pollstep--active { background: var(--fsk-select-bg); box-shadow: inset 2px 0 0 var(--fsk-brand); font-weight: 600; }
+      .pollstep--todo { color: var(--fsk-ink-muted); opacity: 0.7; }
+      .pollstep__ico { text-align: center; }
+      .pollstep__meta { font-family: var(--font-mono); font-size: 11px; color: var(--fsk-ink-muted); }
+      .spinner { display: inline-block; width: 11px; height: 11px; border: 2px solid var(--fsk-line); border-top-color: var(--fsk-brand); border-radius: 50%; animation: spin 0.8s linear infinite; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+      .progress { height: 4px; border-radius: var(--fsk-radius-m); background: var(--fsk-surface-raised); overflow: hidden; }
+      .progress__bar { height: 100%; background: var(--fsk-brand); }
+      .statusline { font-size: 11px; font-family: var(--font-mono); color: var(--fsk-ink-muted); }
+      .notice { display: flex; gap: 8px; align-items: flex-start; font-size: 11px; border-radius: var(--fsk-radius-m); padding: 7px 9px; border-left: 3px solid var(--fsk-severity-warning); background: var(--fsk-severity-warning-soft); color: var(--fsk-ink); text-align: left; }
+
+      /* Legend for the cross-highlight visual language */
+      .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+      .legend__item { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--fsk-ink-muted); border: 1px solid var(--fsk-line); border-radius: var(--fsk-radius-m); padding: 4px 9px; background: var(--fsk-surface); }
+      .legend__swatch { width: 26px; height: 14px; border-radius: 2px; flex: none; }
+      .legend__swatch--field { border: 2px solid var(--fsk-brand); background: var(--fsk-select-bg); }
+      .legend__swatch--range { background: var(--fsk-select-bg); border-bottom: 2px solid var(--fsk-brand); }
+      .legend__swatch--gutter { background: transparent; box-shadow: inset 2px 0 0 var(--fsk-brand); border: 1px solid var(--fsk-line); }
+      .legend__swatch--sev { background: var(--fsk-severity-error-soft); border-bottom: 2px solid var(--fsk-severity-error); }
+
+      /* ===================================================================
+         RESPONSIVE — mirrors the breakpoints in viewer-spec.md
+         Split >= 1280 px · stacked 1024-1279 px · drawer < 1024 px
+         =================================================================== */
+      @media (max-width: 1279px) {
+        .viewer__body--split { grid-template-columns: 1fr; grid-template-rows: auto 1px auto; }
+        .diff__panes { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 1023px) {
+        .findings--drawer { position: static; border-top: 1px solid var(--fsk-line); }
+        .card__grid--2 { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="doc">
+      <header class="doc__bar">
+        <div>
+          <h1 class="doc__title">Invoice viewer, findings &amp; diff — visual specification</h1>
+          <p class="doc__sub">
+            Static mockup for M2/M3. Tokens copied verbatim from
+            <span class="doc__inline-code">frontend/src/theme.css</span>. Interaction contract:
+            <span class="doc__inline-code">docs/design/viewer-spec.md</span>.
+          </p>
+        </div>
+        <div class="doc__bar-right">
+          <span class="chip chip--mono">FatturaPA 1.2.2</span>
+          <div class="seg" role="tablist" aria-label="Theme">
+            <button class="seg__btn" type="button" role="tab" aria-selected="false" data-set-theme="light">Light</button>
+            <button class="seg__btn" type="button" role="tab" aria-selected="true" data-set-theme="system">System</button>
+            <button class="seg__btn" type="button" role="tab" aria-selected="false" data-set-theme="dark">Dark</button>
+          </div>
+        </div>
+      </header>
+
+      <nav class="doc__nav" aria-label="Sections">
+        <a href="#split">1 · Split view</a>
+        <a href="#modes">2 · XML-only &amp; Human-only</a>
+        <a href="#findings">3 · Findings panel</a>
+        <a href="#diff">4 · DiffView</a>
+        <a href="#states">5 · Empty / loading / error / polling</a>
+      </nav>
+
+      <!-- ================================================================
+           1 · SPLIT VIEW  —  Human left, XML right, one selection on both
+           ================================================================ -->
+      <section id="split">
+        <h2 class="doc__h2">1 · Split view — cross-highlight</h2>
+        <p class="doc__note">
+          Default layout at <strong>&ge; 1280 px</strong>. Selected field:
+          <span class="doc__inline-code">seller.vatId</span> (BT-31 / FPA 1.2.1.1), selection source
+          <span class="doc__inline-code">"human"</span>. The XML pane resolves the field to the node range
+          <span class="doc__inline-code">/FatturaElettronica/FatturaElettronicaHeader/CedentePrestatore/DatiAnagrafici/IdFiscaleIVA</span>
+          (lines 16–19) and applies all three highlight affordances at once.
+        </p>
+
+        <div class="doc__scroll">
+          <div class="viewer" style="min-width: 1180px;">
+            <div class="viewer__toolbar">
+              <div class="seg" role="tablist" aria-label="Invoice view mode">
+                <button class="seg__btn" type="button" role="tab" aria-selected="false" aria-controls="split-xml">XML</button>
+                <button class="seg__btn" type="button" role="tab" aria-selected="false" aria-controls="split-human">Human</button>
+                <button class="seg__btn" type="button" role="tab" aria-selected="true">Split</button>
+              </div>
+              <span class="chip chip--mono">FatturaPA 1.2.2 &middot; FPR12</span>
+              <span class="chip">Preset: Italian B2B (SDI)</span>
+              <div class="viewer__toolbar-right">
+                <span class="pill pill--ok">&#10003; 0 findings</span>
+                <button class="btn" type="button">Edit XML</button>
+                <button class="btn" type="button">Download .xml</button>
+              </div>
+            </div>
+
+            <div class="viewer__body viewer__body--split">
+              <!-- ---------------- HUMAN VIEW ---------------- -->
+              <div class="viewer__pane" id="split-human" role="tabpanel" aria-label="Human view">
+                <div class="human" style="max-height: 560px;">
+
+                  <section class="card">
+                    <h3 class="card__head">Header</h3>
+                    <div class="card__body">
+                      <div class="card__grid card__grid--2">
+                        <button class="field" type="button" aria-pressed="false" data-field="invoice.number">
+                          <span class="field__label">Invoice number</span>
+                          <span class="field__value field__value--mono">2026/0142</span>
+                          <span class="field__badges">
+                            <span class="badge badge--bt" title="BT-1 Invoice number — EN 16931">BT-1</span>
+                            <span class="badge badge--fpa" title="2.1.1.4 Numero — FatturaPA 1.9.1">2.1.1.4</span>
+                          </span>
+                        </button>
+                        <button class="field" type="button" aria-pressed="false" data-field="invoice.issueDate">
+                          <span class="field__label">Issue date</span>
+                          <span class="field__value field__value--mono">17/02/2026</span>
+                          <span class="field__badges">
+                            <span class="badge badge--bt" title="BT-2 Invoice issue date">BT-2</span>
+                            <span class="badge badge--fpa" title="2.1.1.3 Data">2.1.1.3</span>
+                          </span>
+                        </button>
+                        <button class="field" type="button" aria-pressed="false" data-field="invoice.typeCode">
+                          <span class="field__label">Document type</span>
+                          <span class="field__value"><span class="mono">TD01</span> &mdash; Fattura</span>
+                          <span class="field__badges">
+                            <span class="badge badge--bt" title="BT-3 Invoice type code">BT-3</span>
+                            <span class="badge badge--fpa" title="2.1.1.1 TipoDocumento">2.1.1.1</span>
+                          </span>
+                        </button>
+                        <button class="field" type="button" aria-pressed="false" data-field="invoice.currency">
+                          <span class="field__label">Currency</span>
+                          <span class="field__value field__value--mono">EUR</span>
+                          <span class="field__badges">
+                            <span class="badge badge--bt" title="BT-5 Invoice currency code">BT-5</span>
+                            <span class="badge badge--fpa" title="2.1.1.2 Divisa">2.1.1.2</span>
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section class="card">
+                    <h3 class="card__head">Seller &mdash; Cedente / Prestatore</h3>
+                    <div class="card__body">
+                      <div class="card__grid card__grid--2">
+                        <button class="field" type="button" aria-pressed="false" data-field="seller.name">
+                          <span class="field__label">Name</span>
+                          <span class="field__value">Aurora Componenti S.r.l.</span>
+                          <span class="field__badges">
+                            <span class="badge badge--bt" title="BT-27 Seller name">BT-27</span>
+                            <span class="badge badge--fpa" title="1.2.1.3.1 Denominazione">1.2.1.3.1</span>
+                          </span>
+                        </button>
+
+                        <!-- SELECTED FIELD — drives the XML highlight on the right -->
+                        <button
+                          class="field field--selected"
+                          type="button"
+                          aria-pressed="true"
+                          data-field="seller.vatId"
+                          aria-describedby="tt-bt31"
+                        >
+                          <span class="field__label">VAT identifier</span>
+                          <span class="field__value field__value--mono">IT01234567890</span>
+                          <span class="field__badges">
+                            <span class="badge badge--bt" id="tt-bt31" title="BT-31 Seller VAT identifier — VAT identifier of the seller. EN 16931 · path /Invoice/AccountingSupplierParty/Party/PartyTaxScheme/CompanyID">BT-31</span>
+                            <span class="badge badge--fpa" title="1.2.1.1 IdFiscaleIVA — IdPaese + IdCodice. FatturaPA 1.9.1">1.2.1.1</span>
+                          </span>
+                        </button>
+
+                        <button class="field" type="button" aria-pressed="false" data-field="seller.taxRegime">
+                          <span class="field__label">Tax regime</span>
+                          <span class="field__value"><span class="mono">RF01</span> &mdash; Ordinario</span>
+                          <span class="field__badges">
+                            <span class="badge badge--fpa" title="1.2.1.8 RegimeFiscale — Italian-only, no EN 16931 business term">1.2.1.8</span>
+                          </span>
+                        </button>
+                        <button class="field" type="button" aria-pressed="false" data-field="seller.address">
+                          <span class="field__label">Address</span>
+                          <span class="field__value">Via Torino 42, 20123 Milano (MI), IT</span>
+                          <span class="field__badges">
+                            <span class="badge badge--bt" title="BT-35 … BT-40 Seller postal address">BT-35…40</span>
+                            <span class="badge badge--fpa" title="1.2.2 Sede">1.2.2</span>
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section class="card">
+                    <h3 class="card__head">Buyer &mdash; Cessionario / Committente</h3>
+                    <div class="card__body">
+                      <div class="card__grid card__grid--2">
+                        <button class="field" type="button" aria-pressed="false" data-field="buyer.name">
+                          <span class="field__label">Name</span>
+                          <span class="field__value">Belli Distribuzione S.p.A.</span>
+                          <span class="field__badges">
+                            <span class="badge badge--bt" title="BT-44 Buyer name">BT-44</span>
+                            <span class="badge badge--fpa" title="1.4.1.3.1 Denominazione">1.4.1.3.1</span>
+                          </span>
+                        </button>
+                        <button class="field" type="button" aria-pressed="false" data-field="buyer.vatId">
+                          <span class="field__label">VAT identifier</span>
+                          <span class="field__value field__value--mono">IT09876543211</span>
+                          <span class="field__badges">
+                            <span class="badge badge--bt" title="BT-48 Buyer VAT identifier">BT-48</span>
+                            <span class="badge badge--fpa" title="1.4.1.1 IdFiscaleIVA">1.4.1.1</span>
+                          </span>
+                        </button>
+                        <button class="field" type="button" aria-pressed="false" data-field="buyer.address">
+                          <span class="field__label">Address</span>
+                          <span class="field__value">Via Roma 8, 00184 Roma (RM), IT</span>
+                          <span class="field__badges">
+                            <span class="badge badge--bt" title="BT-50 … BT-55 Buyer postal address">BT-50…55</span>
+                            <span class="badge badge--fpa" title="1.4.2 Sede">1.4.2</span>
+                          </span>
+                        </button>
+                        <button class="field" type="button" aria-pressed="false" data-field="buyer.channel">
+                          <span class="field__label">Delivery channel</span>
+                          <span class="field__value"><span class="mono">SDI</span> &mdash; Sistema di Interscambio</span>
+                          <span class="field__badges">
+                            <span class="badge badge--fpa" title="UAPI recipients[].invoicing.type — not an XML element">UAPI</span>
+                          </span>
+                        </button>
+                        <button class="field" type="button" aria-pressed="false" data-field="buyer.destinationCode">
+                          <span class="field__label">Codice Destinatario</span>
+                          <span class="field__value field__value--mono">KRRH6B9</span>
+                          <span class="field__badges">
+                            <span class="badge badge--bt" title="BT-49 Buyer electronic address">BT-49</span>
+                            <span class="badge badge--fpa" title="1.1.4 CodiceDestinatario — 7 characters for SDI, 6 for PA">1.1.4</span>
+                          </span>
+                        </button>
+                        <button class="field" type="button" aria-pressed="false" data-field="buyer.pec">
+                          <span class="field__label">PEC destinatario</span>
+                          <span class="field__value field__value--mono field__value--empty">&mdash; not set (only required when the code is 0000000)</span>
+                          <span class="field__badges">
+                            <span class="badge badge--fpa" title="1.1.6 PECDestinatario">1.1.6</span>
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section class="card">
+                    <h3 class="card__head">Payment</h3>
+                    <div class="card__body">
+                      <div class="card__grid card__grid--2">
+                        <button class="field" type="button" aria-pressed="false" data-field="payment.terms">
+                          <span class="field__label">Payment terms</span>
+                          <span class="field__value"><span class="mono">TP02</span> &mdash; Pagamento completo</span>
+                          <span class="field__badges">
+                            <span class="badge badge--fpa" title="2.4.1 CondizioniPagamento">2.4.1</span>
+                          </span>
+                        </button>
+                        <button class="field" type="button" aria-pressed="false" data-field="payment.means">
+                          <span class="field__label">Payment means</span>
+                          <span class="field__value"><span class="mono">MP05</span> &mdash; Bonifico</span>
+                          <span class="field__badges">
+                            <span class="badge badge--bt" title="BT-81 Payment means type code">BT-81</span>
+                            <span class="badge badge--fpa" title="2.4.2.2 ModalitaPagamento">2.4.2.2</span>
+                          </span>
+                        </button>
+                        <button class="field" type="button" aria-pressed="false" data-field="payment.dueDate">
+                          <span class="field__label">Due date</span>
+                          <span class="field__value field__value--mono">19/03/2026</span>
+                          <span class="field__badges">
+                            <span class="badge badge--bt" title="BT-9 Payment due date">BT-9</span>
+                            <span class="badge badge--fpa" title="2.4.2.5 DataScadenzaPagamento">2.4.2.5</span>
+                          </span>
+                        </button>
+                        <button class="field" type="button" aria-pressed="false" data-field="payment.iban">
+                          <span class="field__label">IBAN</span>
+                          <span class="field__value field__value--mono trunc-mid" title="IT60X0542811101000000123456">
+                            <span>IT60X05428111010000</span><span>00123456</span>
+                          </span>
+                          <span class="field__badges">
+                            <span class="badge badge--bt" title="BT-84 Payment account identifier">BT-84</span>
+                            <span class="badge badge--fpa" title="2.4.2.13 IBAN">2.4.2.13</span>
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section class="card">
+                    <h3 class="card__head">Lines &mdash; DettaglioLinee <span class="badge badge--fpa" title="2.2.1 DettaglioLinee">2.2.1</span></h3>
+                    <table class="tbl">
+                      <thead>
+                        <tr>
+                          <th scope="col">#</th>
+                          <th scope="col">Description <span class="badge badge--bt">BT-153</span></th>
+                          <th scope="col" class="num">Qty <span class="badge badge--bt">BT-129</span></th>
+                          <th scope="col">UoM</th>
+                          <th scope="col" class="num">Unit price <span class="badge badge--bt">BT-146</span></th>
+                          <th scope="col" class="num">Net <span class="badge badge--bt">BT-131</span></th>
+                          <th scope="col" class="num">VAT <span class="badge badge--bt">BT-152</span></th>
+                          <th scope="col">Natura</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td class="num">1</td>
+                          <td>Modulo sensore SX-200</td>
+                          <td class="num">12,00</td>
+                          <td class="mono">PZ</td>
+                          <td class="num">148,00</td>
+                          <td class="num">1.776,00</td>
+                          <td class="num">22,00&nbsp;%</td>
+                          <td>&mdash;</td>
+                        </tr>
+                        <tr>
+                          <td class="num">2</td>
+                          <td>Manuale tecnico stampato</td>
+                          <td class="num">40,00</td>
+                          <td class="mono">PZ</td>
+                          <td class="num">9,50</td>
+                          <td class="num">380,00</td>
+                          <td class="num">10,00&nbsp;%</td>
+                          <td>&mdash;</td>
+                        </tr>
+                        <tr>
+                          <td class="num">3</td>
+                          <td>
+                            Fornitura in sospensione d&rsquo;imposta
+                            <span class="finding__loc">AltriDatiGestionali INTENTO 2026-4471 &middot; 08/01/2026</span>
+                          </td>
+                          <td class="num">1,00</td>
+                          <td class="mono">&mdash;</td>
+                          <td class="num">250,00</td>
+                          <td class="num">250,00</td>
+                          <td class="num">0,00&nbsp;%</td>
+                          <td><span class="mono">N3.5</span></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </section>
+
+                  <section class="card">
+                    <h3 class="card__head">VAT breakdown &mdash; DatiRiepilogo <span class="badge badge--fpa" title="2.2.2 DatiRiepilogo">2.2.2</span></h3>
+                    <table class="tbl">
+                      <thead>
+                        <tr>
+                          <th scope="col" class="num">Rate</th>
+                          <th scope="col">Natura <span class="badge badge--bt">BT-121</span></th>
+                          <th scope="col" class="num">Taxable <span class="badge badge--bt">BT-116</span></th>
+                          <th scope="col" class="num">VAT <span class="badge badge--bt">BT-117</span></th>
+                          <th scope="col">Legal reference <span class="badge badge--bt">BT-120</span></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td class="num">22,00&nbsp;%</td><td>&mdash;</td><td class="num">1.776,00</td><td class="num">390,72</td><td>&mdash;</td></tr>
+                        <tr><td class="num">10,00&nbsp;%</td><td>&mdash;</td><td class="num">380,00</td><td class="num">38,00</td><td>&mdash;</td></tr>
+                        <tr>
+                          <td class="num">0,00&nbsp;%</td>
+                          <td><span class="mono">N3.5</span></td>
+                          <td class="num">250,00</td>
+                          <td class="num">0,00</td>
+                          <td>Art.&nbsp;8, c.&nbsp;1, lett.&nbsp;c) DPR 633/72</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </section>
+
+                  <section class="card">
+                    <h3 class="card__head">Totals</h3>
+                    <table class="tbl totals">
+                      <tbody>
+                        <tr>
+                          <td>Sum of line net amounts <span class="badge badge--bt">BT-106</span></td>
+                          <td class="num">2.406,00&nbsp;&euro;</td>
+                        </tr>
+                        <tr>
+                          <td>Total VAT amount <span class="badge badge--bt">BT-110</span></td>
+                          <td class="num">428,72&nbsp;&euro;</td>
+                        </tr>
+                        <tr class="totals__grand">
+                          <td>Invoice total with VAT <span class="badge badge--bt">BT-112</span> <span class="badge badge--fpa" title="2.1.1.9 ImportoTotaleDocumento">2.1.1.9</span></td>
+                          <td class="num">2.834,72&nbsp;&euro;</td>
+                        </tr>
+                        <tr>
+                          <td>Amount due for payment <span class="badge badge--bt">BT-115</span></td>
+                          <td class="num">2.834,72&nbsp;&euro;</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </section>
+
+                  <p class="disclaimer">
+                    Visualisation for review &mdash; the XML is the legally valid invoice.
+                  </p>
+                </div>
+              </div>
+
+              <div class="viewer__divider" role="separator" aria-orientation="vertical"></div>
+
+              <!-- ---------------- XML VIEW ---------------- -->
+              <div class="viewer__pane" id="split-xml" role="tabpanel" aria-label="XML view">
+                <div class="xmlv xmlv--h560" tabindex="0" aria-label="FatturaPA XML, read-only">
+                  <ol class="xmlv__rows">
+<li class="xmlv__row"><code class="xmlv__code"><span class="xmlv__decl">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code"><span class="xmlv__tag">&lt;p:FatturaElettronica</span> <span class="xmlv__attr">versione=</span>"FPR12"</code></li>
+<li class="xmlv__row"><code class="xmlv__code">    <span class="xmlv__attr">xmlns:p=</span>"http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2"<span class="xmlv__tag">&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">  <span class="xmlv__tag">&lt;FatturaElettronicaHeader&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">    <span class="xmlv__tag">&lt;DatiTrasmissione&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;IdTrasmittente&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;IdPaese&gt;</span>IT<span class="xmlv__tag">&lt;/IdPaese&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;IdCodice&gt;</span>01234567890<span class="xmlv__tag">&lt;/IdCodice&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;/IdTrasmittente&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;ProgressivoInvio&gt;</span>00001<span class="xmlv__tag">&lt;/ProgressivoInvio&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;FormatoTrasmissione&gt;</span>FPR12<span class="xmlv__tag">&lt;/FormatoTrasmissione&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;CodiceDestinatario&gt;</span>KRRH6B9<span class="xmlv__tag">&lt;/CodiceDestinatario&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">    <span class="xmlv__tag">&lt;/DatiTrasmissione&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">    <span class="xmlv__tag">&lt;CedentePrestatore&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;DatiAnagrafici&gt;</span></code></li>
+<li class="xmlv__row xmlv__row--sel"><code class="xmlv__code">        <span class="xmlv__tag">&lt;IdFiscaleIVA&gt;</span></code></li>
+<li class="xmlv__row xmlv__row--sel"><code class="xmlv__code">          <span class="xmlv__tag">&lt;IdPaese&gt;</span>IT<span class="xmlv__tag">&lt;/IdPaese&gt;</span></code></li>
+<li class="xmlv__row xmlv__row--sel"><code class="xmlv__code">          <span class="xmlv__tag">&lt;IdCodice&gt;</span>01234567890<span class="xmlv__tag">&lt;/IdCodice&gt;</span></code></li>
+<li class="xmlv__row xmlv__row--sel"><code class="xmlv__code">        <span class="xmlv__tag">&lt;/IdFiscaleIVA&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Anagrafica&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">          <span class="xmlv__tag">&lt;Denominazione&gt;</span>Aurora Componenti S.r.l.<span class="xmlv__tag">&lt;/Denominazione&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;/Anagrafica&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;RegimeFiscale&gt;</span>RF01<span class="xmlv__tag">&lt;/RegimeFiscale&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;/DatiAnagrafici&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;Sede&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Indirizzo&gt;</span>Via Torino 42<span class="xmlv__tag">&lt;/Indirizzo&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;CAP&gt;</span>20123<span class="xmlv__tag">&lt;/CAP&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Comune&gt;</span>Milano<span class="xmlv__tag">&lt;/Comune&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Provincia&gt;</span>MI<span class="xmlv__tag">&lt;/Provincia&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Nazione&gt;</span>IT<span class="xmlv__tag">&lt;/Nazione&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;/Sede&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">    <span class="xmlv__tag">&lt;/CedentePrestatore&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">    <span class="xmlv__tag">&lt;CessionarioCommittente&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;DatiAnagrafici&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;IdFiscaleIVA&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">          <span class="xmlv__tag">&lt;IdPaese&gt;</span>IT<span class="xmlv__tag">&lt;/IdPaese&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">          <span class="xmlv__tag">&lt;IdCodice&gt;</span>09876543211<span class="xmlv__tag">&lt;/IdCodice&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;/IdFiscaleIVA&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Anagrafica&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">          <span class="xmlv__tag">&lt;Denominazione&gt;</span>Belli Distribuzione S.p.A.<span class="xmlv__tag">&lt;/Denominazione&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;/Anagrafica&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;/DatiAnagrafici&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;Sede&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Indirizzo&gt;</span>Via Roma 8<span class="xmlv__tag">&lt;/Indirizzo&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;CAP&gt;</span>00184<span class="xmlv__tag">&lt;/CAP&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Comune&gt;</span>Roma<span class="xmlv__tag">&lt;/Comune&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Provincia&gt;</span>RM<span class="xmlv__tag">&lt;/Provincia&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Nazione&gt;</span>IT<span class="xmlv__tag">&lt;/Nazione&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;/Sede&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">    <span class="xmlv__tag">&lt;/CessionarioCommittente&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">  <span class="xmlv__tag">&lt;/FatturaElettronicaHeader&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">  <span class="xmlv__tag">&lt;FatturaElettronicaBody&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">    <span class="xmlv__tag">&lt;DatiGenerali&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;DatiGeneraliDocumento&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;TipoDocumento&gt;</span>TD01<span class="xmlv__tag">&lt;/TipoDocumento&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Divisa&gt;</span>EUR<span class="xmlv__tag">&lt;/Divisa&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Data&gt;</span>2026-02-17<span class="xmlv__tag">&lt;/Data&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Numero&gt;</span>2026/0142<span class="xmlv__tag">&lt;/Numero&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;ImportoTotaleDocumento&gt;</span>2834.72<span class="xmlv__tag">&lt;/ImportoTotaleDocumento&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;/DatiGeneraliDocumento&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">    <span class="xmlv__tag">&lt;/DatiGenerali&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">    <span class="xmlv__tag">&lt;DatiBeniServizi&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;DettaglioLinee&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;NumeroLinea&gt;</span>1<span class="xmlv__tag">&lt;/NumeroLinea&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Descrizione&gt;</span>Modulo sensore SX-200<span class="xmlv__tag">&lt;/Descrizione&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Quantita&gt;</span>12.00<span class="xmlv__tag">&lt;/Quantita&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;UnitaMisura&gt;</span>PZ<span class="xmlv__tag">&lt;/UnitaMisura&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;PrezzoUnitario&gt;</span>148.00<span class="xmlv__tag">&lt;/PrezzoUnitario&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;PrezzoTotale&gt;</span>1776.00<span class="xmlv__tag">&lt;/PrezzoTotale&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;AliquotaIVA&gt;</span>22.00<span class="xmlv__tag">&lt;/AliquotaIVA&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;/DettaglioLinee&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;DettaglioLinee&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;NumeroLinea&gt;</span>2<span class="xmlv__tag">&lt;/NumeroLinea&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Descrizione&gt;</span>Manuale tecnico stampato<span class="xmlv__tag">&lt;/Descrizione&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Quantita&gt;</span>40.00<span class="xmlv__tag">&lt;/Quantita&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;UnitaMisura&gt;</span>PZ<span class="xmlv__tag">&lt;/UnitaMisura&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;PrezzoUnitario&gt;</span>9.50<span class="xmlv__tag">&lt;/PrezzoUnitario&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;PrezzoTotale&gt;</span>380.00<span class="xmlv__tag">&lt;/PrezzoTotale&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;AliquotaIVA&gt;</span>10.00<span class="xmlv__tag">&lt;/AliquotaIVA&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;/DettaglioLinee&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;DettaglioLinee&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;NumeroLinea&gt;</span>3<span class="xmlv__tag">&lt;/NumeroLinea&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Descrizione&gt;</span>Fornitura in sospensione d'imposta<span class="xmlv__tag">&lt;/Descrizione&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Quantita&gt;</span>1.00<span class="xmlv__tag">&lt;/Quantita&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;PrezzoUnitario&gt;</span>250.00<span class="xmlv__tag">&lt;/PrezzoUnitario&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;PrezzoTotale&gt;</span>250.00<span class="xmlv__tag">&lt;/PrezzoTotale&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;AliquotaIVA&gt;</span>0.00<span class="xmlv__tag">&lt;/AliquotaIVA&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Natura&gt;</span>N3.5<span class="xmlv__tag">&lt;/Natura&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;AltriDatiGestionali&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">          <span class="xmlv__tag">&lt;TipoDato&gt;</span>INTENTO<span class="xmlv__tag">&lt;/TipoDato&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">          <span class="xmlv__tag">&lt;RiferimentoTesto&gt;</span>2026-4471<span class="xmlv__tag">&lt;/RiferimentoTesto&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">          <span class="xmlv__tag">&lt;RiferimentoData&gt;</span>2026-01-08<span class="xmlv__tag">&lt;/RiferimentoData&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;/AltriDatiGestionali&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;/DettaglioLinee&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;DatiRiepilogo&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;AliquotaIVA&gt;</span>22.00<span class="xmlv__tag">&lt;/AliquotaIVA&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;ImponibileImporto&gt;</span>1776.00<span class="xmlv__tag">&lt;/ImponibileImporto&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Imposta&gt;</span>390.72<span class="xmlv__tag">&lt;/Imposta&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;EsigibilitaIVA&gt;</span>I<span class="xmlv__tag">&lt;/EsigibilitaIVA&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;/DatiRiepilogo&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;DatiRiepilogo&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;AliquotaIVA&gt;</span>10.00<span class="xmlv__tag">&lt;/AliquotaIVA&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;ImponibileImporto&gt;</span>380.00<span class="xmlv__tag">&lt;/ImponibileImporto&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Imposta&gt;</span>38.00<span class="xmlv__tag">&lt;/Imposta&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;EsigibilitaIVA&gt;</span>I<span class="xmlv__tag">&lt;/EsigibilitaIVA&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;/DatiRiepilogo&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;DatiRiepilogo&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;AliquotaIVA&gt;</span>0.00<span class="xmlv__tag">&lt;/AliquotaIVA&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Natura&gt;</span>N3.5<span class="xmlv__tag">&lt;/Natura&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;ImponibileImporto&gt;</span>250.00<span class="xmlv__tag">&lt;/ImponibileImporto&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Imposta&gt;</span>0.00<span class="xmlv__tag">&lt;/Imposta&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;EsigibilitaIVA&gt;</span>I<span class="xmlv__tag">&lt;/EsigibilitaIVA&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;RiferimentoNormativo&gt;</span>Art. 8, c.1, lett. c) DPR 633/72 - dich. intento 2026-4471<span class="xmlv__tag">&lt;/RiferimentoNormativo&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;/DatiRiepilogo&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">    <span class="xmlv__tag">&lt;/DatiBeniServizi&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">    <span class="xmlv__tag">&lt;DatiPagamento&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;CondizioniPagamento&gt;</span>TP02<span class="xmlv__tag">&lt;/CondizioniPagamento&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;DettaglioPagamento&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;ModalitaPagamento&gt;</span>MP05<span class="xmlv__tag">&lt;/ModalitaPagamento&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;DataScadenzaPagamento&gt;</span>2026-03-19<span class="xmlv__tag">&lt;/DataScadenzaPagamento&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;ImportoPagamento&gt;</span>2834.72<span class="xmlv__tag">&lt;/ImportoPagamento&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;IBAN&gt;</span>IT60X0542811101000000123456<span class="xmlv__tag">&lt;/IBAN&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;/DettaglioPagamento&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">    <span class="xmlv__tag">&lt;/DatiPagamento&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">  <span class="xmlv__tag">&lt;/FatturaElettronicaBody&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code"><span class="xmlv__tag">&lt;/p:FatturaElettronica&gt;</span></code></li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="legend" aria-label="Cross-highlight legend">
+          <span class="legend__item"><span class="legend__swatch legend__swatch--field"></span> Human field: 2&nbsp;px <code class="doc__inline-code">--fsk-brand</code> outline + <code class="doc__inline-code">--fsk-select-bg</code></span>
+          <span class="legend__item"><span class="legend__swatch legend__swatch--range"></span> XML range: tint + 2&nbsp;px underline on the glyphs</span>
+          <span class="legend__item"><span class="legend__swatch legend__swatch--gutter"></span> Gutter: 2&nbsp;px rail + <span class="mono">&#9656;</span> marker</span>
+          <span class="legend__item"><span class="legend__swatch legend__swatch--sev"></span> Finding: severity rail + wavy underline</span>
+        </div>
+        <p class="doc__caption">
+          Split &ge; 1280&nbsp;px &middot; below 1280&nbsp;px the two panes stack (Human first) &middot; the toolbar
+          keeps the segmented control at all widths.
+        </p>
+
+        <h3 class="doc__h2" style="margin-top: 26px;">1b &middot; Every row and field state, side by side</h3>
+        <p class="doc__note">
+          The complete set of modifier classes an engineer has to implement. Row states are mutually
+          exclusive; when a row carries both a selection and a finding, the finding wins.
+        </p>
+        <div class="doc__grid2">
+          <div class="viewer">
+            <div class="viewer__toolbar"><span class="findings__title">XML row states</span></div>
+            <div class="xmlv" aria-label="XML row state reference">
+              <ol class="xmlv__rows">
+<li class="xmlv__row"><code class="xmlv__code">  .xmlv__row                &mdash; default</code></li>
+<li class="xmlv__row xmlv__row--sel"><code class="xmlv__code">  .xmlv__row--sel           &mdash; selected range</code></li>
+<li class="xmlv__row xmlv__row--fatal"><code class="xmlv__code">  .xmlv__row--fatal         &mdash; fatal finding</code></li>
+<li class="xmlv__row xmlv__row--error"><code class="xmlv__code">  .xmlv__row--error         &mdash; error finding</code></li>
+<li class="xmlv__row xmlv__row--warning"><code class="xmlv__code">  .xmlv__row--warning       &mdash; warning finding</code></li>
+<li class="xmlv__row xmlv__row--info"><code class="xmlv__code">  .xmlv__row--info          &mdash; info finding</code></li>
+<li class="xmlv__row xmlv__row--mark-error"><code class="xmlv__code">  .xmlv__row--mark-error    &mdash; gutter only, off-screen finding</code></li>
+<li class="xmlv__row xmlv__row--mark-warning"><code class="xmlv__code">  .xmlv__row--mark-warning  &mdash; gutter only</code></li>
+<li class="xmlv__row xmlv__row--add"><code class="xmlv__code">  .xmlv__row--add           &mdash; diff: added</code></li>
+<li class="xmlv__row xmlv__row--del"><code class="xmlv__code">  .xmlv__row--del           &mdash; diff: removed</code></li>
+<li class="xmlv__row xmlv__row--chg"><code class="xmlv__code">  .xmlv__row--chg           &mdash; diff: changed</code></li>
+<li class="xmlv__row xmlv__row--gap"><code class="xmlv__code">  .xmlv__row--gap           &mdash; collapsed region, no number</code></li>
+              </ol>
+            </div>
+          </div>
+
+          <div class="viewer">
+            <div class="viewer__toolbar"><span class="findings__title">Human field states</span></div>
+            <div class="card__body" style="background: var(--fsk-surface);">
+              <div class="card__grid">
+                <button class="field" type="button" aria-pressed="false">
+                  <span class="field__label">.field &mdash; default (hover for the raised background)</span>
+                  <span class="field__value field__value--mono">IT01234567890</span>
+                  <span class="field__badges"><span class="badge badge--bt">BT-31</span></span>
+                </button>
+                <button class="field field--selected" type="button" aria-pressed="true">
+                  <span class="field__label">.field--selected &mdash; brand outline + tint</span>
+                  <span class="field__value field__value--mono">IT01234567890</span>
+                  <span class="field__badges"><span class="badge badge--bt">BT-31</span><span class="badge badge--fpa">1.2.1.1</span></span>
+                </button>
+                <button class="field field--flagged" type="button" aria-pressed="false" aria-describedby="f-2">
+                  <span class="field__label">.field--flagged &mdash; a finding points here (severity rail)</span>
+                  <span class="field__value field__value--mono">0,00&nbsp;%</span>
+                  <span class="field__badges"><span class="badge badge--bt">BT-121</span><span class="badge badge--fpa">2.2.2.2</span></span>
+                </button>
+                <button class="field field--selected field--flagged" type="button" aria-pressed="true" aria-describedby="f-2">
+                  <span class="field__label">both &mdash; selected <em>and</em> flagged</span>
+                  <span class="field__value field__value--empty">&mdash; Natura missing</span>
+                  <span class="field__badges"><span class="badge badge--bt">BT-121</span><span class="badge badge--fpa">2.2.2.2</span></span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================
+           2 · XML-ONLY  &  HUMAN-ONLY
+           ================================================================ -->
+      <section id="modes">
+        <h2 class="doc__h2">2 · XML-only and Human-only</h2>
+        <p class="doc__note">
+          The segmented control is the only mode switch and is present in all three states. Mode is
+          persisted per session; below 1280&nbsp;px <span class="doc__inline-code">Split</span> stays selectable
+          but renders stacked. Selection survives a mode change &mdash; here the selection came from the
+          <strong>XML side</strong> (<span class="doc__inline-code">source: "xml"</span>) and the Human view would
+          scroll its VAT-breakdown row into view when Split or Human is chosen.
+        </p>
+
+        <div class="doc__grid2">
+          <!-- ---- XML only ---- -->
+          <div class="viewer">
+            <div class="viewer__toolbar">
+              <div class="seg" role="tablist" aria-label="Invoice view mode">
+                <button class="seg__btn" type="button" role="tab" aria-selected="true">XML</button>
+                <button class="seg__btn" type="button" role="tab" aria-selected="false">Human</button>
+                <button class="seg__btn" type="button" role="tab" aria-selected="false">Split</button>
+              </div>
+              <span class="chip chip--mono">126 lines &middot; 6.1 KB</span>
+              <div class="viewer__toolbar-right">
+                <label class="toggle"><input type="checkbox" checked /> Edit XML</label>
+                <button class="btn" type="button">Format</button>
+                <button class="btn" type="button">Copy</button>
+              </div>
+            </div>
+            <div class="viewer__body viewer__body--single">
+              <div class="viewer__pane">
+                <div class="xmlv xmlv--h360" tabindex="0" aria-label="FatturaPA XML, editable">
+                  <ol class="xmlv__rows" style="--xmlv-start: 94;">
+<li class="xmlv__row xmlv__row--sel"><code class="xmlv__code">      <span class="xmlv__tag">&lt;DatiRiepilogo&gt;</span></code></li>
+<li class="xmlv__row xmlv__row--sel"><code class="xmlv__code">        <span class="xmlv__tag">&lt;AliquotaIVA&gt;</span>22.00<span class="xmlv__tag">&lt;/AliquotaIVA&gt;</span></code></li>
+<li class="xmlv__row xmlv__row--sel"><code class="xmlv__code">        <span class="xmlv__tag">&lt;ImponibileImporto&gt;</span>1776.00<span class="xmlv__tag">&lt;/ImponibileImporto&gt;</span></code></li>
+<li class="xmlv__row xmlv__row--sel"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Imposta&gt;</span>390.72<span class="xmlv__tag">&lt;/Imposta&gt;</span></code></li>
+<li class="xmlv__row xmlv__row--sel"><code class="xmlv__code">        <span class="xmlv__tag">&lt;EsigibilitaIVA&gt;</span>I<span class="xmlv__tag">&lt;/EsigibilitaIVA&gt;</span></code></li>
+<li class="xmlv__row xmlv__row--sel"><code class="xmlv__code">      <span class="xmlv__tag">&lt;/DatiRiepilogo&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;DatiRiepilogo&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;AliquotaIVA&gt;</span>10.00<span class="xmlv__tag">&lt;/AliquotaIVA&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;ImponibileImporto&gt;</span>380.00<span class="xmlv__tag">&lt;/ImponibileImporto&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Imposta&gt;</span>38.00<span class="xmlv__tag">&lt;/Imposta&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;EsigibilitaIVA&gt;</span>I<span class="xmlv__tag">&lt;/EsigibilitaIVA&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;/DatiRiepilogo&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;DatiRiepilogo&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;AliquotaIVA&gt;</span>0.00<span class="xmlv__tag">&lt;/AliquotaIVA&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Natura&gt;</span>N3.5<span class="xmlv__tag">&lt;/Natura&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;ImponibileImporto&gt;</span>250.00<span class="xmlv__tag">&lt;/ImponibileImporto&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Imposta&gt;</span>0.00<span class="xmlv__tag">&lt;/Imposta&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;EsigibilitaIVA&gt;</span>I<span class="xmlv__tag">&lt;/EsigibilitaIVA&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;RiferimentoNormativo&gt;</span>Art. 8, c.1, lett. c) DPR 633/72 - dich. intento 2026-4471<span class="xmlv__tag">&lt;/RiferimentoNormativo&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;/DatiRiepilogo&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">    <span class="xmlv__tag">&lt;/DatiBeniServizi&gt;</span></code></li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ---- Human only ---- -->
+          <div class="viewer">
+            <div class="viewer__toolbar">
+              <div class="seg" role="tablist" aria-label="Invoice view mode">
+                <button class="seg__btn" type="button" role="tab" aria-selected="false">XML</button>
+                <button class="seg__btn" type="button" role="tab" aria-selected="true">Human</button>
+                <button class="seg__btn" type="button" role="tab" aria-selected="false">Split</button>
+              </div>
+              <span class="chip">Seller view</span>
+              <div class="viewer__toolbar-right">
+                <label class="toggle"><input type="checkbox" checked /> Show BT / FPA badges</label>
+              </div>
+            </div>
+            <div class="viewer__body viewer__body--single">
+              <div class="viewer__pane">
+                <div class="human" style="max-height: 360px;">
+                  <section class="card">
+                    <h3 class="card__head">Header</h3>
+                    <div class="card__body">
+                      <div class="card__grid card__grid--2">
+                        <button class="field" type="button" aria-pressed="false">
+                          <span class="field__label">Invoice number</span>
+                          <span class="field__value field__value--mono">2026/0142</span>
+                          <span class="field__badges"><span class="badge badge--bt">BT-1</span><span class="badge badge--fpa">2.1.1.4</span></span>
+                        </button>
+                        <button class="field" type="button" aria-pressed="false">
+                          <span class="field__label">Issue date</span>
+                          <span class="field__value field__value--mono">17/02/2026</span>
+                          <span class="field__badges"><span class="badge badge--bt">BT-2</span><span class="badge badge--fpa">2.1.1.3</span></span>
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+                  <section class="card">
+                    <h3 class="card__head">VAT breakdown</h3>
+                    <table class="tbl">
+                      <thead>
+                        <tr>
+                          <th scope="col" class="num">Rate</th><th scope="col">Natura</th>
+                          <th scope="col" class="num">Taxable</th><th scope="col" class="num">VAT</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr class="tbl__row--sel"><td class="num">22,00&nbsp;%</td><td>&mdash;</td><td class="num">1.776,00</td><td class="num">390,72</td></tr>
+                        <tr><td class="num">10,00&nbsp;%</td><td>&mdash;</td><td class="num">380,00</td><td class="num">38,00</td></tr>
+                        <tr><td class="num">0,00&nbsp;%</td><td><span class="mono">N3.5</span></td><td class="num">250,00</td><td class="num">0,00</td></tr>
+                      </tbody>
+                    </table>
+                  </section>
+                  <section class="card">
+                    <h3 class="card__head">Totals</h3>
+                    <table class="tbl totals">
+                      <tbody>
+                        <tr><td>Sum of line net amounts <span class="badge badge--bt">BT-106</span></td><td class="num">2.406,00&nbsp;&euro;</td></tr>
+                        <tr><td>Total VAT amount <span class="badge badge--bt">BT-110</span></td><td class="num">428,72&nbsp;&euro;</td></tr>
+                        <tr class="totals__grand"><td>Invoice total with VAT <span class="badge badge--bt">BT-112</span></td><td class="num">2.834,72&nbsp;&euro;</td></tr>
+                      </tbody>
+                    </table>
+                  </section>
+                  <p class="disclaimer">Visualisation for review &mdash; the XML is the legally valid invoice.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="doc__caption">
+          Human-only keeps the disclaimer; XML-only does not need it (it <em>is</em> the legal instance).
+        </p>
+      </section>
+
+      <!-- ================================================================
+           3 · FINDINGS PANEL
+           ================================================================ -->
+      <section id="findings">
+        <h2 class="doc__h2">3 · Findings panel</h2>
+        <p class="doc__note">
+          Preset <strong>&ldquo;Intentionally broken&rdquo;</strong>, so all four severities are present at once.
+          The list is a single-select <span class="doc__inline-code">listbox</span> with a roving tabindex:
+          &uarr;/&darr; move the active option <em>and</em> the selection, which republishes
+          <span class="doc__inline-code">{path, field, source: "finding"}</span> to both panes. The selected
+          finding &mdash; <span class="doc__inline-code">00401</span> &mdash; drives the wavy error underline in the
+          excerpt on the right; the other findings only leave gutter markers.
+        </p>
+
+        <div class="doc__grid2">
+          <div class="viewer">
+            <div class="findings findings--drawer">
+              <div class="findings__head">
+                <h3 class="findings__title">Findings</h3>
+                <span class="chip chip--mono">5</span>
+                <div class="findings__filters">
+                  <button class="fchip" type="button" aria-pressed="true">Fatal <span class="fchip__n">1</span></button>
+                  <button class="fchip" type="button" aria-pressed="true">Error <span class="fchip__n">2</span></button>
+                  <button class="fchip" type="button" aria-pressed="true">Warning <span class="fchip__n">1</span></button>
+                  <button class="fchip" type="button" aria-pressed="false">Info <span class="fchip__n">1</span></button>
+                </div>
+              </div>
+
+              <div class="stages" aria-label="Validation stages">
+                <span class="stage stage--pass"><span class="stage__dot"></span> Model rules</span>
+                <span class="stage stage--pass"><span class="stage__dot"></span> Well-formed</span>
+                <span class="stage stage--fail"><span class="stage__dot"></span> XSD</span>
+                <span class="stage stage--fail"><span class="stage__dot"></span> SDI rules</span>
+                <span class="stage stage--skip"><span class="stage__dot"></span> Schematron &mdash; UBL only</span>
+                <span class="stage stage--skip"><span class="stage__dot"></span> fiskaly &mdash; not sent</span>
+              </div>
+
+              <ul class="findings__list" role="listbox" aria-label="Validation findings" aria-activedescendant="f-2" style="max-height: 340px;">
+                <li>
+                  <button class="finding sev--fatal" type="button" role="option" id="f-1" aria-selected="false" tabindex="-1">
+                    <span class="finding__mark" aria-hidden="true">&#9632;</span>
+                    <span class="finding__top">
+                      <span class="finding__sev">Fatal</span>
+                      <span class="finding__rule">cvc-complex-type.2.4.b</span>
+                      <span class="badge badge--bt" title="BT-55 Buyer country code">BT-55</span>
+                      <span class="badge badge--fpa" title="1.4.2.5 Nazione">1.4.2.5</span>
+                      <span class="finding__src">xsd</span>
+                    </span>
+                    <span class="finding__msg">Element <span class="mono">Sede</span> is incomplete: required child <span class="mono">Nazione</span> is missing.</span>
+                    <span class="finding__loc">&rarr; /FatturaElettronicaHeader/CessionarioCommittente/Sede &middot; line 49</span>
+                  </button>
+                </li>
+                <li>
+                  <button class="finding sev--error" type="button" role="option" id="f-2" aria-selected="true" tabindex="0">
+                    <span class="finding__mark" aria-hidden="true">&#9679;</span>
+                    <span class="finding__top">
+                      <span class="finding__sev">Error</span>
+                      <span class="finding__rule">00401</span>
+                      <span class="badge badge--bt" title="BT-121 VAT exemption reason code">BT-121</span>
+                      <span class="badge badge--fpa" title="2.2.2.2 Natura">2.2.2.2</span>
+                      <span class="finding__src">sdi</span>
+                    </span>
+                    <span class="finding__msg">Natura non presente a fronte di <span class="mono">AliquotaIVA</span> pari a zero (riepilogo&nbsp;3).</span>
+                    <span class="finding__loc">&rarr; /FatturaElettronicaBody/DatiBeniServizi/DatiRiepilogo[3] &middot; line 108</span>
+                  </button>
+                </li>
+                <li>
+                  <button class="finding sev--error" type="button" role="option" id="f-3" aria-selected="false" tabindex="-1">
+                    <span class="finding__mark" aria-hidden="true">&#9679;</span>
+                    <span class="finding__top">
+                      <span class="finding__sev">Error</span>
+                      <span class="finding__rule">00422</span>
+                      <span class="badge badge--bt" title="BT-112 Invoice total amount with VAT">BT-112</span>
+                      <span class="badge badge--fpa" title="2.1.1.9 ImportoTotaleDocumento">2.1.1.9</span>
+                      <span class="finding__src">sdi</span>
+                    </span>
+                    <span class="finding__msg"><span class="mono">ImportoTotaleDocumento</span> 2.900,00 &ne; &Sigma; imponibili + imposte 2.834,72 (&Delta; 65,28).</span>
+                    <span class="finding__loc">&rarr; /FatturaElettronicaBody/DatiGenerali/DatiGeneraliDocumento/ImportoTotaleDocumento &middot; line 59</span>
+                  </button>
+                </li>
+                <li>
+                  <button class="finding sev--warning" type="button" role="option" id="f-4" aria-selected="false" tabindex="-1">
+                    <span class="finding__mark" aria-hidden="true">&#9650;</span>
+                    <span class="finding__top">
+                      <span class="finding__sev">Warning</span>
+                      <span class="finding__rule">MODEL-CHANNEL-01</span>
+                      <span class="badge badge--bt" title="BT-49 Buyer electronic address">BT-49</span>
+                      <span class="badge badge--fpa" title="1.1.4 CodiceDestinatario / 1.1.6 PECDestinatario">1.1.4</span>
+                      <span class="finding__src">model</span>
+                    </span>
+                    <span class="finding__msg"><span class="mono">CodiceDestinatario</span> is <span class="mono">0000000</span> and no <span class="mono">PECDestinatario</span> is set &mdash; SDI will file the invoice to the Cassetto Fiscale only. fiskaly rejects this payload with <span class="mono">400 E_BAD_REQUEST</span>.</span>
+                    <span class="finding__loc">&rarr; /FatturaElettronicaHeader/DatiTrasmissione/CodiceDestinatario &middot; line 12</span>
+                  </button>
+                </li>
+                <li>
+                  <button class="finding sev--info" type="button" role="option" id="f-5" aria-selected="false" tabindex="-1">
+                    <span class="finding__mark" aria-hidden="true">&#9675;</span>
+                    <span class="finding__top">
+                      <span class="finding__sev">Info</span>
+                      <span class="finding__rule">FPA-LEN-DESCR</span>
+                      <span class="badge badge--bt" title="BT-153 Item name">BT-153</span>
+                      <span class="badge badge--fpa" title="2.2.1.4 Descrizione — max 1000 chars">2.2.1.4</span>
+                      <span class="finding__src">fiskaly</span>
+                    </span>
+                    <span class="finding__msg">fiskaly truncated <span class="mono">Descrizione</span> on line&nbsp;2 to 1000 characters (FatturaPA maximum).</span>
+                    <span class="finding__loc">&rarr; /FatturaElettronicaBody/DatiBeniServizi/DettaglioLinee[2]/Descrizione &middot; line 74</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="viewer">
+            <div class="viewer__toolbar">
+              <span class="findings__title">XML &mdash; excerpt driven by the selected finding</span>
+              <div class="viewer__toolbar-right">
+                <span class="pill pill--bad">&#9679; 5 findings</span>
+              </div>
+            </div>
+            <div class="viewer__body viewer__body--single">
+              <div class="viewer__pane">
+                <div class="xmlv" tabindex="0" aria-label="XML excerpt with findings">
+                  <ol class="xmlv__rows" style="--xmlv-start: 105;">
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;/DatiRiepilogo&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;DatiRiepilogo&gt;</span></code></li>
+<li class="xmlv__row xmlv__row--error"><code class="xmlv__code">        <span class="xmlv__tag">&lt;AliquotaIVA&gt;</span>0.00<span class="xmlv__tag">&lt;/AliquotaIVA&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;ImponibileImporto&gt;</span>250.00<span class="xmlv__tag">&lt;/ImponibileImporto&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Imposta&gt;</span>0.00<span class="xmlv__tag">&lt;/Imposta&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;EsigibilitaIVA&gt;</span>I<span class="xmlv__tag">&lt;/EsigibilitaIVA&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;/DatiRiepilogo&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">    <span class="xmlv__tag">&lt;/DatiBeniServizi&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">    <span class="xmlv__tag">&lt;DatiPagamento&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;CondizioniPagamento&gt;</span>TP02<span class="xmlv__tag">&lt;/CondizioniPagamento&gt;</span></code></li>
+<li class="xmlv__row xmlv__row--mark-warning"><code class="xmlv__code">      <span class="xmlv__tag">&lt;DettaglioPagamento&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;ModalitaPagamento&gt;</span>MP05<span class="xmlv__tag">&lt;/ModalitaPagamento&gt;</span></code></li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+            <div style="padding: 10px 12px; border-top: 1px solid var(--fsk-line);">
+              <p class="doc__caption" style="margin: 0;">
+                Selected finding &rarr; rail + tint + wavy underline. Unselected findings elsewhere in the
+                document &rarr; gutter marker only (row 115 above). Clicking a marker selects that finding.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="legend" aria-label="Severity legend">
+          <span class="legend__item sev--fatal"><span class="finding__mark">&#9632;</span> fatal &rarr; <code class="doc__inline-code">--fsk-severity-fatal</code> &middot; filled badge</span>
+          <span class="legend__item sev--error"><span class="finding__mark">&#9679;</span> error &rarr; <code class="doc__inline-code">--fsk-severity-error</code></span>
+          <span class="legend__item sev--warning"><span class="finding__mark">&#9650;</span> warning &rarr; <code class="doc__inline-code">--fsk-severity-warning</code></span>
+          <span class="legend__item sev--info"><span class="finding__mark">&#9675;</span> info &rarr; <code class="doc__inline-code">--fsk-severity-info</code></span>
+        </div>
+        <p class="doc__caption">
+          Shape carries severity as well as hue (&#9632; &#9679; &#9650; &#9675;) so the panel survives greyscale,
+          projector gamma and colour-vision deficiency. Below 1024&nbsp;px the panel becomes a bottom drawer.
+        </p>
+      </section>
+
+      <!-- ================================================================
+           4 · DIFF VIEW  —  local XML  vs  fiskaly compliance artifact
+           ================================================================ -->
+      <section id="diff">
+        <h2 class="doc__h2">4 · DiffView &mdash; local XML &#8646; fiskaly compliance artifact</h2>
+        <p class="doc__note">
+          The demo moment. Left pane: the XML this tool predicted. Right pane: the XML fiskaly actually
+          transmitted, from
+          <span class="doc__inline-code">GET /records/{transmission_id}?compliance-artifact</span>
+          (base64 in <span class="doc__inline-code">content.compliance.artifact.data</span>). The
+          normalisation row is the control that turns 17 raw text differences into 5 that mean something;
+          the semantic change list below is what the presenter actually narrates.
+        </p>
+
+        <div class="diff">
+          <div class="diff__head">
+            <h3 class="findings__title">Compliance artifact diff</h3>
+            <span class="chip chip--mono">FatturaPA 1.2.2</span>
+            <span class="chip chip--mock">MOCK</span>
+            <div class="viewer__toolbar-right">
+              <button class="btn" type="button">&uarr; Prev difference</button>
+              <button class="btn" type="button">&darr; Next difference</button>
+              <button class="btn" type="button">Refetch artifact</button>
+            </div>
+          </div>
+
+          <div class="diff__meta">
+            <span>transmission</span>
+            <span class="mono trunc-mid" style="max-width: 190px;" title="7f3ad91c-24b8-4f0e-9d3a-6b1c05e2aa17">
+              <span>7f3ad91c-24b8-4f0e-9d3a</span><span>-6b1c05e2aa17</span>
+            </span>
+            <span>&middot;</span>
+            <span>fetched 12:04:31</span>
+            <span>&middot;</span>
+            <span>artifact.data</span>
+            <span class="mono trunc" style="max-width: 210px;" title="base64, 5 736 bytes">PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgi&hellip;</span>
+            <span class="chip chip--mono">base64 &middot; 5.6 KB</span>
+            <button class="btn" type="button">Decode &amp; copy</button>
+          </div>
+
+          <div class="norm">
+            <span class="norm__label">Normalise</span>
+            <label class="toggle"><input type="checkbox" checked /> Pretty-print</label>
+            <label class="toggle"><input type="checkbox" checked /> Strip XAdES signature</label>
+            <label class="toggle"><input type="checkbox" checked /> Ignore volatile ids &amp; timestamps</label>
+            <label class="toggle"><input type="checkbox" checked /> Normalise decimals</label>
+            <label class="toggle"><input type="checkbox" /> Ignore attribute order</label>
+            <span class="norm__summary">17 raw &middot; 5 semantic &middot; 12 hidden</span>
+          </div>
+
+          <div class="diff__panes">
+            <div class="diff__pane">
+              <div class="diff__pane-head">
+                <span>Local prediction</span>
+                <span class="chip chip--mono">xml-writer.ts</span>
+                <span style="margin-left: auto;" class="chip chip--mono">126 lines</span>
+              </div>
+              <div class="xmlv xmlv--h220" tabindex="0" aria-label="Local XML">
+                <ol class="xmlv__rows" style="--xmlv-start: 3;">
+<li class="xmlv__row"><code class="xmlv__code">  <span class="xmlv__tag">&lt;FatturaElettronicaHeader&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">    <span class="xmlv__tag">&lt;DatiTrasmissione&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;IdTrasmittente&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;IdPaese&gt;</span>IT<span class="xmlv__tag">&lt;/IdPaese&gt;</span></code></li>
+<li class="xmlv__row xmlv__row--chg"><code class="xmlv__code">        <span class="xmlv__tag">&lt;IdCodice&gt;</span>01234567890<span class="xmlv__tag">&lt;/IdCodice&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;/IdTrasmittente&gt;</span></code></li>
+<li class="xmlv__row xmlv__row--chg"><code class="xmlv__code">      <span class="xmlv__tag">&lt;ProgressivoInvio&gt;</span>00001<span class="xmlv__tag">&lt;/ProgressivoInvio&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;FormatoTrasmissione&gt;</span>FPR12<span class="xmlv__tag">&lt;/FormatoTrasmissione&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;CodiceDestinatario&gt;</span>KRRH6B9<span class="xmlv__tag">&lt;/CodiceDestinatario&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">    <span class="xmlv__tag">&lt;/DatiTrasmissione&gt;</span></code></li>
+<li class="xmlv__row xmlv__row--gap"><code class="xmlv__code">    &#8943; 113 unchanged lines</code></li>
+                </ol>
+              </div>
+            </div>
+
+            <div class="viewer__divider" role="separator" aria-orientation="vertical"></div>
+
+            <div class="diff__pane">
+              <div class="diff__pane-head">
+                <span>fiskaly compliance artifact</span>
+                <span class="chip chip--mono">GOBL &rarr; Invopop &rarr; SDI</span>
+                <span style="margin-left: auto;" class="chip chip--mono">128 lines</span>
+              </div>
+              <div class="xmlv xmlv--h220" tabindex="0" aria-label="fiskaly compliance artifact XML">
+                <ol class="xmlv__rows" style="--xmlv-start: 3;">
+<li class="xmlv__row"><code class="xmlv__code">  <span class="xmlv__tag">&lt;FatturaElettronicaHeader&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">    <span class="xmlv__tag">&lt;DatiTrasmissione&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;IdTrasmittente&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">        <span class="xmlv__tag">&lt;IdPaese&gt;</span>IT<span class="xmlv__tag">&lt;/IdPaese&gt;</span></code></li>
+<li class="xmlv__row xmlv__row--chg"><code class="xmlv__code">        <span class="xmlv__tag">&lt;IdCodice&gt;</span>03874090238<span class="xmlv__tag">&lt;/IdCodice&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;/IdTrasmittente&gt;</span></code></li>
+<li class="xmlv__row xmlv__row--chg"><code class="xmlv__code">      <span class="xmlv__tag">&lt;ProgressivoInvio&gt;</span>00042<span class="xmlv__tag">&lt;/ProgressivoInvio&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;FormatoTrasmissione&gt;</span>FPR12<span class="xmlv__tag">&lt;/FormatoTrasmissione&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">      <span class="xmlv__tag">&lt;CodiceDestinatario&gt;</span>KRRH6B9<span class="xmlv__tag">&lt;/CodiceDestinatario&gt;</span></code></li>
+<li class="xmlv__row xmlv__row--add"><code class="xmlv__code">      <span class="xmlv__tag">&lt;ContattiTrasmittente&gt;</span></code></li>
+<li class="xmlv__row xmlv__row--add"><code class="xmlv__code">        <span class="xmlv__tag">&lt;Telefono&gt;</span>+390212345678<span class="xmlv__tag">&lt;/Telefono&gt;</span></code></li>
+<li class="xmlv__row xmlv__row--add"><code class="xmlv__code">      <span class="xmlv__tag">&lt;/ContattiTrasmittente&gt;</span></code></li>
+<li class="xmlv__row"><code class="xmlv__code">    <span class="xmlv__tag">&lt;/DatiTrasmissione&gt;</span></code></li>
+<li class="xmlv__row xmlv__row--gap"><code class="xmlv__code">    &#8943; 112 unchanged lines</code></li>
+                </ol>
+              </div>
+            </div>
+          </div>
+
+          <div class="changes">
+            <h4 class="changes__head">
+              Semantic changes
+              <span class="chip chip--mono">5</span>
+              <span style="margin-left: auto; font-weight: 400; text-transform: none; letter-spacing: 0;">
+                12 differences hidden by normalisation (whitespace, decimal padding,
+                <span class="mono">ds:Signature</span>, <span class="mono">SistemaEmittente</span>)
+              </span>
+            </h4>
+
+            <button class="change change--changed" type="button">
+              <span class="change__kind">Changed</span>
+              <span class="change__path">
+                <span class="trunc">1.1.1.2 &nbsp;DatiTrasmissione/IdTrasmittente/IdCodice</span>
+                <span class="badge badge--fpa" title="1.1.1.2 IdCodice — no EN 16931 business term (transport envelope)">FPA only</span>
+              </span>
+              <span class="change__vals"><span class="change__from">01234567890</span> &nbsp;&rarr;&nbsp; <span class="change__to">03874090238</span></span>
+              <span class="change__why">fiskaly transmits as the intermediary; the seller stays the <span class="mono">CedentePrestatore</span>.</span>
+            </button>
+
+            <button class="change change--changed" type="button">
+              <span class="change__kind">Changed</span>
+              <span class="change__path">
+                <span class="trunc">1.1.2 &nbsp;DatiTrasmissione/ProgressivoInvio</span>
+                <span class="badge badge--fpa">FPA only</span>
+              </span>
+              <span class="change__vals"><span class="change__from">00001</span> &nbsp;&rarr;&nbsp; <span class="change__to">00042</span></span>
+              <span class="change__why">Envelope sequence assigned by the transmitting system, not invoice content.</span>
+            </button>
+
+            <button class="change change--added" type="button">
+              <span class="change__kind">Added</span>
+              <span class="change__path">
+                <span class="trunc">1.1.5 &nbsp;DatiTrasmissione/ContattiTrasmittente/Telefono</span>
+                <span class="badge badge--fpa">FPA only</span>
+              </span>
+              <span class="change__vals"><span class="change__to">+390212345678</span></span>
+              <span class="change__why">fiskaly adds its own transmitter contact so SDI notices reach it.</span>
+            </button>
+
+            <button class="change change--changed" type="button">
+              <span class="change__kind">Changed</span>
+              <span class="change__path">
+                <span class="trunc">2.2.2.7 &nbsp;DatiRiepilogo[3]/RiferimentoNormativo</span>
+                <span class="badge badge--bt" title="BT-120 VAT exemption reason text">BT-120</span>
+                <span class="badge badge--fpa" title="2.2.2.7 RiferimentoNormativo">2.2.2.7</span>
+              </span>
+              <span class="change__vals">
+                <span class="change__from trunc">Art. 8, c.1, lett. c) DPR 633/72 - dich. intento 2026-4471</span><br />
+                <span class="change__to trunc">Art. 8, comma 1, lett. c), DPR 633/1972 &ndash; dichiarazione d&rsquo;intento n. 2026-4471</span>
+              </span>
+              <span class="change__why">Wording normalised by GOBL&rsquo;s IT exemption catalogue. Meaning unchanged &mdash; worth calling out on stage.</span>
+            </button>
+
+            <button class="change change--removed" type="button">
+              <span class="change__kind">Removed</span>
+              <span class="change__path">
+                <span class="trunc">2.2.1.5 &nbsp;DettaglioLinee[3]/Quantita</span>
+                <span class="badge badge--bt" title="BT-129 Invoiced quantity">BT-129</span>
+                <span class="badge badge--fpa" title="2.2.1.5 Quantita">2.2.1.5</span>
+              </span>
+              <span class="change__vals"><span class="change__from">1.00</span></span>
+              <span class="change__why">Optional when <span class="mono">UnitaMisura</span> is absent; fiskaly omits it for service lines.</span>
+            </button>
+          </div>
+        </div>
+        <p class="doc__caption">
+          Change rows are buttons: activating one scrolls both panes to the change and selects the
+          corresponding human field, exactly like a finding.
+        </p>
+      </section>
+
+      <!-- ================================================================
+           5 · EMPTY / LOADING / ERROR / POLLING
+           ================================================================ -->
+      <section id="states">
+        <h2 class="doc__h2">5 · Empty, loading, error &amp; polling</h2>
+        <p class="doc__note">
+          Every state keeps the toolbar so the mode switch never disappears. Status text lives in an
+          <span class="doc__inline-code">aria-live="polite"</span> region; the error box is
+          <span class="doc__inline-code">role="alert"</span>.
+        </p>
+
+        <div class="doc__grid2">
+          <!-- Empty -->
+          <div class="viewer">
+            <div class="viewer__toolbar">
+              <div class="seg" role="tablist" aria-label="Invoice view mode">
+                <button class="seg__btn" type="button" role="tab" aria-selected="false" disabled>XML</button>
+                <button class="seg__btn" type="button" role="tab" aria-selected="false" disabled>Human</button>
+                <button class="seg__btn" type="button" role="tab" aria-selected="true" disabled>Split</button>
+              </div>
+              <div class="viewer__toolbar-right"><span class="chip">no invoice</span></div>
+            </div>
+            <div class="state">
+              <p class="state__title">No invoice yet</p>
+              <p class="state__body">
+                Pick a preset in <strong>Compose</strong> to build the canonical invoice and generate its
+                FatturaPA XML. Nothing is sent to fiskaly until you reach <strong>Send</strong>.
+              </p>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn--primary" type="button">Choose preset</button>
+                <button class="btn" type="button">Import XML&hellip;</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Loading -->
+          <div class="viewer">
+            <div class="viewer__toolbar">
+              <div class="seg" role="tablist" aria-label="Invoice view mode">
+                <button class="seg__btn" type="button" role="tab" aria-selected="false">XML</button>
+                <button class="seg__btn" type="button" role="tab" aria-selected="false">Human</button>
+                <button class="seg__btn" type="button" role="tab" aria-selected="true">Split</button>
+              </div>
+              <div class="viewer__toolbar-right"><span class="spinner" aria-hidden="true"></span></div>
+            </div>
+            <div class="viewer__body viewer__body--split" aria-busy="true">
+              <div class="viewer__pane skel--pane">
+                <div class="skel skel--title"></div>
+                <div class="skel" style="width: 88%;"></div>
+                <div class="skel" style="width: 64%;"></div>
+                <div class="skel" style="width: 92%;"></div>
+                <div class="skel" style="width: 40%;"></div>
+                <div class="skel" style="width: 76%;"></div>
+              </div>
+              <div class="viewer__divider"></div>
+              <div class="viewer__pane skel--pane">
+                <div class="skel" style="width: 30%;"></div>
+                <div class="skel" style="width: 58%;"></div>
+                <div class="skel" style="width: 72%;"></div>
+                <div class="skel" style="width: 50%;"></div>
+                <div class="skel" style="width: 66%;"></div>
+                <div class="skel" style="width: 44%;"></div>
+              </div>
+            </div>
+            <div style="padding: 8px 12px; border-top: 1px solid var(--fsk-line);">
+              <p class="statusline" role="status" aria-live="polite">
+                Generating FatturaPA XML &hellip; then XSD, then SDI rules
+              </p>
+            </div>
+          </div>
+
+          <!-- Error -->
+          <div class="viewer">
+            <div class="viewer__toolbar">
+              <div class="seg" role="tablist" aria-label="Invoice view mode">
+                <button class="seg__btn" type="button" role="tab" aria-selected="true">XML</button>
+                <button class="seg__btn" type="button" role="tab" aria-selected="false">Human</button>
+                <button class="seg__btn" type="button" role="tab" aria-selected="false">Split</button>
+              </div>
+              <div class="viewer__toolbar-right"><span class="pill pill--bad">request failed</span></div>
+            </div>
+            <div class="state" style="align-items: stretch; justify-content: flex-start; min-height: 200px;">
+              <div class="errbox" role="alert">
+                <div class="errbox__top">
+                  <span class="errbox__code">422 &middot; E_UNPROCESSABLE_CONTENT</span>
+                  <span class="chip chip--mono">POST /records</span>
+                </div>
+                <p class="errbox__msg">
+                  Recipient <span class="mono">invoicing.SDI.destination_code</span> is
+                  <span class="mono">0000000</span> but no <span class="mono">pec</span> was supplied.
+                </p>
+                <p class="errbox__trace">
+                  <span>X-Trace-Identifier</span>
+                  <span class="trunc-mid" style="max-width: 180px;" title="8f2c41a0-6e57-4b19-8a02-c3e0d7b5f194">
+                    <span>8f2c41a0-6e57-4b19</span><span>-8a02-c3e0d7b5f194</span>
+                  </span>
+                  <button class="btn" type="button">Copy</button>
+                </p>
+              </div>
+              <div style="display: flex; gap: 8px; margin-top: 10px;">
+                <button class="btn btn--primary" type="button">Retry</button>
+                <button class="btn" type="button">Open in API log</button>
+                <button class="btn" type="button">Fix in Compose</button>
+              </div>
+              <p class="doc__caption" style="margin-top: 10px;">
+                The last good XML stays rendered behind the alert &mdash; an error never blanks the viewer.
+              </p>
+            </div>
+          </div>
+
+          <!-- Polling (send step) -->
+          <div class="viewer">
+            <div class="viewer__toolbar">
+              <span class="findings__title">Send &mdash; awaiting transmission</span>
+              <div class="viewer__toolbar-right">
+                <span class="chip chip--mock">MOCK</span>
+                <button class="btn" type="button">Cancel</button>
+              </div>
+            </div>
+            <div class="state" style="align-items: stretch; justify-content: flex-start; min-height: 200px;">
+              <div class="poll">
+                <ol class="poll__steps">
+                  <li class="pollstep pollstep--done">
+                    <span class="pollstep__ico">&#10003;</span>
+                    <span>INTENTION::TRANSACTION</span>
+                    <span class="pollstep__meta">201 &middot; 184 ms</span>
+                  </li>
+                  <li class="pollstep pollstep--done">
+                    <span class="pollstep__ico">&#10003;</span>
+                    <span>TRANSACTION::INVOICE &mdash; ACCEPTED</span>
+                    <span class="pollstep__meta">201 &middot; 262 ms</span>
+                  </li>
+                  <li class="pollstep pollstep--active" aria-current="step">
+                    <span class="pollstep__ico"><span class="spinner" aria-hidden="true"></span></span>
+                    <span>Waiting for <span class="mono">content.used_in.id</span></span>
+                    <span class="pollstep__meta">attempt 4 / 12</span>
+                  </li>
+                  <li class="pollstep pollstep--todo">
+                    <span class="pollstep__ico">&#8226;</span>
+                    <span>E_INVOICE::TRANSMISSION &rarr; <span class="mono">mode: FINISHED</span></span>
+                    <span class="pollstep__meta">&mdash;</span>
+                  </li>
+                  <li class="pollstep pollstep--todo">
+                    <span class="pollstep__ico">&#8226;</span>
+                    <span>Fetch <span class="mono">?compliance-artifact</span> &rarr; DiffView</span>
+                    <span class="pollstep__meta">&mdash;</span>
+                  </li>
+                </ol>
+                <div class="progress"><div class="progress__bar" style="width: 33%;"></div></div>
+                <p class="statusline" role="status" aria-live="polite">
+                  Polling GET /records/7f3ad91c&hellip;aa17 &mdash; attempt 4 of 12 &middot; 20 s elapsed &middot; timeout 60 s
+                </p>
+                <p class="notice">
+                  <span aria-hidden="true">&#9650;</span>
+                  <span>
+                    Italy waits for SDI: TEST usually answers in seconds, production can take minutes and is
+                    allowed up to 48&nbsp;h. On timeout the step stays resumable &mdash; the record id is kept.
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="doc__caption">
+          A <span class="mono">DEGRADED</span> system or a missing <span class="mono">compliance.state</span>
+          replaces the primary action with guidance instead of a Send button (Setup step, not shown here).
+        </p>
+      </section>
+    </div>
+
+    <script>
+      // Mockup-only: theme toggle. The app stamps data-theme from its store (main.tsx).
+      document.querySelectorAll("[data-set-theme]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var mode = btn.getAttribute("data-set-theme");
+          if (mode === "system") delete document.documentElement.dataset.theme;
+          else document.documentElement.dataset.theme = mode;
+          document.querySelectorAll("[data-set-theme]").forEach(function (b) {
+            b.setAttribute("aria-selected", String(b === btn));
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

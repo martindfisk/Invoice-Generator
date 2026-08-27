@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- synthetic fixture; see backend/fixtures/uapi/SOURCES.md -->
+<ns3:RicevutaConsegna xmlns:ns3="http://www.fatturapa.gov.it/sdi/messaggi/v1.0" versione="1.0">
+  <IdentificativoSdI>000000001</IdentificativoSdI>
+  <NomeFile>IT01234567890_00001.xml</NomeFile>
+  <DataOraRicezione>2026-08-26T09:00:05.000+02:00</DataOraRicezione>
+  <DataOraConsegna>2026-08-26T09:00:12.000+02:00</DataOraConsegna>
+  <Destinatario>
+    <Codice>ABC1234</Codice>
+    <Descrizione>Beta Distribuzione S.p.A.</Descrizione>
+  </Destinatario>
+  <MessageId>1</MessageId>
+  <Note>Sintetica: ricevuta di consegna simulata (fixture)</Note>
+</ns3:RicevutaConsegna>

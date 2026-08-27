@@ -1,0 +1,174 @@
+{
+  "type": "INVOICE",
+  "document": {
+    "number": "IT-RM-2026-0117",
+    "issued_at": "2026-08-24T00:00:00+00:00",
+    "payment_terms": "Pagamento a 30 giorni data fattura",
+    "references": {
+      "purchase_order": "ORD-SLF-2026-0091"
+    }
+  },
+  "entries": [
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Pranzo di lavoro - menu completo",
+        "unit": {
+          "quantity": "8.00",
+          "measure": "C62",
+          "factor": "1",
+          "price": {
+            "exclusive": "34.00",
+            "inclusive": "37.40"
+          }
+        },
+        "value": {
+          "base": "272.00"
+        },
+        "vat": {
+          "type": "VAT_RATE",
+          "code": "REDUCED_1",
+          "percentage": "10.00",
+          "amount": "27.20",
+          "exclusive": "272.00",
+          "inclusive": "299.20"
+        }
+      },
+      "details": {
+        "concept": "GOOD",
+        "description": "8 coperti, sala Traiano",
+        "number": "1"
+      }
+    },
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Bevande analcoliche",
+        "unit": {
+          "quantity": "8.00",
+          "measure": "C62",
+          "factor": "1",
+          "price": {
+            "exclusive": "4.50",
+            "inclusive": "4.95"
+          }
+        },
+        "value": {
+          "base": "36.00"
+        },
+        "vat": {
+          "type": "VAT_RATE",
+          "code": "REDUCED_1",
+          "percentage": "10.00",
+          "amount": "3.60",
+          "exclusive": "36.00",
+          "inclusive": "39.60"
+        }
+      },
+      "details": {
+        "concept": "GOOD",
+        "number": "2"
+      }
+    },
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Anticipazioni in nome e per conto - noleggio sala esterna",
+        "unit": {
+          "quantity": "1.00",
+          "measure": "C62",
+          "factor": "1",
+          "price": {
+            "exclusive": "120.00",
+            "inclusive": "120.00"
+          }
+        },
+        "value": {
+          "base": "120.00"
+        },
+        "vat": {
+          "type": "VAT_EXEMPTION",
+          "code": "NOT_SUBJECT"
+        }
+      },
+      "details": {
+        "concept": "GOOD",
+        "number": "3"
+      }
+    }
+  ],
+  "recipients": [
+    {
+      "type": "BUSINESS",
+      "name": "Studio Legale Ferrari e Associati S.t.p.",
+      "address": {
+        "line": {
+          "type": "STREET_NUMBER",
+          "street": "Via Nomentana",
+          "number": "108"
+        },
+        "code": "00161",
+        "city": "Roma",
+        "country": "IT",
+        "region": "RM"
+      },
+      "company_id": "03456789012",
+      "identification": {
+        "type": "VAT",
+        "number": "03456789012"
+      },
+      "invoicing": {
+        "type": "SDI",
+        "destination_code": "M5UXCR1"
+      }
+    }
+  ],
+  "payments": [
+    {
+      "type": "OUTSTANDING",
+      "details": {
+        "amount": "458.80",
+        "currency": "EUR",
+        "date": "2026-09-23"
+      },
+      "concept": "INVOICE",
+      "instruction": {
+        "type": "CREDIT_TRANSFER",
+        "account": "IT41W8000000292100645211151",
+        "name": "Trattoria del Colosseo S.r.l.",
+        "payment_service_provider": "BCITITMMXXX",
+        "text": "IT-RM-2026-0117"
+      }
+    }
+  ],
+  "breakdown": [
+    {
+      "type": "VAT_RATE",
+      "code": "REDUCED_1",
+      "percentage": "10.00",
+      "amount": "30.80",
+      "exclusive": "308.00",
+      "inclusive": "338.80"
+    },
+    {
+      "type": "VAT_EXEMPTION",
+      "code": "NOT_SUBJECT",
+      "exclusive": "120.00"
+    }
+  ],
+  "totals": {
+    "vat": {
+      "amount": "30.80",
+      "exclusive": "428.00",
+      "inclusive": "458.80"
+    }
+  },
+  "seller": {
+    "name": "Amministrazione",
+    "phone": "+39065550188",
+    "email": "amministrazione@trattoriadelcolosseo.example"
+  }
+}

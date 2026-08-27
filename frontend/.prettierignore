@@ -1,0 +1,5 @@
+dist
+src/gen
+playwright-report
+test-results
+package-lock.json

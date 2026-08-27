@@ -1,0 +1,181 @@
+{
+  "type": "INVOICE",
+  "document": {
+    "number": "IT-INV-0001",
+    "issued_at": "2026-08-26T00:00:00+00:00",
+    "payment_terms": "Pagamento a 30 giorni data fattura",
+    "references": {
+      "purchase_order": "PO-2026-0042"
+    }
+  },
+  "entries": [
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Servizio di consulenza",
+        "unit": {
+          "quantity": "10.00",
+          "measure": "HUR",
+          "factor": "1",
+          "price": {
+            "exclusive": "150.00",
+            "inclusive": "183.00"
+          }
+        },
+        "value": {
+          "base": "1500.00"
+        },
+        "vat": {
+          "type": "VAT_RATE",
+          "code": "STANDARD",
+          "percentage": "22.00",
+          "amount": "330.00",
+          "exclusive": "1500.00",
+          "inclusive": "1830.00"
+        }
+      },
+      "details": {
+        "concept": "SERVICE",
+        "description": "Consulenza tecnica su progetto e-invoicing",
+        "number": "1"
+      }
+    },
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Manuale operativo stampato",
+        "unit": {
+          "quantity": "20.00",
+          "measure": "H87",
+          "factor": "1",
+          "price": {
+            "exclusive": "25.00",
+            "inclusive": "27.50"
+          }
+        },
+        "value": {
+          "base": "500.00"
+        },
+        "vat": {
+          "type": "VAT_RATE",
+          "code": "REDUCED_1",
+          "percentage": "10.00",
+          "amount": "50.00",
+          "exclusive": "500.00",
+          "inclusive": "550.00"
+        }
+      },
+      "details": {
+        "concept": "GOOD",
+        "number": "2"
+      }
+    },
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Fornitura con dichiarazione d'intento",
+        "unit": {
+          "quantity": "1.00",
+          "measure": "C62",
+          "factor": "1",
+          "price": {
+            "exclusive": "800.00",
+            "inclusive": "800.00"
+          }
+        },
+        "value": {
+          "base": "800.00"
+        },
+        "vat": {
+          "type": "VAT_EXEMPTION",
+          "code": "CAUSE_7"
+        }
+      },
+      "details": {
+        "concept": "GOOD",
+        "number": "3"
+      }
+    }
+  ],
+  "recipients": [
+    {
+      "type": "BUSINESS",
+      "name": "Cantina del Sole S.p.A.",
+      "address": {
+        "line": {
+          "type": "STREET_NUMBER",
+          "street": "Via Nazionale",
+          "number": "1"
+        },
+        "code": "00184",
+        "city": "Roma",
+        "country": "IT",
+        "region": "RM"
+      },
+      "identification": {
+        "type": "VAT",
+        "number": "09876543210"
+      },
+      "invoicing": {
+        "type": "SDI",
+        "destination_code": "ABC1234"
+      }
+    }
+  ],
+  "payments": [
+    {
+      "type": "OUTSTANDING",
+      "details": {
+        "amount": "3180.00",
+        "currency": "EUR",
+        "date": "2026-09-25"
+      },
+      "concept": "INVOICE",
+      "instruction": {
+        "type": "CREDIT_TRANSFER",
+        "account": "IT60X0542811101000000123456",
+        "name": "Bottega Alpina S.r.l.",
+        "payment_service_provider": "BPMOIT22XXX",
+        "text": "IT-INV-0001"
+      }
+    }
+  ],
+  "breakdown": [
+    {
+      "type": "VAT_RATE",
+      "code": "STANDARD",
+      "percentage": "22.00",
+      "amount": "330.00",
+      "exclusive": "1500.00",
+      "inclusive": "1830.00"
+    },
+    {
+      "type": "VAT_RATE",
+      "code": "REDUCED_1",
+      "percentage": "10.00",
+      "amount": "50.00",
+      "exclusive": "500.00",
+      "inclusive": "550.00"
+    },
+    {
+      "type": "VAT_EXEMPTION",
+      "code": "CAUSE_7",
+      "exclusive": "800.00"
+    }
+  ],
+  "totals": {
+    "vat": {
+      "amount": "380.00",
+      "exclusive": "2800.00",
+      "inclusive": "3180.00"
+    }
+  },
+  "seller": {
+    "name": "Ufficio Fatturazione",
+    "phone": "+39021234567",
+    "email": "fatture@example.it"
+  }
+}

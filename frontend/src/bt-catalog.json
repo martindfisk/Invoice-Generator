@@ -1,0 +1,1578 @@
+[
+  {
+    "id": "BG-0",
+    "group": "BG-0",
+    "name": "INVOICE",
+    "description": "The root business group representing the entire electronic invoice document. Contains all other BGs and document-level BTs",
+    "cardinality": "1..1",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-1",
+    "group": "BG-0",
+    "name": "Invoice number",
+    "description": "A unique identifier assigned by the Seller to identify the invoice within the Seller's system. No identification scheme should be used",
+    "cardinality": "1..1",
+    "datatype": "Identifier"
+  },
+  {
+    "id": "BT-2",
+    "group": "BG-0",
+    "name": "Invoice issue date",
+    "description": "The date on which the invoice was issued. Format: YYYY-MM-DD",
+    "cardinality": "1..1",
+    "datatype": "Date"
+  },
+  {
+    "id": "BT-3",
+    "group": "BG-0",
+    "name": "Invoice type code",
+    "description": "A code specifying the functional type of the invoice. Code list: UNTDID 1001. Permitted values: 326 (partial), 380 (commercial), 381 (credit note), 384 (corrected), 389 (self-billed), 875/876/877 (construction invoices)",
+    "cardinality": "1..1",
+    "datatype": "Code"
+  },
+  {
+    "id": "BT-5",
+    "group": "BG-0",
+    "name": "Invoice currency code",
+    "description": "The currency in which all invoice amounts are expressed (except BT-111). Code list: ISO 4217 (alpha-3 only)",
+    "cardinality": "1..1",
+    "datatype": "Code"
+  },
+  {
+    "id": "BT-6",
+    "group": "BG-0",
+    "name": "VAT accounting currency code",
+    "description": "The currency used for VAT accounting and reporting, applicable in the Seller's country. Code list: ISO 4217",
+    "cardinality": "0..1",
+    "datatype": "Code"
+  },
+  {
+    "id": "BT-7",
+    "group": "BG-0",
+    "name": "Value added tax point date",
+    "description": "The date on which VAT becomes accountable for the Seller and Buyer",
+    "cardinality": "0..1",
+    "datatype": "Date"
+  },
+  {
+    "id": "BT-8",
+    "group": "BG-0",
+    "name": "Value added tax point date code",
+    "description": "A code determining the VAT point date when BT-7 is not yet known at invoicing time. Code list: UNTDID 2005 (codes: 3, 35, 432)",
+    "cardinality": "0..1",
+    "datatype": "Code"
+  },
+  {
+    "id": "BT-9",
+    "group": "BG-0",
+    "name": "Payment due date",
+    "description": "The date by which payment is due. Represents the net payment date; for partial payments, this is the first instalment date",
+    "cardinality": "0..1",
+    "datatype": "Date"
+  },
+  {
+    "id": "BT-10",
+    "group": "BG-0",
+    "name": "Buyer reference",
+    "description": "An identifier assigned by the Buyer for internal routing purposes (e.g., cost centre, department code)",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-11",
+    "group": "BG-0",
+    "name": "Project reference",
+    "description": "An identifier of a project the invoice relates to",
+    "cardinality": "0..1",
+    "datatype": "Document Reference"
+  },
+  {
+    "id": "BT-12",
+    "group": "BG-0",
+    "name": "Contract reference",
+    "description": "A unique identifier of a contract (e.g., contract number)",
+    "cardinality": "0..1",
+    "datatype": "Document Reference"
+  },
+  {
+    "id": "BT-13",
+    "group": "BG-0",
+    "name": "Purchase order reference",
+    "description": "An identifier of a referenced purchase order issued by the Buyer",
+    "cardinality": "0..1",
+    "datatype": "Document Reference"
+  },
+  {
+    "id": "BT-14",
+    "group": "BG-0",
+    "name": "Sales order reference",
+    "description": "An identifier of a referenced sales order issued by the Seller",
+    "cardinality": "0..1",
+    "datatype": "Document Reference"
+  },
+  {
+    "id": "BT-15",
+    "group": "BG-0",
+    "name": "Receiving advice reference",
+    "description": "An identifier for a referenced receiving advice",
+    "cardinality": "0..1",
+    "datatype": "Document Reference"
+  },
+  {
+    "id": "BT-16",
+    "group": "BG-0",
+    "name": "Despatch advice reference",
+    "description": "An identifier for a referenced despatch advice (delivery note)",
+    "cardinality": "0..1",
+    "datatype": "Document Reference"
+  },
+  {
+    "id": "BT-17",
+    "group": "BG-0",
+    "name": "Tender or lot reference",
+    "description": "The identifier of a tender or lot the invoice relates to",
+    "cardinality": "0..1",
+    "datatype": "Document Reference"
+  },
+  {
+    "id": "BT-18",
+    "group": "BG-0",
+    "name": "Invoiced object identifier",
+    "description": "A Seller-assigned identifier for the object referenced by the invoice (e.g., meter number, subscription number, vehicle registration)",
+    "cardinality": "0..1",
+    "datatype": "Identifier (+BT-18-1 Scheme ID from UNTDID 1153)"
+  },
+  {
+    "id": "BT-19",
+    "group": "BG-0",
+    "name": "Buyer accounting reference",
+    "description": "A text value specifying where the relevant data is to be entered in the Buyer's financial accounts",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-20",
+    "group": "BG-0",
+    "name": "Payment terms",
+    "description": "A textual description of payment terms (including early payment discounts/Skonto)",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BG-1",
+    "group": "BG-0",
+    "name": "INVOICE NOTE",
+    "description": "A group of business terms providing textual notes relevant to the invoice, with optional subject code",
+    "cardinality": "0..n",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-21",
+    "group": "BG-1",
+    "name": "Invoice note subject code",
+    "description": "The subject of the following textual note. Code list: UNTDID 4451",
+    "cardinality": "0..1",
+    "datatype": "Code"
+  },
+  {
+    "id": "BT-22",
+    "group": "BG-1",
+    "name": "Invoice note",
+    "description": "A free-text note providing unstructured information relevant to the invoice as a whole. Can include archiving obligation notes per § 14 Abs. 4 Nr. 9 UStG",
+    "cardinality": "1..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BG-2",
+    "group": "BG-0",
+    "name": "PROCESS CONTROL",
+    "description": "A group identifying the business process context and the specification the invoice conforms to",
+    "cardinality": "1..1",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-23",
+    "group": "BG-2",
+    "name": "Business process type",
+    "description": "Identifies the business process context (enables Buyer to route the invoice)",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-24",
+    "group": "BG-2",
+    "name": "Specification identifier",
+    "description": "Identifies the specification (CIUS/profile) the invoice data conforms to. No scheme identifier used",
+    "cardinality": "1..1",
+    "datatype": "Identifier"
+  },
+  {
+    "id": "BG-3",
+    "group": "BG-0",
+    "name": "PRECEDING INVOICE REFERENCE",
+    "description": "A group of terms for referencing one or more preceding invoices (corrections, final invoices referencing advance payments)",
+    "cardinality": "0..n",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-25",
+    "group": "BG-3",
+    "name": "Preceding Invoice reference",
+    "description": "The identifier of the preceding invoice being referenced",
+    "cardinality": "1..1",
+    "datatype": "Document Reference"
+  },
+  {
+    "id": "BT-26",
+    "group": "BG-3",
+    "name": "Preceding Invoice issue date",
+    "description": "The issue date of the preceding invoice",
+    "cardinality": "0..1",
+    "datatype": "Date"
+  },
+  {
+    "id": "BG-4",
+    "group": "BG-0",
+    "name": "SELLER",
+    "description": "A group of terms providing information about the Seller (supplier/vendor)",
+    "cardinality": "1..1",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-27",
+    "group": "BG-4",
+    "name": "Seller name",
+    "description": "The full formal name of the Seller as registered in the national register of legal entities or as a taxable person",
+    "cardinality": "1..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-28",
+    "group": "BG-4",
+    "name": "Seller trading name",
+    "description": "A name under which the Seller is known, if different from the Seller name",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-29",
+    "group": "BG-4",
+    "name": "Seller identifier",
+    "description": "A Seller identifier (e.g., creditor number, supplier number assigned by the Buyer)",
+    "cardinality": "0..n",
+    "datatype": "Identifier (+BT-29-1 Scheme ID from ISO 6523/ICD)"
+  },
+  {
+    "id": "BT-30",
+    "group": "BG-4",
+    "name": "Seller legal registration identifier",
+    "description": "An identifier issued by an official registrar identifying the Seller as a legal entity",
+    "cardinality": "0..1",
+    "datatype": "Identifier (+BT-30-1 Scheme ID from ICD)"
+  },
+  {
+    "id": "BT-31",
+    "group": "BG-4",
+    "name": "Seller VAT identifier",
+    "description": "The Seller's VAT registration number, prefixed with country code per ISO 3166-1",
+    "cardinality": "0..1",
+    "datatype": "Identifier"
+  },
+  {
+    "id": "BT-32",
+    "group": "BG-4",
+    "name": "Seller tax registration identifier",
+    "description": "A local tax identification of the Seller, or reference to registered tax status",
+    "cardinality": "0..1",
+    "datatype": "Identifier"
+  },
+  {
+    "id": "BT-33",
+    "group": "BG-4",
+    "name": "Seller additional legal information",
+    "description": "Additional legal information about the Seller (e.g., share capital, legal form)",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-34",
+    "group": "BG-4",
+    "name": "Seller electronic address",
+    "description": "The Seller's electronic address for receiving application-level responses",
+    "cardinality": "1..1",
+    "datatype": "Identifier (+BT-34-1 Scheme ID from EAS, mandatory)"
+  },
+  {
+    "id": "BG-5",
+    "group": "BG-4",
+    "name": "SELLER POSTAL ADDRESS",
+    "description": "The Seller's postal address",
+    "cardinality": "1..1",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-35",
+    "group": "BG-5",
+    "name": "Seller address line 1",
+    "description": "The main address line (typically street name and number)",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-36",
+    "group": "BG-5",
+    "name": "Seller address line 2",
+    "description": "An additional address line",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-162",
+    "group": "BG-5",
+    "name": "Seller address line 3",
+    "description": "A third address line (added in maintenance release)",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-37",
+    "group": "BG-5",
+    "name": "Seller city",
+    "description": "The city/town of the Seller's address",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-38",
+    "group": "BG-5",
+    "name": "Seller post code",
+    "description": "The postal/ZIP code",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-39",
+    "group": "BG-5",
+    "name": "Seller country subdivision",
+    "description": "The country subdivision (state, province, region)",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-40",
+    "group": "BG-5",
+    "name": "Seller country code",
+    "description": "Code list: ISO 3166-1 alpha-2",
+    "cardinality": "1..1",
+    "datatype": "Code"
+  },
+  {
+    "id": "BG-6",
+    "group": "BG-4",
+    "name": "SELLER CONTACT",
+    "description": "Contact information for the Seller",
+    "cardinality": "0..1",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-41",
+    "group": "BG-6",
+    "name": "Seller contact point",
+    "description": "The name of the contact person or department",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-42",
+    "group": "BG-6",
+    "name": "Seller contact telephone number",
+    "description": "The telephone number",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-43",
+    "group": "BG-6",
+    "name": "Seller contact email address",
+    "description": "The email address",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BG-7",
+    "group": "BG-0",
+    "name": "BUYER",
+    "description": "A group providing information about the Buyer (customer)",
+    "cardinality": "1..1",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-44",
+    "group": "BG-7",
+    "name": "Buyer name",
+    "description": "The full name of the Buyer as legally registered",
+    "cardinality": "1..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-45",
+    "group": "BG-7",
+    "name": "Buyer trading name",
+    "description": "A name under which the Buyer is known, if different from the legal name",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-46",
+    "group": "BG-7",
+    "name": "Buyer identifier",
+    "description": "An identifier of the Buyer (e.g., customer account number)",
+    "cardinality": "0..1",
+    "datatype": "Identifier (+BT-46-1 Scheme ID from ICD)"
+  },
+  {
+    "id": "BT-47",
+    "group": "BG-7",
+    "name": "Buyer legal registration identifier",
+    "description": "An official registration identifier of the Buyer as a legal entity",
+    "cardinality": "0..1",
+    "datatype": "Identifier (+BT-47-1 Scheme ID from ICD)"
+  },
+  {
+    "id": "BT-48",
+    "group": "BG-7",
+    "name": "Buyer VAT identifier",
+    "description": "The Buyer's VAT registration number, prefixed per ISO 3166-1",
+    "cardinality": "0..1",
+    "datatype": "Identifier"
+  },
+  {
+    "id": "BT-49",
+    "group": "BG-7",
+    "name": "Buyer electronic address",
+    "description": "The Buyer's electronic address for receiving invoices",
+    "cardinality": "1..1",
+    "datatype": "Identifier (+BT-49-1 Scheme ID from EAS, mandatory)"
+  },
+  {
+    "id": "BG-8",
+    "group": "BG-7",
+    "name": "BUYER POSTAL ADDRESS",
+    "description": "The Buyer's postal address",
+    "cardinality": "1..1",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-50",
+    "group": "BG-8",
+    "name": "Buyer address line 1",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-51",
+    "group": "BG-8",
+    "name": "Buyer address line 2",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-163",
+    "group": "BG-8",
+    "name": "Buyer address line 3",
+    "description": "(Added in maintenance release.)",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-52",
+    "group": "BG-8",
+    "name": "Buyer city",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-53",
+    "group": "BG-8",
+    "name": "Buyer post code",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-54",
+    "group": "BG-8",
+    "name": "Buyer country subdivision",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-55",
+    "group": "BG-8",
+    "name": "Buyer country code",
+    "description": "ISO 3166-1 alpha-2",
+    "cardinality": "1..1",
+    "datatype": "Code"
+  },
+  {
+    "id": "BG-9",
+    "group": "BG-7",
+    "name": "BUYER CONTACT",
+    "description": "Contact information for the Buyer",
+    "cardinality": "0..1",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-56",
+    "group": "BG-9",
+    "name": "Buyer contact point",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-57",
+    "group": "BG-9",
+    "name": "Buyer contact telephone number",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-58",
+    "group": "BG-9",
+    "name": "Buyer contact email address",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BG-10",
+    "group": "BG-0",
+    "name": "PAYEE",
+    "description": "A group providing information about the Payee (party receiving payment, if different from Seller)",
+    "cardinality": "0..1",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-59",
+    "group": "BG-10",
+    "name": "Payee name",
+    "description": "The name of the Payee",
+    "cardinality": "1..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-60",
+    "group": "BG-10",
+    "name": "Payee identifier",
+    "description": "An identifier for the Payee",
+    "cardinality": "0..1",
+    "datatype": "Identifier (+BT-60-1 Scheme ID from ICD)"
+  },
+  {
+    "id": "BT-61",
+    "group": "BG-10",
+    "name": "Payee legal registration identifier",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Identifier (+BT-61-1 Scheme ID from ICD)"
+  },
+  {
+    "id": "BG-11",
+    "group": "BG-0",
+    "name": "SELLER TAX REPRESENTATIVE PARTY",
+    "description": "The Seller's tax representative (fiscal representative)",
+    "cardinality": "0..1",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-62",
+    "group": "BG-11",
+    "name": "Seller tax representative name",
+    "description": "",
+    "cardinality": "1..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-63",
+    "group": "BG-11",
+    "name": "Seller tax representative VAT identifier",
+    "description": "The VAT identifier of the tax representative, prefixed per ISO 3166-1",
+    "cardinality": "1..1",
+    "datatype": "Identifier"
+  },
+  {
+    "id": "BG-12",
+    "group": "BG-11",
+    "name": "SELLER TAX REPRESENTATIVE POSTAL ADDRESS",
+    "description": "The postal address of the tax representative. Card: 1..1 (within BG-11)",
+    "cardinality": "1..1",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-64",
+    "group": "BG-12",
+    "name": "Tax representative address line 1",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-65",
+    "group": "BG-12",
+    "name": "Tax representative address line 2",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-164",
+    "group": "BG-12",
+    "name": "Tax representative address line 3",
+    "description": "(Added in maintenance release.)",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-66",
+    "group": "BG-12",
+    "name": "Tax representative city",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-67",
+    "group": "BG-12",
+    "name": "Tax representative post code",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-68",
+    "group": "BG-12",
+    "name": "Tax representative country subdivision",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-69",
+    "group": "BG-12",
+    "name": "Tax representative country code",
+    "description": "ISO 3166-1 alpha-2",
+    "cardinality": "1..1",
+    "datatype": "Code"
+  },
+  {
+    "id": "BG-13",
+    "group": "BG-0",
+    "name": "DELIVERY INFORMATION",
+    "description": "A group providing delivery details",
+    "cardinality": "0..1",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-70",
+    "group": "BG-13",
+    "name": "Deliver to party name",
+    "description": "The name of the party to whom goods are delivered or services are provided",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-71",
+    "group": "BG-13",
+    "name": "Deliver to location identifier",
+    "description": "An identifier for the delivery location (e.g., GLN)",
+    "cardinality": "0..1",
+    "datatype": "Identifier (+BT-71-1 Scheme ID from ICD)"
+  },
+  {
+    "id": "BT-72",
+    "group": "BG-13",
+    "name": "Actual delivery date",
+    "description": "The date on which delivery was made or services completed",
+    "cardinality": "0..1",
+    "datatype": "Date"
+  },
+  {
+    "id": "BG-14",
+    "group": "BG-0",
+    "name": "INVOICING PERIOD",
+    "description": "The period to which the invoice applies (document level)",
+    "cardinality": "0..1",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-73",
+    "group": "BG-14",
+    "name": "Invoicing period start date",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Date"
+  },
+  {
+    "id": "BT-74",
+    "group": "BG-14",
+    "name": "Invoicing period end date",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Date"
+  },
+  {
+    "id": "BG-15",
+    "group": "BG-13",
+    "name": "DELIVER TO ADDRESS",
+    "description": "The address to which goods are delivered or at which services are provided",
+    "cardinality": "0..1",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-75",
+    "group": "BG-15",
+    "name": "Deliver to address line 1",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-76",
+    "group": "BG-15",
+    "name": "Deliver to address line 2",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-165",
+    "group": "BG-15",
+    "name": "Deliver to address line 3",
+    "description": "(Added in maintenance release.)",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-77",
+    "group": "BG-15",
+    "name": "Deliver to city",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-78",
+    "group": "BG-15",
+    "name": "Deliver to post code",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-79",
+    "group": "BG-15",
+    "name": "Deliver to country subdivision",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-80",
+    "group": "BG-15",
+    "name": "Deliver to country code",
+    "description": "ISO 3166-1 alpha-2",
+    "cardinality": "1..1",
+    "datatype": "Code"
+  },
+  {
+    "id": "BG-16",
+    "group": "BG-0",
+    "name": "PAYMENT INSTRUCTIONS",
+    "description": "A group providing information about how and to whom payment is made",
+    "cardinality": "0..1",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-81",
+    "group": "BG-16",
+    "name": "Payment means type code",
+    "description": "Code list: UNTDID 4461. Identifies the payment method (e.g., 30=credit transfer, 48=bank card, 49=direct debit, 58=SEPA credit transfer, 59=SEPA direct debit)",
+    "cardinality": "1..1",
+    "datatype": "Code"
+  },
+  {
+    "id": "BT-82",
+    "group": "BG-16",
+    "name": "Payment means text",
+    "description": "A descriptive text for the payment method. In UBL, carried in @name attribute of PaymentMeansCode",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-83",
+    "group": "BG-16",
+    "name": "Remittance information",
+    "description": "A textual value for payment reconciliation (reference number for the Seller)",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BG-17",
+    "group": "BG-16",
+    "name": "CREDIT TRANSFER",
+    "description": "A group providing bank account details for credit transfer payments",
+    "cardinality": "0..n",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-84",
+    "group": "BG-17",
+    "name": "Payment account identifier",
+    "description": "The account number (IBAN for SEPA)",
+    "cardinality": "1..1",
+    "datatype": "Identifier"
+  },
+  {
+    "id": "BT-85",
+    "group": "BG-17",
+    "name": "Payment account name",
+    "description": "The name of the account holder",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-86",
+    "group": "BG-17",
+    "name": "Payment service provider identifier",
+    "description": "The BIC code of the payment service provider (bank)",
+    "cardinality": "0..1",
+    "datatype": "Identifier"
+  },
+  {
+    "id": "BG-18",
+    "group": "BG-16",
+    "name": "PAYMENT CARD INFORMATION",
+    "description": "Card payment details",
+    "cardinality": "0..1",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-87",
+    "group": "BG-18",
+    "name": "Payment card primary account number",
+    "description": "The truncated PAN (last 4–6 digits only)",
+    "cardinality": "1..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-88",
+    "group": "BG-18",
+    "name": "Payment card holder name",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BG-19",
+    "group": "BG-16",
+    "name": "DIRECT DEBIT",
+    "description": "Direct debit mandate details",
+    "cardinality": "0..1",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-89",
+    "group": "BG-19",
+    "name": "Mandate reference identifier",
+    "description": "The SEPA mandate reference",
+    "cardinality": "0..1",
+    "datatype": "Identifier"
+  },
+  {
+    "id": "BT-90",
+    "group": "BG-19",
+    "name": "Bank assigned creditor identifier",
+    "description": "The Seller's creditor ID assigned by the bank",
+    "cardinality": "0..1",
+    "datatype": "Identifier"
+  },
+  {
+    "id": "BT-91",
+    "group": "BG-19",
+    "name": "Debited account identifier",
+    "description": "The Buyer's account to be debited (IBAN for SEPA)",
+    "cardinality": "1..1",
+    "datatype": "Identifier"
+  },
+  {
+    "id": "BG-20",
+    "group": "BG-0",
+    "name": "DOCUMENT LEVEL ALLOWANCES",
+    "description": "Allowances (discounts/rebates) applicable to the entire invoice",
+    "cardinality": "0..n",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-92",
+    "group": "BG-20",
+    "name": "Document level allowance amount",
+    "description": "The net amount of the allowance",
+    "cardinality": "1..1",
+    "datatype": "Amount"
+  },
+  {
+    "id": "BT-93",
+    "group": "BG-20",
+    "name": "Document level allowance base amount",
+    "description": "The base on which the allowance percentage is calculated",
+    "cardinality": "0..1",
+    "datatype": "Amount"
+  },
+  {
+    "id": "BT-94",
+    "group": "BG-20",
+    "name": "Document level allowance percentage",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Percentage"
+  },
+  {
+    "id": "BT-95",
+    "group": "BG-20",
+    "name": "Document level allowance VAT category code",
+    "description": "UNTDID 5305 (S, Z, E, AE, K, G, O, L, M)",
+    "cardinality": "1..1",
+    "datatype": "Code"
+  },
+  {
+    "id": "BT-96",
+    "group": "BG-20",
+    "name": "Document level allowance VAT rate",
+    "description": "The VAT rate for this allowance",
+    "cardinality": "0..1",
+    "datatype": "Percentage"
+  },
+  {
+    "id": "BT-97",
+    "group": "BG-20",
+    "name": "Document level allowance reason",
+    "description": "The reason for the allowance in text form",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-98",
+    "group": "BG-20",
+    "name": "Document level allowance reason code",
+    "description": "UNTDID 5189",
+    "cardinality": "0..1",
+    "datatype": "Code"
+  },
+  {
+    "id": "BG-21",
+    "group": "BG-0",
+    "name": "DOCUMENT LEVEL CHARGES",
+    "description": "Charges (surcharges/fees) applicable to the entire invoice",
+    "cardinality": "0..n",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-99",
+    "group": "BG-21",
+    "name": "Document level charge amount",
+    "description": "",
+    "cardinality": "1..1",
+    "datatype": "Amount"
+  },
+  {
+    "id": "BT-100",
+    "group": "BG-21",
+    "name": "Document level charge base amount",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Amount"
+  },
+  {
+    "id": "BT-101",
+    "group": "BG-21",
+    "name": "Document level charge percentage",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Percentage"
+  },
+  {
+    "id": "BT-102",
+    "group": "BG-21",
+    "name": "Document level charge VAT category code",
+    "description": "UNTDID 5305",
+    "cardinality": "1..1",
+    "datatype": "Code"
+  },
+  {
+    "id": "BT-103",
+    "group": "BG-21",
+    "name": "Document level charge VAT rate",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Percentage"
+  },
+  {
+    "id": "BT-104",
+    "group": "BG-21",
+    "name": "Document level charge reason",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-105",
+    "group": "BG-21",
+    "name": "Document level charge reason code",
+    "description": "UNTDID 7161",
+    "cardinality": "0..1",
+    "datatype": "Code"
+  },
+  {
+    "id": "BG-22",
+    "group": "BG-0",
+    "name": "DOCUMENT TOTALS",
+    "description": "The totals of the invoice",
+    "cardinality": "1..1",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-106",
+    "group": "BG-22",
+    "name": "Sum of Invoice line net amount",
+    "description": "The total of all invoice line net amounts",
+    "cardinality": "1..1",
+    "datatype": "Amount"
+  },
+  {
+    "id": "BT-107",
+    "group": "BG-22",
+    "name": "Sum of allowances on document level",
+    "description": "Total of all document-level allowance amounts",
+    "cardinality": "0..1",
+    "datatype": "Amount"
+  },
+  {
+    "id": "BT-108",
+    "group": "BG-22",
+    "name": "Sum of charges on document level",
+    "description": "Total of all document-level charge amounts",
+    "cardinality": "0..1",
+    "datatype": "Amount"
+  },
+  {
+    "id": "BT-109",
+    "group": "BG-22",
+    "name": "Invoice total amount without VAT",
+    "description": "The total before VAT",
+    "cardinality": "1..1",
+    "datatype": "Amount"
+  },
+  {
+    "id": "BT-110",
+    "group": "BG-22",
+    "name": "Invoice total VAT amount",
+    "description": "The total VAT amount in invoice currency (BT-5)",
+    "cardinality": "0..1",
+    "datatype": "Amount"
+  },
+  {
+    "id": "BT-111",
+    "group": "BG-22",
+    "name": "Invoice total VAT amount in accounting currency",
+    "description": "The VAT total in the accounting currency (BT-6)",
+    "cardinality": "0..1",
+    "datatype": "Amount"
+  },
+  {
+    "id": "BT-112",
+    "group": "BG-22",
+    "name": "Invoice total amount with VAT",
+    "description": "The total including VAT",
+    "cardinality": "1..1",
+    "datatype": "Amount"
+  },
+  {
+    "id": "BT-113",
+    "group": "BG-22",
+    "name": "Paid amount",
+    "description": "Amount already paid (advance payments, prepayments)",
+    "cardinality": "0..1",
+    "datatype": "Amount"
+  },
+  {
+    "id": "BT-114",
+    "group": "BG-22",
+    "name": "Rounding amount",
+    "description": "The difference between BT-112 and the actual rounded amount",
+    "cardinality": "0..1",
+    "datatype": "Amount"
+  },
+  {
+    "id": "BT-115",
+    "group": "BG-22",
+    "name": "Amount due for payment",
+    "description": "The outstanding amount to be paid",
+    "cardinality": "1..1",
+    "datatype": "Amount"
+  },
+  {
+    "id": "BG-23",
+    "group": "BG-0",
+    "name": "VAT BREAKDOWN",
+    "description": "A group providing the VAT breakdown per rate/category",
+    "cardinality": "1..n",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-116",
+    "group": "BG-23",
+    "name": "VAT category taxable amount",
+    "description": "The taxable base for this VAT category/rate",
+    "cardinality": "1..1",
+    "datatype": "Amount"
+  },
+  {
+    "id": "BT-117",
+    "group": "BG-23",
+    "name": "VAT category tax amount",
+    "description": "The calculated VAT amount for this category",
+    "cardinality": "1..1",
+    "datatype": "Amount"
+  },
+  {
+    "id": "BT-118",
+    "group": "BG-23",
+    "name": "VAT category code",
+    "description": "UNTDID 5305. Values: S (standard), Z (zero-rated), E (exempt), AE (reverse charge), K (intra-community), G (export), O (outside scope), L (Canary Islands IGIC), M (Ceuta/Melilla IPSI)",
+    "cardinality": "1..1",
+    "datatype": "Code"
+  },
+  {
+    "id": "BT-119",
+    "group": "BG-23",
+    "name": "VAT category rate",
+    "description": "The VAT rate for this category. Must be 0 for categories Z, E, AE, K, G, O",
+    "cardinality": "1..1",
+    "datatype": "Percentage"
+  },
+  {
+    "id": "BT-120",
+    "group": "BG-23",
+    "name": "VAT exemption reason text",
+    "description": "The reason for exemption from VAT, in text",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-121",
+    "group": "BG-23",
+    "name": "VAT exemption reason code",
+    "description": "Code list: VATEX (CEF VATEX code list)",
+    "cardinality": "0..1",
+    "datatype": "Code"
+  },
+  {
+    "id": "BG-24",
+    "group": "BG-0",
+    "name": "ADDITIONAL SUPPORTING DOCUMENTS",
+    "description": "Attached or referenced documents supporting the invoice",
+    "cardinality": "0..n",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-122",
+    "group": "BG-24",
+    "name": "Supporting document reference",
+    "description": "The identifier of the supporting document",
+    "cardinality": "1..1",
+    "datatype": "Document Reference"
+  },
+  {
+    "id": "BT-123",
+    "group": "BG-24",
+    "name": "Supporting document description",
+    "description": "A description of the attached/referenced document",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-124",
+    "group": "BG-24",
+    "name": "External document location",
+    "description": "A URL where the document can be accessed",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-125",
+    "group": "BG-24",
+    "name": "Attached document",
+    "description": "An embedded binary attachment",
+    "cardinality": "0..1",
+    "datatype": "Binary Object (+mime code from IANA media types, +filename)"
+  },
+  {
+    "id": "BG-25",
+    "group": "BG-0",
+    "name": "INVOICE LINE",
+    "description": "An individual line item of the invoice",
+    "cardinality": "1..n",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-126",
+    "group": "BG-25",
+    "name": "Invoice line identifier",
+    "description": "A unique identifier for the line within this invoice",
+    "cardinality": "1..1",
+    "datatype": "Identifier"
+  },
+  {
+    "id": "BT-127",
+    "group": "BG-25",
+    "name": "Invoice line note",
+    "description": "A textual note providing additional line-level information",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-128",
+    "group": "BG-25",
+    "name": "Invoice line object identifier",
+    "description": "An identifier for an object referenced at line level (e.g., subscription number, meter reading)",
+    "cardinality": "0..1",
+    "datatype": "Identifier (+BT-128-1 Scheme ID from UNTDID 1153)"
+  },
+  {
+    "id": "BT-129",
+    "group": "BG-25",
+    "name": "Invoiced quantity",
+    "description": "The quantity of items invoiced on this line",
+    "cardinality": "1..1",
+    "datatype": "Quantity"
+  },
+  {
+    "id": "BT-130",
+    "group": "BG-25",
+    "name": "Invoiced quantity unit of measure code",
+    "description": "Code list: UN/ECE Rec 20 + Rec 21. The unit of measure for BT-129",
+    "cardinality": "1..1",
+    "datatype": "Code"
+  },
+  {
+    "id": "BT-131",
+    "group": "BG-25",
+    "name": "Invoice line net amount",
+    "description": "The net amount of the line (exclusive of VAT)",
+    "cardinality": "1..1",
+    "datatype": "Amount"
+  },
+  {
+    "id": "BT-132",
+    "group": "BG-25",
+    "name": "Referenced purchase order line reference",
+    "description": "The line number within the purchase order referenced by BT-13",
+    "cardinality": "0..1",
+    "datatype": "Document Reference"
+  },
+  {
+    "id": "BT-133",
+    "group": "BG-25",
+    "name": "Invoice line Buyer accounting reference",
+    "description": "A reference for the Buyer's accounting system at line level",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BG-26",
+    "group": "BG-25",
+    "name": "INVOICE LINE PERIOD",
+    "description": "The period to which this specific line item applies",
+    "cardinality": "0..1",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-134",
+    "group": "BG-26",
+    "name": "Invoice line period start date",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Date"
+  },
+  {
+    "id": "BT-135",
+    "group": "BG-26",
+    "name": "Invoice line period end date",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Date"
+  },
+  {
+    "id": "BG-27",
+    "group": "BG-25",
+    "name": "INVOICE LINE ALLOWANCES",
+    "description": "Allowances applicable to a specific invoice line",
+    "cardinality": "0..n",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-136",
+    "group": "BG-27",
+    "name": "Invoice line allowance amount",
+    "description": "",
+    "cardinality": "1..1",
+    "datatype": "Amount"
+  },
+  {
+    "id": "BT-137",
+    "group": "BG-27",
+    "name": "Invoice line allowance base amount",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Amount"
+  },
+  {
+    "id": "BT-138",
+    "group": "BG-27",
+    "name": "Invoice line allowance percentage",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Percentage"
+  },
+  {
+    "id": "BT-139",
+    "group": "BG-27",
+    "name": "Invoice line allowance reason",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-140",
+    "group": "BG-27",
+    "name": "Invoice line allowance reason code",
+    "description": "UNTDID 5189",
+    "cardinality": "0..1",
+    "datatype": "Code"
+  },
+  {
+    "id": "BG-28",
+    "group": "BG-25",
+    "name": "INVOICE LINE CHARGES",
+    "description": "Charges (surcharges) applicable to a specific invoice line",
+    "cardinality": "0..n",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-141",
+    "group": "BG-28",
+    "name": "Invoice line charge amount",
+    "description": "",
+    "cardinality": "1..1",
+    "datatype": "Amount"
+  },
+  {
+    "id": "BT-142",
+    "group": "BG-28",
+    "name": "Invoice line charge base amount",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Amount"
+  },
+  {
+    "id": "BT-143",
+    "group": "BG-28",
+    "name": "Invoice line charge percentage",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Percentage"
+  },
+  {
+    "id": "BT-144",
+    "group": "BG-28",
+    "name": "Invoice line charge reason",
+    "description": "",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-145",
+    "group": "BG-28",
+    "name": "Invoice line charge reason code",
+    "description": "UNTDID 7161",
+    "cardinality": "0..1",
+    "datatype": "Code"
+  },
+  {
+    "id": "BG-29",
+    "group": "BG-25",
+    "name": "PRICE DETAILS",
+    "description": "Price information for the invoiced item",
+    "cardinality": "1..1",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-146",
+    "group": "BG-29",
+    "name": "Item net price",
+    "description": "The price of the item after any price discount (BT-147) has been applied. Must not be negative",
+    "cardinality": "1..1",
+    "datatype": "Unit Price Amount"
+  },
+  {
+    "id": "BT-147",
+    "group": "BG-29",
+    "name": "Item price discount",
+    "description": "The discount applied to the gross price to arrive at the net price",
+    "cardinality": "0..1",
+    "datatype": "Unit Price Amount"
+  },
+  {
+    "id": "BT-148",
+    "group": "BG-29",
+    "name": "Item gross price",
+    "description": "The gross price before discount. Must not be negative",
+    "cardinality": "0..1",
+    "datatype": "Unit Price Amount"
+  },
+  {
+    "id": "BT-149",
+    "group": "BG-29",
+    "name": "Item price base quantity",
+    "description": "The number of item units to which the price applies (e.g., price per 100 units). Must be > 0",
+    "cardinality": "0..1",
+    "datatype": "Quantity"
+  },
+  {
+    "id": "BT-150",
+    "group": "BG-29",
+    "name": "Item price base quantity unit of measure code",
+    "description": "UN/ECE Rec 20+21. Must equal BT-130 when present",
+    "cardinality": "0..1",
+    "datatype": "Code"
+  },
+  {
+    "id": "BG-30",
+    "group": "BG-25",
+    "name": "LINE VAT INFORMATION",
+    "description": "VAT information for the invoiced item",
+    "cardinality": "1..1",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-151",
+    "group": "BG-30",
+    "name": "Invoiced item VAT category code",
+    "description": "UNTDID 5305. Same code list as BT-118",
+    "cardinality": "1..1",
+    "datatype": "Code"
+  },
+  {
+    "id": "BT-152",
+    "group": "BG-30",
+    "name": "Invoiced item VAT rate",
+    "description": "The VAT rate applicable to the item",
+    "cardinality": "0..1",
+    "datatype": "Percentage"
+  },
+  {
+    "id": "BG-31",
+    "group": "BG-25",
+    "name": "ITEM INFORMATION",
+    "description": "A group of terms providing identifying and descriptive information about the invoiced item",
+    "cardinality": "1..1",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-153",
+    "group": "BG-31",
+    "name": "Item name",
+    "description": "A name for the item (a short description)",
+    "cardinality": "1..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-154",
+    "group": "BG-31",
+    "name": "Item description",
+    "description": "A longer description of the item",
+    "cardinality": "0..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-155",
+    "group": "BG-31",
+    "name": "Item Seller's identifier",
+    "description": "The identifier assigned to the item by the Seller (catalogue/article number)",
+    "cardinality": "0..1",
+    "datatype": "Identifier"
+  },
+  {
+    "id": "BT-156",
+    "group": "BG-31",
+    "name": "Item Buyer's identifier",
+    "description": "The identifier assigned to the item by the Buyer",
+    "cardinality": "0..1",
+    "datatype": "Identifier"
+  },
+  {
+    "id": "BT-157",
+    "group": "BG-31",
+    "name": "Item standard identifier",
+    "description": "An item identifier based on a global standard (e.g., GTIN/EAN)",
+    "cardinality": "0..1",
+    "datatype": "Identifier (+BT-157-1 Scheme ID from ICD, mandatory when BT-157 present)"
+  },
+  {
+    "id": "BT-158",
+    "group": "BG-31",
+    "name": "Item classification identifier",
+    "description": "An item classification code (e.g., CPV, UNSPSC, eCl@ss)",
+    "cardinality": "0..n",
+    "datatype": "Identifier (+BT-158-1 listID from UNTDID 7143, mandatory; +BT-158-2 listVersionID, optional)"
+  },
+  {
+    "id": "BT-159",
+    "group": "BG-31",
+    "name": "Item country of origin",
+    "description": "ISO 3166-1 alpha-2. The country where the item originates",
+    "cardinality": "0..1",
+    "datatype": "Code"
+  },
+  {
+    "id": "BG-32",
+    "group": "BG-31",
+    "name": "ITEM ATTRIBUTES",
+    "description": "Additional attributes (name/value pairs) for the item",
+    "cardinality": "0..n",
+    "datatype": "Group"
+  },
+  {
+    "id": "BT-160",
+    "group": "BG-32",
+    "name": "Item attribute name",
+    "description": "The name of the attribute",
+    "cardinality": "1..1",
+    "datatype": "Text"
+  },
+  {
+    "id": "BT-161",
+    "group": "BG-32",
+    "name": "Item attribute value",
+    "description": "The value of the attribute",
+    "cardinality": "1..1",
+    "datatype": "Text"
+  }
+]

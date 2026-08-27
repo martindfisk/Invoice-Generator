@@ -1,0 +1,45 @@
+name: ci
+on:
+  push:
+  pull_request:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      UAPI_MODE: mock
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Backend deps
+        run: python3 -m venv backend/.venv && backend/.venv/bin/pip install -q -e 'backend[dev]'
+      - name: Frontend deps
+        run: npm ci --prefix frontend
+      - name: Spec (falls back to committed cache with a warning)
+        run: python3 tools/fetch_spec.py
+      - name: Vendor XSD/XSLT assets
+        run: make schemas
+      - name: Compile Schematron to SEF
+        run: make sef
+      - name: Generate UAPI types
+        run: npm run gen-types --prefix frontend
+      - name: Lint
+        run: make lint
+      - name: Unit tests
+        run: make test
+      - name: Playwright browsers
+        run: npx --prefix frontend playwright install --with-deps chromium
+      - name: E2E (MOCK)
+        run: make e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: frontend/playwright-report
+          if-no-files-found: ignore

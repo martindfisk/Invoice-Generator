@@ -1,0 +1,149 @@
+{
+  "type": "INVOICE",
+  "document": {
+    "number": "DE-MUC-2026-004203",
+    "issued_at": "2026-08-26T00:00:00+00:00",
+    "payment_terms": "Zahlbar innerhalb von 30 Tagen ohne Abzug",
+    "references": {
+      "purchase_order": "BST-2026-004489"
+    }
+  },
+  "entries": [
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Uebernachtung Einzelzimmer",
+        "unit": {
+          "quantity": "2.00",
+          "measure": "DAY",
+          "factor": "1",
+          "price": {
+            "exclusive": "129.00",
+            "inclusive": "138.03"
+          }
+        },
+        "value": {
+          "base": "258.00"
+        },
+        "vat": {
+          "type": "VAT_RATE",
+          "code": "REDUCED_1",
+          "percentage": "7.00",
+          "amount": "18.06",
+          "exclusive": "258.00",
+          "inclusive": "276.06"
+        }
+      },
+      "details": {
+        "concept": "GOOD",
+        "description": "2 Naechte, 24.08.2026 bis 26.08.2026",
+        "number": "1"
+      }
+    },
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Fruehstuecksbuffet",
+        "unit": {
+          "quantity": "2.00",
+          "measure": "C62",
+          "factor": "1",
+          "price": {
+            "exclusive": "18.00",
+            "inclusive": "21.42"
+          }
+        },
+        "value": {
+          "base": "36.00"
+        },
+        "vat": {
+          "type": "VAT_RATE",
+          "code": "STANDARD",
+          "percentage": "19.00",
+          "amount": "6.84",
+          "exclusive": "36.00",
+          "inclusive": "42.84"
+        }
+      },
+      "details": {
+        "concept": "GOOD",
+        "number": "2"
+      }
+    }
+  ],
+  "recipients": [
+    {
+      "type": "BUSINESS",
+      "name": "Bundesamt fuer Musterverwaltung",
+      "address": {
+        "line": {
+          "type": "STREET_NUMBER",
+          "street": "Musterallee",
+          "number": "12"
+        },
+        "code": "53113",
+        "city": "Bonn",
+        "country": "DE",
+        "region": "Nordrhein-Westfalen"
+      },
+      "company_id": "991-01234-56",
+      "identification": {
+        "type": "OTHER",
+        "number": "991-01234-56"
+      },
+      "invoicing": {
+        "type": "PEPPOL",
+        "identifier": "0204:991-01234-56"
+      }
+    }
+  ],
+  "payments": [
+    {
+      "type": "OUTSTANDING",
+      "details": {
+        "amount": "318.90",
+        "currency": "EUR",
+        "date": "2026-09-25"
+      },
+      "concept": "INVOICE",
+      "instruction": {
+        "type": "CREDIT_TRANSFER",
+        "account": "DE89370400440532013000",
+        "name": "Hotel Isartor Betriebs GmbH",
+        "payment_service_provider": "COBADEFFXXX",
+        "text": "DE-MUC-2026-004203"
+      }
+    }
+  ],
+  "breakdown": [
+    {
+      "type": "VAT_RATE",
+      "code": "REDUCED_1",
+      "percentage": "7.00",
+      "amount": "18.06",
+      "exclusive": "258.00",
+      "inclusive": "276.06"
+    },
+    {
+      "type": "VAT_RATE",
+      "code": "STANDARD",
+      "percentage": "19.00",
+      "amount": "6.84",
+      "exclusive": "36.00",
+      "inclusive": "42.84"
+    }
+  ],
+  "totals": {
+    "vat": {
+      "amount": "24.90",
+      "exclusive": "294.00",
+      "inclusive": "318.90"
+    }
+  },
+  "seller": {
+    "name": "Rechnungswesen",
+    "email": "rechnung@hotel-isartor.example"
+  }
+}

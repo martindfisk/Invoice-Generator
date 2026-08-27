@@ -1,0 +1,36 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# python
+backend/.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# node
+frontend/node_modules/
+frontend/dist/
+frontend/src/gen/
+frontend/playwright-report/
+frontend/test-results/
+
+# vendored standards (make schemas)
+vendor/
+
+# compiled Schematron (make sef) — 25 MB, embeds a build timestamp so it churns
+frontend/public/sef/*.sef.json
+frontend/dist/sef/
+
+# SaxonJS browser runtime (make sef copies it from vendor/saxon-js/) — Saxonica binary,
+# redistributable with the application but not re-hosted from this repository
+frontend/public/saxon/
+frontend/dist/saxon/
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json

@@ -1,0 +1,1 @@
+`bt-catalog.json` (generated; schema `{id: "BT-31", group: "BG-4", name, description, cardinality, datatype, ubl: [paths], fpa?: [FatturaPA paths]}`) lives at `frontend/src/bt-catalog.json`; this folder only documents the source and the build command: `cd frontend && node scripts/build-bt-catalog.mjs`.

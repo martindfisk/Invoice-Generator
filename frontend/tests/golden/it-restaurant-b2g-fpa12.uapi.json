@@ -1,0 +1,151 @@
+{
+  "type": "INVOICE",
+  "document": {
+    "number": "IT-RM-2026-0121",
+    "issued_at": "2026-08-26T00:00:00+00:00",
+    "payment_terms": "Pagamento a 30 giorni data fattura",
+    "references": {
+      "contract": "CTR-MIC-2026-0088",
+      "purchase_order": "ODA-2026-000517",
+      "tender": "CONV-MIC-2026-0042"
+    }
+  },
+  "entries": [
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Servizio di catering - buffet",
+        "unit": {
+          "quantity": "120.00",
+          "measure": "C62",
+          "factor": "1",
+          "price": {
+            "exclusive": "18.50",
+            "inclusive": "20.35"
+          }
+        },
+        "value": {
+          "base": "2220.00"
+        },
+        "vat": {
+          "type": "VAT_RATE",
+          "code": "REDUCED_1",
+          "percentage": "10.00",
+          "amount": "222.00",
+          "exclusive": "2220.00",
+          "inclusive": "2442.00"
+        }
+      },
+      "details": {
+        "concept": "GOOD",
+        "description": "120 coperti, allestimento e servizio in loco",
+        "number": "1"
+      }
+    },
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Noleggio attrezzature e allestimento sala",
+        "unit": {
+          "quantity": "1.00",
+          "measure": "C62",
+          "factor": "1",
+          "price": {
+            "exclusive": "640.00",
+            "inclusive": "780.80"
+          }
+        },
+        "value": {
+          "base": "640.00"
+        },
+        "vat": {
+          "type": "VAT_RATE",
+          "code": "STANDARD",
+          "percentage": "22.00",
+          "amount": "140.80",
+          "exclusive": "640.00",
+          "inclusive": "780.80"
+        }
+      },
+      "details": {
+        "concept": "GOOD",
+        "number": "2"
+      }
+    }
+  ],
+  "recipients": [
+    {
+      "type": "BUSINESS",
+      "name": "Ministero della Cultura - Direzione Generale Musei",
+      "address": {
+        "line": {
+          "type": "STREET_NUMBER",
+          "street": "Via del Collegio Romano",
+          "number": "27"
+        },
+        "code": "00186",
+        "city": "Roma",
+        "country": "IT",
+        "region": "RM"
+      },
+      "identification": {
+        "type": "TAX",
+        "number": "97564530580"
+      },
+      "invoicing": {
+        "type": "SDI",
+        "destination_code": "UFY9K3"
+      }
+    }
+  ],
+  "payments": [
+    {
+      "type": "OUTSTANDING",
+      "details": {
+        "amount": "3222.80",
+        "currency": "EUR",
+        "date": "2026-09-25"
+      },
+      "concept": "INVOICE",
+      "instruction": {
+        "type": "CREDIT_TRANSFER",
+        "account": "IT41W8000000292100645211151",
+        "name": "Trattoria del Colosseo S.r.l.",
+        "payment_service_provider": "BCITITMMXXX",
+        "text": "IT-RM-2026-0121"
+      }
+    }
+  ],
+  "breakdown": [
+    {
+      "type": "VAT_RATE",
+      "code": "REDUCED_1",
+      "percentage": "10.00",
+      "amount": "222.00",
+      "exclusive": "2220.00",
+      "inclusive": "2442.00"
+    },
+    {
+      "type": "VAT_RATE",
+      "code": "STANDARD",
+      "percentage": "22.00",
+      "amount": "140.80",
+      "exclusive": "640.00",
+      "inclusive": "780.80"
+    }
+  ],
+  "totals": {
+    "vat": {
+      "amount": "362.80",
+      "exclusive": "2860.00",
+      "inclusive": "3222.80"
+    }
+  },
+  "seller": {
+    "name": "Amministrazione",
+    "phone": "+39065550188",
+    "email": "amministrazione@trattoriadelcolosseo.example"
+  }
+}

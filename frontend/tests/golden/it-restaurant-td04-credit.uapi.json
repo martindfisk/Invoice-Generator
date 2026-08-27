@@ -1,0 +1,144 @@
+{
+  "type": "INVOICE",
+  "document": {
+    "number": "IT-RM-2026-0128-NC",
+    "issued_at": "2026-08-26T00:00:00+00:00",
+    "payment_terms": "Importo a credito da compensare sulla prossima fattura",
+    "references": {
+      "purchase_order": "ORD-SLF-2026-0091",
+      "preceding_document": {
+        "number": "IT-RM-2026-0117",
+        "issued_at": "2026-08-24"
+      }
+    }
+  },
+  "entries": [
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Storno pranzo di lavoro - 2 coperti non consumati",
+        "unit": {
+          "quantity": "2.00",
+          "measure": "C62",
+          "factor": "1",
+          "price": {
+            "exclusive": "34.00",
+            "inclusive": "37.40"
+          }
+        },
+        "value": {
+          "base": "68.00"
+        },
+        "vat": {
+          "type": "VAT_RATE",
+          "code": "REDUCED_1",
+          "percentage": "10.00",
+          "amount": "6.80",
+          "exclusive": "68.00",
+          "inclusive": "74.80"
+        }
+      },
+      "details": {
+        "concept": "GOOD",
+        "number": "1"
+      }
+    },
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Storno bevande analcoliche - 2 coperti",
+        "unit": {
+          "quantity": "2.00",
+          "measure": "C62",
+          "factor": "1",
+          "price": {
+            "exclusive": "4.50",
+            "inclusive": "4.95"
+          }
+        },
+        "value": {
+          "base": "9.00"
+        },
+        "vat": {
+          "type": "VAT_RATE",
+          "code": "REDUCED_1",
+          "percentage": "10.00",
+          "amount": "0.90",
+          "exclusive": "9.00",
+          "inclusive": "9.90"
+        }
+      },
+      "details": {
+        "concept": "GOOD",
+        "number": "2"
+      }
+    }
+  ],
+  "recipients": [
+    {
+      "type": "BUSINESS",
+      "name": "Studio Legale Ferrari e Associati S.t.p.",
+      "address": {
+        "line": {
+          "type": "STREET_NUMBER",
+          "street": "Via Nomentana",
+          "number": "108"
+        },
+        "code": "00161",
+        "city": "Roma",
+        "country": "IT",
+        "region": "RM"
+      },
+      "company_id": "03456789012",
+      "identification": {
+        "type": "VAT",
+        "number": "03456789012"
+      },
+      "invoicing": {
+        "type": "SDI",
+        "destination_code": "M5UXCR1"
+      }
+    }
+  ],
+  "payments": [
+    {
+      "type": "OUTSTANDING",
+      "details": {
+        "amount": "84.70",
+        "currency": "EUR"
+      },
+      "concept": "INVOICE",
+      "instruction": {
+        "type": "CREDIT_TRANSFER",
+        "account": "IT41W8000000292100645211151",
+        "name": "Trattoria del Colosseo S.r.l.",
+        "payment_service_provider": "BCITITMMXXX",
+        "text": "IT-RM-2026-0128-NC"
+      }
+    }
+  ],
+  "breakdown": [
+    {
+      "type": "VAT_RATE",
+      "code": "REDUCED_1",
+      "percentage": "10.00",
+      "amount": "7.70",
+      "exclusive": "77.00",
+      "inclusive": "84.70"
+    }
+  ],
+  "totals": {
+    "vat": {
+      "amount": "7.70",
+      "exclusive": "77.00",
+      "inclusive": "84.70"
+    }
+  },
+  "seller": {
+    "name": "Amministrazione",
+    "phone": "+39065550188",
+    "email": "amministrazione@trattoriadelcolosseo.example"
+  }
+}

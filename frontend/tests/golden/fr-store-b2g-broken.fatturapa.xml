@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<p:FatturaElettronica xmlns:p="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2" versione="FPR12">
+  <FatturaElettronicaHeader>
+    <DatiTrasmissione>
+      <IdTrasmittente>
+        <IdPaese>FR</IdPaese>
+      </IdTrasmittente>
+      <ProgressivoInvio>LY20260358</ProgressivoInvio>
+      <FormatoTrasmissione>FPR12</FormatoTrasmissione>
+      <CodiceDestinatario>XXXXXXX</CodiceDestinatario>
+    </DatiTrasmissione>
+    <CedentePrestatore>
+      <DatiAnagrafici>
+        <Anagrafica>
+          <Denominazione>Quincaillerie Rhone Materiaux SARL</Denominazione>
+        </Anagrafica>
+        <RegimeFiscale>RF01</RegimeFiscale>
+      </DatiAnagrafici>
+      <Sede>
+        <Indirizzo>Rue de la Villette</Indirizzo>
+        <NumeroCivico>42</NumeroCivico>
+        <CAP>69003</CAP>
+        <Comune>Lyon</Comune>
+        <Provincia>Auvergne-Rhone-Alpes</Provincia>
+        <Nazione>FR</Nazione>
+      </Sede>
+      <Contatti>
+        <Telefono>+33 4 72550140</Telefono>
+        <Email>facturation@rhone-materiaux.example</Email>
+      </Contatti>
+    </CedentePrestatore>
+    <CessionarioCommittente>
+      <DatiAnagrafici>
+        <Anagrafica>
+          <Denominazione>Commune de Saint-Genis-Laval</Denominazione>
+        </Anagrafica>
+      </DatiAnagrafici>
+      <Sede>
+        <Indirizzo>Avenue Clemenceau</Indirizzo>
+        <NumeroCivico>106</NumeroCivico>
+        <CAP>69230</CAP>
+        <Comune>Saint-Genis-Laval</Comune>
+        <Provincia>Auvergne-Rhone-Alpes</Provincia>
+        <Nazione>FR</Nazione>
+      </Sede>
+    </CessionarioCommittente>
+  </FatturaElettronicaHeader>
+  <FatturaElettronicaBody>
+    <DatiGenerali>
+      <DatiGeneraliDocumento>
+        <TipoDocumento>TD01</TipoDocumento>
+        <Divisa>EUR</Divisa>
+        <Data>2026-08-26</Data>
+        <Numero>FR-LY-2026-0358</Numero>
+        <ImportoTotaleDocumento>3592.80</ImportoTotaleDocumento>
+        <Causale>Fourniture de peinture de sol - marche 2026-TR-014</Causale>
+      </DatiGeneraliDocumento>
+      <DatiOrdineAcquisto>
+        <IdDocumento>EJ-2026-004531</IdDocumento>
+      </DatiOrdineAcquisto>
+      <DatiContratto>
+        <IdDocumento>2026-TR-014</IdDocumento>
+      </DatiContratto>
+    </DatiGenerali>
+    <DatiBeniServizi>
+      <DettaglioLinee>
+        <NumeroLinea>1</NumeroLinea>
+        <Descrizione>Peinture de sol sportif - bidon 20 L</Descrizione>
+        <Quantita>24.00</Quantita>
+        <UnitaMisura>H87</UnitaMisura>
+        <PrezzoUnitario>96.00</PrezzoUnitario>
+        <PrezzoTotale>2304.00</PrezzoTotale>
+        <AliquotaIVA>20.00</AliquotaIVA>
+      </DettaglioLinee>
+      <DettaglioLinee>
+        <NumeroLinea>2</NumeroLinea>
+        <Descrizione>Bandes de marquage sportif - rouleau 50 m</Descrizione>
+        <Quantita>12.00</Quantita>
+        <UnitaMisura>C62</UnitaMisura>
+        <PrezzoUnitario>45.00</PrezzoUnitario>
+        <PrezzoTotale>540.00</PrezzoTotale>
+        <AliquotaIVA>20.00</AliquotaIVA>
+      </DettaglioLinee>
+      <DettaglioLinee>
+        <NumeroLinea>3</NumeroLinea>
+        <Descrizione>Livraison sur chantier</Descrizione>
+        <Quantita>1.00</Quantita>
+        <UnitaMisura>C62</UnitaMisura>
+        <PrezzoUnitario>150.00</PrezzoUnitario>
+        <PrezzoTotale>150.00</PrezzoTotale>
+        <AliquotaIVA>20.00</AliquotaIVA>
+      </DettaglioLinee>
+      <DatiRiepilogo>
+        <AliquotaIVA>20.00</AliquotaIVA>
+        <ImponibileImporto>2994.00</ImponibileImporto>
+        <Imposta>598.80</Imposta>
+        <EsigibilitaIVA>I</EsigibilitaIVA>
+      </DatiRiepilogo>
+    </DatiBeniServizi>
+    <DatiPagamento>
+      <CondizioniPagamento>TP02</CondizioniPagamento>
+      <DettaglioPagamento>
+        <Beneficiario>Quincaillerie Rhone Materiaux SARL</Beneficiario>
+        <ModalitaPagamento>MP05</ModalitaPagamento>
+        <DataScadenzaPagamento>2026-09-25</DataScadenzaPagamento>
+        <ImportoPagamento>3592.80</ImportoPagamento>
+        <IBAN>FR7630006000011234567890189</IBAN>
+        <BIC>BNPAFRPPXXX</BIC>
+      </DettaglioPagamento>
+    </DatiPagamento>
+  </FatturaElettronicaBody>
+</p:FatturaElettronica>

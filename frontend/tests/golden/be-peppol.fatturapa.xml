@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<p:FatturaElettronica xmlns:p="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2" versione="FPR12">
+  <FatturaElettronicaHeader>
+    <DatiTrasmissione>
+      <IdTrasmittente>
+        <IdPaese>BE</IdPaese>
+        <IdCodice>0999999922</IdCodice>
+      </IdTrasmittente>
+      <ProgressivoInvio>NV20260007</ProgressivoInvio>
+      <FormatoTrasmissione>FPR12</FormatoTrasmissione>
+      <CodiceDestinatario>XXXXXXX</CodiceDestinatario>
+    </DatiTrasmissione>
+    <CedentePrestatore>
+      <DatiAnagrafici>
+        <IdFiscaleIVA>
+          <IdPaese>BE</IdPaese>
+          <IdCodice>0999999922</IdCodice>
+        </IdFiscaleIVA>
+        <Anagrafica>
+          <Denominazione>Ardennes Bureau BV</Denominazione>
+        </Anagrafica>
+        <RegimeFiscale>RF01</RegimeFiscale>
+      </DatiAnagrafici>
+      <Sede>
+        <Indirizzo>Rue de la Loi</Indirizzo>
+        <NumeroCivico>16</NumeroCivico>
+        <CAP>1000</CAP>
+        <Comune>Bruxelles</Comune>
+        <Nazione>BE</Nazione>
+      </Sede>
+      <Contatti>
+        <Email>billing@example.be</Email>
+      </Contatti>
+    </CedentePrestatore>
+    <CessionarioCommittente>
+      <DatiAnagrafici>
+        <IdFiscaleIVA>
+          <IdPaese>BE</IdPaese>
+          <IdCodice>0888888895</IdCodice>
+        </IdFiscaleIVA>
+        <Anagrafica>
+          <Denominazione>Meuse Logistics NV</Denominazione>
+        </Anagrafica>
+      </DatiAnagrafici>
+      <Sede>
+        <Indirizzo>Havenlaan</Indirizzo>
+        <NumeroCivico>86C</NumeroCivico>
+        <CAP>1000</CAP>
+        <Comune>Brussel</Comune>
+        <Nazione>BE</Nazione>
+      </Sede>
+    </CessionarioCommittente>
+  </FatturaElettronicaHeader>
+  <FatturaElettronicaBody>
+    <DatiGenerali>
+      <DatiGeneraliDocumento>
+        <TipoDocumento>TD01</TipoDocumento>
+        <Divisa>EUR</Divisa>
+        <Data>2026-08-26</Data>
+        <Numero>BE-INV-2026-0007</Numero>
+        <ImportoTotaleDocumento>1512.50</ImportoTotaleDocumento>
+      </DatiGeneraliDocumento>
+      <DatiOrdineAcquisto>
+        <IdDocumento>PO-BE-2026-014</IdDocumento>
+      </DatiOrdineAcquisto>
+    </DatiGenerali>
+    <DatiBeniServizi>
+      <DettaglioLinee>
+        <NumeroLinea>1</NumeroLinea>
+        <Descrizione>Consultancy services</Descrizione>
+        <Quantita>8.00</Quantita>
+        <UnitaMisura>HUR</UnitaMisura>
+        <PrezzoUnitario>125.00</PrezzoUnitario>
+        <PrezzoTotale>1000.00</PrezzoTotale>
+        <AliquotaIVA>21.00</AliquotaIVA>
+      </DettaglioLinee>
+      <DettaglioLinee>
+        <NumeroLinea>2</NumeroLinea>
+        <Descrizione>Project licence</Descrizione>
+        <Quantita>1.00</Quantita>
+        <UnitaMisura>C62</UnitaMisura>
+        <PrezzoUnitario>250.00</PrezzoUnitario>
+        <PrezzoTotale>250.00</PrezzoTotale>
+        <AliquotaIVA>21.00</AliquotaIVA>
+      </DettaglioLinee>
+      <DatiRiepilogo>
+        <AliquotaIVA>21.00</AliquotaIVA>
+        <ImponibileImporto>1250.00</ImponibileImporto>
+        <Imposta>262.50</Imposta>
+        <EsigibilitaIVA>I</EsigibilitaIVA>
+      </DatiRiepilogo>
+    </DatiBeniServizi>
+    <DatiPagamento>
+      <CondizioniPagamento>TP02</CondizioniPagamento>
+      <DettaglioPagamento>
+        <Beneficiario>Ardennes Bureau BV</Beneficiario>
+        <ModalitaPagamento>MP05</ModalitaPagamento>
+        <DataScadenzaPagamento>2026-09-25</DataScadenzaPagamento>
+        <ImportoPagamento>1512.50</ImportoPagamento>
+        <IBAN>BE68539007547034</IBAN>
+        <BIC>GEBABEBB</BIC>
+      </DettaglioPagamento>
+    </DatiPagamento>
+  </FatturaElettronicaBody>
+</p:FatturaElettronica>

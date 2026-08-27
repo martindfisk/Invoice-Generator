@@ -1,0 +1,153 @@
+{
+  "type": "INVOICE",
+  "document": {
+    "number": "DE-MUC-2026-004182",
+    "issued_at": "2026-08-26T00:00:00+00:00",
+    "payment_terms": "Zahlbar innerhalb von 14 Tagen ohne Abzug",
+    "references": {
+      "buyer": "KST-4711-MUSTERMANN",
+      "purchase_order": "BT-2026-00918"
+    }
+  },
+  "entries": [
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Uebernachtung Doppelzimmer zur Einzelnutzung",
+        "unit": {
+          "quantity": "3.00",
+          "measure": "DAY",
+          "factor": "1",
+          "price": {
+            "exclusive": "145.00",
+            "inclusive": "155.15"
+          }
+        },
+        "value": {
+          "base": "435.00"
+        },
+        "vat": {
+          "type": "VAT_RATE",
+          "code": "REDUCED_1",
+          "percentage": "7.00",
+          "amount": "30.45",
+          "exclusive": "435.00",
+          "inclusive": "465.45"
+        }
+      },
+      "details": {
+        "concept": "GOOD",
+        "description": "3 Naechte, 24.08.2026 bis 27.08.2026",
+        "number": "1"
+      }
+    },
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Bewirtung Restaurant Isartor",
+        "unit": {
+          "quantity": "1.00",
+          "measure": "C62",
+          "factor": "1",
+          "price": {
+            "exclusive": "268.00",
+            "inclusive": "318.92"
+          }
+        },
+        "value": {
+          "base": "268.00"
+        },
+        "vat": {
+          "type": "VAT_RATE",
+          "code": "STANDARD",
+          "percentage": "19.00",
+          "amount": "50.92",
+          "exclusive": "268.00",
+          "inclusive": "318.92"
+        }
+      },
+      "details": {
+        "concept": "GOOD",
+        "description": "Geschaeftsessen mit 4 Personen am 25.08.2026",
+        "number": "2"
+      }
+    }
+  ],
+  "recipients": [
+    {
+      "type": "BUSINESS",
+      "name": "Bayern Technik AG",
+      "address": {
+        "line": {
+          "type": "STREET_NUMBER",
+          "street": "Nordring",
+          "number": "44"
+        },
+        "code": "90409",
+        "city": "Nuernberg",
+        "country": "DE",
+        "region": "Bayern"
+      },
+      "company_id": "HRB 98765",
+      "identification": {
+        "type": "VAT",
+        "number": "812345678"
+      },
+      "invoicing": {
+        "type": "EMAIL",
+        "email": "rechnungseingang@bayern-technik.example",
+        "format": "ZUGFERD_V2"
+      }
+    }
+  ],
+  "payments": [
+    {
+      "type": "OUTSTANDING",
+      "details": {
+        "amount": "784.37",
+        "currency": "EUR",
+        "date": "2026-09-09"
+      },
+      "concept": "INVOICE",
+      "instruction": {
+        "type": "CREDIT_TRANSFER",
+        "account": "DE89370400440532013000",
+        "name": "Hotel Isartor Betriebs GmbH",
+        "payment_service_provider": "COBADEFFXXX",
+        "text": "DE-MUC-2026-004182"
+      }
+    }
+  ],
+  "breakdown": [
+    {
+      "type": "VAT_RATE",
+      "code": "REDUCED_1",
+      "percentage": "7.00",
+      "amount": "30.45",
+      "exclusive": "435.00",
+      "inclusive": "465.45"
+    },
+    {
+      "type": "VAT_RATE",
+      "code": "STANDARD",
+      "percentage": "19.00",
+      "amount": "50.92",
+      "exclusive": "268.00",
+      "inclusive": "318.92"
+    }
+  ],
+  "totals": {
+    "vat": {
+      "amount": "81.37",
+      "exclusive": "703.00",
+      "inclusive": "784.37"
+    }
+  },
+  "seller": {
+    "name": "Rechnungswesen",
+    "phone": "+49 89 5551200",
+    "email": "rechnung@hotel-isartor.example"
+  }
+}

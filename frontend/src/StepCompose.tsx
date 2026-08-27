@@ -1,0 +1,37 @@
+import { InvoiceWorkbench } from "./InvoiceWorkbench";
+import { store, useStore } from "./store";
+
+export function StepCompose() {
+  const workflow = useStore((state) => state.workflow);
+  const { invoice, presetId } = workflow;
+
+  if (!invoice || !presetId) {
+    return (
+      <p className="p-6 text-sm text-muted">
+        No invoice loaded — pick a preset in Setup to compose one.
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
+      <InvoiceWorkbench invoice={invoice} presetId={presetId} />
+      <div className="flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          onClick={() => store.dispatch({ type: "goToStep", step: "validate" })}
+          className="rounded-m bg-brand px-3 py-1.5 text-xs font-semibold text-bunker"
+        >
+          Continue to Validate
+        </button>
+        <button
+          type="button"
+          onClick={() => store.dispatch({ type: "goToStep", step: "setup" })}
+          className="rounded-m border border-line px-3 py-1.5 text-xs font-medium text-muted hover:border-brand hover:text-ink"
+        >
+          Change preset
+        </button>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,1007 @@
+import { add, format, parse as canonical, percentOf } from "./decimal";
+import type {
+  Buyer,
+  Channel,
+  FieldId,
+  Invoice,
+  Line,
+  Party,
+  Payment,
+  References,
+  Totals,
+  Vat,
+  VatBreakdownRow,
+  VatCategory,
+} from "./model";
+
+const AMOUNT_DP = 2;
+const RATE_DP = 2;
+const UNIT_FACTOR = "1";
+const REASON_MAX = 128;
+const CREDIT_NOTE_TYPE_CODE = "381";
+const ZERO = "0.00";
+const SERVICE_UNIT = "HUR";
+const DEFAULT_UNIT = "C62";
+
+export type UapiVatRate = {
+  code: string;
+  percentage: string;
+  description?: string;
+  historic?: boolean;
+};
+
+export type UapiVatExemption = { code: string; description?: string };
+
+export type UapiContext = {
+  vatRates?: UapiVatRate[];
+  vatExemptions?: UapiVatExemption[];
+};
+
+export type UapiVat =
+  | {
+      type: "VAT_RATE";
+      code: string;
+      percentage: string;
+      amount: string;
+      exclusive: string;
+      inclusive: string;
+    }
+  | { type: "VAT_EXEMPTION"; code: string; reason?: string }
+  | { type: "VAT_REVERSE_CHARGE" };
+
+export type UapiBreakdownEntry =
+  | {
+      type: "VAT_RATE";
+      code: string;
+      percentage: string;
+      amount: string;
+      exclusive: string;
+      inclusive: string;
+    }
+  | { type: "VAT_EXEMPTION"; code: string; exclusive: string }
+  | { type: "VAT_REVERSE_CHARGE"; exclusive: string };
+
+export type UapiEntry = {
+  type: "SALE";
+  data: {
+    type: "ITEM";
+    text: string;
+    unit: {
+      quantity: string;
+      measure?: string;
+      factor?: string;
+      price: { exclusive: string; inclusive: string };
+    };
+    value: { base: string; discount?: string; surcharge?: string };
+    vat: UapiVat;
+  };
+  details: { concept: "GOOD" | "SERVICE"; description?: string; number?: string };
+};
+
+export type UapiAddress = {
+  line: { type: "STREET_NUMBER"; street: string; number: string };
+  code: string;
+  city: string;
+  country: string;
+  region?: string;
+};
+
+export type UapiInvoicing =
+  | { type: "SDI"; destination_code: string; pec?: string }
+  | { type: "PEPPOL"; identifier: string }
+  | { type: "EMAIL"; email: string; format?: "ZUGFERD_V2" | "XRECHNUNG_V3" };
+
+export type UapiIdentification = { type: "VAT" | "TAX" | "OTHER"; number: string };
+
+// components.schemas.PersonName (2026-06-01) requires gender, forename and surname; prefix, infix
+// and suffix are optional and the model has no home for them. PersonGender is DIVERSE|FEMALE|MALE,
+// so a model person without a stated gender is sent as DIVERSE rather than omitting a required key.
+export type UapiPersonName = {
+  gender: "MALE" | "FEMALE" | "DIVERSE";
+  forename: string;
+  surname: string;
+};
+
+export type UapiBusinessRecipient = {
+  type: "BUSINESS";
+  name: string;
+  address: UapiAddress;
+  company_id?: string;
+  identification: UapiIdentification;
+  invoicing: UapiInvoicing;
+};
+
+// components.schemas.ConsumerRecipient (2026-06-01) requires type, name and address; identification
+// and invoicing are optional there, but an Italian B2C e-invoice needs both — the codice fiscale as
+// a TAX identification and an SDI invoicing block. There is no company_id on a consumer.
+export type UapiConsumerRecipient = {
+  type: "CONSUMER";
+  name: UapiPersonName;
+  address: UapiAddress;
+  identification: UapiIdentification;
+  invoicing: UapiInvoicing;
+};
+
+export type UapiRecipient = UapiBusinessRecipient | UapiConsumerRecipient;
+
+export type UapiPaymentInstruction =
+  | {
+      type: "CREDIT_TRANSFER";
+      account: string;
+      name: string;
+      payment_service_provider: string;
+      text?: string;
+    }
+  | { type: "UNKNOWN"; text?: string };
+
+export type UapiPayment = {
+  type: "OUTSTANDING";
+  details: { amount: string; currency: string; date?: string };
+  concept: "INVOICE";
+  instruction: UapiPaymentInstruction;
+};
+
+export type UapiDocument = {
+  number: string;
+  issued_at: string;
+  payment_terms?: string;
+  references?: {
+    buyer?: string;
+    project?: string;
+    contract?: string;
+    purchase_order?: string;
+    despatch_advice?: string;
+    tender?: string;
+    preceding_document?: { number: string; issued_at?: string };
+  };
+};
+
+export type InvoiceTransaction = {
+  type: "INVOICE";
+  document: UapiDocument;
+  entries: UapiEntry[];
+  recipients: UapiRecipient[];
+  payments: UapiPayment[];
+  breakdown: UapiBreakdownEntry[];
+  totals: { vat: { amount: string; exclusive: string; inclusive: string } };
+  seller?: { name?: string; phone?: string; email?: string };
+};
+
+export type CorrectionTransaction = {
+  type: "CORRECTION";
+  record: { id: string };
+  reason?: string;
+  data: InvoiceTransaction;
+};
+
+export type CorrectionOptions = { originalRecordId: string; reason?: string };
+
+export const FALLBACK_VAT_RATES: Record<string, Record<string, string>> = {
+  IT: { "22": "STANDARD", "10": "REDUCED_1", "5": "REDUCED_2", "4": "REDUCED_3" },
+  BE: { "21": "STANDARD", "12": "REDUCED_1", "6": "REDUCED_2" },
+  DE: { "19": "STANDARD", "7": "REDUCED_1" },
+  FR: { "20": "STANDARD", "10": "REDUCED_1", "5.5": "REDUCED_2", "2.1": "REDUCED_3" },
+};
+
+export const FALLBACK_VAT_EXEMPTIONS: Record<string, string> = {
+  N1: "NOT_SUBJECT",
+  "N2.1": "NOT_SUBJECT",
+  "N2.2": "NOT_SUBJECT",
+  "N3.1": "NOT_TAXABLE",
+  "N3.2": "NOT_TAXABLE",
+  "N3.3": "NOT_TAXABLE",
+  "N3.4": "NOT_TAXABLE",
+  "N3.5": "NOT_TAXABLE",
+  "N3.6": "NOT_TAXABLE",
+  N4: "CAUSE_1",
+  N5: "CAUSE_2",
+  N7: "NOT_TAXABLE",
+};
+
+export const FALLBACK_CATEGORY_EXEMPTIONS: Record<VatCategory, string> = {
+  S: "NOT_SUBJECT",
+  Z: "NOT_TAXABLE",
+  E: "CAUSE_1",
+  AE: "NOT_SUBJECT",
+  K: "NOT_TAXABLE",
+  G: "NOT_TAXABLE",
+  O: "NOT_SUBJECT",
+};
+
+export const ITALIAN_TAX_REGIMES: Record<string, string> = {
+  ORDINARY: "RF01",
+  FLAT_RATE_SCHEME: "RF19",
+};
+
+function money(value: string): string {
+  return format(value, AMOUNT_DP);
+}
+
+function percentage(rate: string): string {
+  return format(rate, RATE_DP);
+}
+
+export function rateCode(rate: string, country: string, ctx?: UapiContext): string {
+  const wanted = canonical(rate);
+  const configured = ctx?.vatRates?.find(
+    (entry) => entry.historic !== true && canonical(entry.percentage) === wanted,
+  );
+  if (configured) return configured.code;
+  const fallback = FALLBACK_VAT_RATES[country]?.[wanted];
+  if (fallback) return fallback;
+  throw new Error(
+    `uapi-map: no VAT rate code for ${wanted}% in ${country}; pass the system's vat_rates in the context`,
+  );
+}
+
+export function exemptionCode(
+  category: VatCategory,
+  natura: string | undefined,
+  ctx?: UapiContext,
+): string {
+  if (natura) {
+    const configured = ctx?.vatExemptions?.find((entry) =>
+      (entry.description ?? "").toUpperCase().includes(natura.toUpperCase()),
+    );
+    if (configured) return configured.code;
+    const fallback = FALLBACK_VAT_EXEMPTIONS[natura];
+    if (fallback) return fallback;
+  }
+  return FALLBACK_CATEGORY_EXEMPTIONS[category];
+}
+
+function lineVat(line: Line, country: string, ctx?: UapiContext): UapiVat {
+  if (line.vat.category === "AE") return { type: "VAT_REVERSE_CHARGE" };
+  if (line.vat.category !== "S") {
+    return {
+      type: "VAT_EXEMPTION",
+      code: exemptionCode(line.vat.category, line.vat.natura, ctx),
+      reason: line.vat.reason,
+    };
+  }
+  const amount = money(percentOf(line.netAmount, line.vat.rate));
+  return {
+    type: "VAT_RATE",
+    code: rateCode(line.vat.rate, country, ctx),
+    percentage: percentage(line.vat.rate),
+    amount,
+    exclusive: money(line.netAmount),
+    inclusive: money(add(line.netAmount, amount)),
+  };
+}
+
+function breakdownEntry(
+  row: VatBreakdownRow,
+  country: string,
+  ctx?: UapiContext,
+): UapiBreakdownEntry {
+  if (row.category === "AE") {
+    return { type: "VAT_REVERSE_CHARGE", exclusive: money(row.taxableAmount) };
+  }
+  if (row.category !== "S") {
+    return {
+      type: "VAT_EXEMPTION",
+      code: exemptionCode(row.category, row.natura, ctx),
+      exclusive: money(row.taxableAmount),
+    };
+  }
+  return {
+    type: "VAT_RATE",
+    code: rateCode(row.rate, country, ctx),
+    percentage: percentage(row.rate),
+    amount: money(row.taxAmount),
+    exclusive: money(row.taxableAmount),
+    inclusive: money(add(row.taxableAmount, row.taxAmount)),
+  };
+}
+
+function entry(line: Line, country: string, ctx?: UapiContext): UapiEntry {
+  const inclusive =
+    line.vat.category === "S"
+      ? money(add(line.unitPriceNet, percentOf(line.unitPriceNet, line.vat.rate)))
+      : money(line.unitPriceNet);
+  return {
+    type: "SALE",
+    data: {
+      type: "ITEM",
+      text: line.name,
+      unit: {
+        quantity: money(line.quantity),
+        measure: line.unitCode || undefined,
+        factor: UNIT_FACTOR,
+        price: { exclusive: money(line.unitPriceNet), inclusive },
+      },
+      value: { base: money(line.netAmount) },
+      vat: lineVat(line, country, ctx),
+    },
+    details: {
+      concept: line.unitCode === "HUR" ? "SERVICE" : "GOOD",
+      description: line.description,
+      number: line.id,
+    },
+  };
+}
+
+function invoicing(channel: Channel): UapiInvoicing {
+  if (channel.kind === "SDI") {
+    return { type: "SDI", destination_code: channel.codiceDestinatario, pec: channel.pec };
+  }
+  if (channel.kind === "PEPPOL") {
+    return { type: "PEPPOL", identifier: channel.participantId };
+  }
+  return { type: "EMAIL", email: channel.email, format: channel.format };
+}
+
+export function nationalNumber(identifier: string, country: string): string {
+  const prefix = identifier.slice(0, 2).toUpperCase();
+  return country && prefix === country.toUpperCase() ? identifier.slice(2) : identifier;
+}
+
+function identification(buyer: Invoice["buyer"]): UapiIdentification {
+  if (buyer.vatId) {
+    return { type: "VAT", number: nationalNumber(buyer.vatId, buyer.address.country) };
+  }
+  if (buyer.taxId) return { type: "TAX", number: buyer.taxId };
+  return { type: "OTHER", number: buyer.legalRegId ?? "" };
+}
+
+function recipientAddress(buyer: Invoice["buyer"]): UapiAddress {
+  return {
+    line: {
+      type: "STREET_NUMBER",
+      street: buyer.address.street,
+      number: buyer.address.number ?? "",
+    },
+    code: buyer.address.postCode,
+    city: buyer.address.city,
+    country: buyer.address.country,
+    region: buyer.address.region,
+  };
+}
+
+// A buyer that is a natural person *without* a VAT id is a consumer and becomes a
+// ConsumerRecipient: PersonName instead of a legal name, no company_id, and the codice fiscale as a
+// TAX identification. A natural person who does hold a partita IVA is a sole trader, not a
+// consumer, and stays a BusinessRecipient under the name FatturaPA writes as Nome + Cognome.
+// The spec's own description of ConsumerRecipient still reads "Not supported yet." and Recipient
+// says "Must be of type `BUSINESS`" — but the FatturaPA side of B2C is real, so the mapping is
+// written here and the caveat is documented rather than the shape being left out.
+function recipient(invoice: Invoice): UapiRecipient {
+  const buyer = invoice.buyer;
+  const person = buyer.vatId ? undefined : buyer.person;
+  if (person) {
+    return {
+      type: "CONSUMER",
+      name: {
+        gender: person.gender ?? "DIVERSE",
+        forename: person.forename,
+        surname: person.surname,
+      },
+      address: recipientAddress(buyer),
+      identification: identification(buyer),
+      invoicing: invoicing(buyer.channel),
+    };
+  }
+  return {
+    type: "BUSINESS",
+    name: buyer.name,
+    address: recipientAddress(buyer),
+    company_id: buyer.legalRegId,
+    identification: identification(buyer),
+    invoicing: invoicing(buyer.channel),
+  };
+}
+
+function payment(invoice: Invoice): UapiPayment {
+  const { iban, accountName, bic, terms } = invoice.payment;
+  const instruction: UapiPaymentInstruction =
+    iban && accountName && bic
+      ? {
+          type: "CREDIT_TRANSFER",
+          account: iban,
+          name: accountName,
+          payment_service_provider: bic,
+          text: invoice.payment.remittanceInformation,
+        }
+      : { type: "UNKNOWN", text: invoice.payment.remittanceInformation ?? terms };
+  return {
+    type: "OUTSTANDING",
+    details: {
+      amount: money(invoice.totals.payable),
+      currency: invoice.currency,
+      date: invoice.dueDate,
+    },
+    concept: "INVOICE",
+    instruction,
+  };
+}
+
+function documentReferences(invoice: Invoice): UapiDocument["references"] {
+  const references = invoice.references;
+  if (!references) return undefined;
+  const value = {
+    buyer: references.buyerReference,
+    project: references.project,
+    contract: references.contract,
+    purchase_order: references.purchaseOrder,
+    despatch_advice: references.despatchAdvice?.number,
+    tender: references.tenderOrLot,
+    preceding_document: references.precedingInvoice
+      ? {
+          number: references.precedingInvoice.number,
+          issued_at: references.precedingInvoice.issueDate,
+        }
+      : undefined,
+  };
+  return Object.values(value).some((item) => item !== undefined) ? value : undefined;
+}
+
+export function toInvoiceTransaction(invoice: Invoice, ctx?: UapiContext): InvoiceTransaction {
+  const country = invoice.seller.address.country;
+  const contact = invoice.seller.contact;
+  return {
+    type: "INVOICE",
+    document: {
+      number: invoice.number,
+      issued_at: `${invoice.issueDate}T00:00:00+00:00`,
+      payment_terms: invoice.payment.terms,
+      references: documentReferences(invoice),
+    },
+    entries: invoice.lines.map((line) => entry(line, country, ctx)),
+    recipients: [recipient(invoice)],
+    payments: [payment(invoice)],
+    breakdown: invoice.vatBreakdown.map((row) => breakdownEntry(row, country, ctx)),
+    totals: {
+      vat: {
+        amount: money(invoice.totals.taxAmount),
+        exclusive: money(invoice.totals.taxExclusive),
+        inclusive: money(invoice.totals.taxInclusive),
+      },
+    },
+    seller: contact
+      ? { name: contact.name, phone: contact.phone, email: contact.email }
+      : undefined,
+  };
+}
+
+export function isCorrection(invoice: Invoice): boolean {
+  return invoice.typeCode === CREDIT_NOTE_TYPE_CODE;
+}
+
+export function correctionReason(invoice: Invoice): string | undefined {
+  const preceding = invoice.references?.precedingInvoice;
+  const text = invoice.note ?? (preceding && `Correction of invoice ${preceding.number}`);
+  return text?.slice(0, REASON_MAX);
+}
+
+export function toCorrectionTransaction(
+  invoice: Invoice,
+  options: CorrectionOptions,
+  ctx?: UapiContext,
+): CorrectionTransaction {
+  if (!options.originalRecordId) {
+    throw new Error(
+      "uapi-map: toCorrectionTransaction needs the record id of the invoice being corrected; " +
+        "it is runtime state from the earlier TRANSACTION::INVOICE and cannot be derived",
+    );
+  }
+  return {
+    type: "CORRECTION",
+    record: { id: options.originalRecordId },
+    reason: (options.reason ?? correctionReason(invoice))?.slice(0, REASON_MAX),
+    data: toInvoiceTransaction(invoice, ctx),
+  };
+}
+
+export type UapiOperation = InvoiceTransaction | CorrectionTransaction;
+
+// Model fields a TRANSACTION::INVOICE operation has no room for, keyed by the reason. Editing
+// the JSON can never set them, so fromInvoiceTransaction copies them from the base invoice and
+// the Compose editor warns before an edit — the same honesty the XML editor already applies.
+export const UAPI_LOSSY_FIELDS: Record<string, FieldId[]> = {
+  "The syntax is chosen by fiskaly from the recipient's channel and the taxpayer's country, not by the operation":
+    ["format"],
+  "BT-3 is derived by fiskaly; the operation only distinguishes INVOICE from CORRECTION": [
+    "typeCode",
+  ],
+  "The operation has no free-text document note (BT-22); `reason` on a CORRECTION is a different field":
+    ["note"],
+  "document.references carries neither BT-14 nor BT-18, and despatch_advice is a bare number without BT-16's date":
+    ["references.salesOrder", "references.invoicedObject", "references.despatchAdvice.issueDate"],
+  "The Italian document extras (bollo virtuale, CUP, CIG) have no counterpart in the operation": [
+    "it.bollo.virtuale",
+    "it.bollo.amount",
+    "it.cup",
+    "it.cig",
+  ],
+  "BT-72 has no counterpart in the operation": ["delivery.date"],
+  "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)":
+    [
+      "seller.name",
+      "seller.tradeName",
+      "seller.person.forename",
+      "seller.person.surname",
+      "seller.person.gender",
+      "seller.vatId",
+      "seller.taxId",
+      "seller.legalRegId",
+      "seller.legalRegScheme",
+      "seller.electronicAddress.scheme",
+      "seller.electronicAddress.id",
+      "seller.address.street",
+      "seller.address.number",
+      "seller.address.city",
+      "seller.address.postCode",
+      "seller.address.region",
+      "seller.address.country",
+      "seller.it.regimeFiscale",
+      "seller.it.rea.office",
+      "seller.it.rea.number",
+      "seller.it.rea.capital",
+      "seller.it.rea.soleShareholder",
+      "seller.it.rea.liquidation",
+    ],
+  "BusinessRecipient has no trading name, no ISO 6523 scheme for company_id, no EAS electronic address and no contact group":
+    [
+      "buyer.tradeName",
+      "buyer.legalRegScheme",
+      "buyer.electronicAddress.scheme",
+      "buyer.electronicAddress.id",
+      "buyer.contact.name",
+      "buyer.contact.phone",
+      "buyer.contact.email",
+    ],
+  "rateCode/exemptionCode are many-to-one: the SystemVatRateCode and SystemVatExemptionCode enums cannot express Natura or a VATEX code":
+    [
+      "lines.{i}.vat.natura",
+      "lines.{i}.vat.vatexCode",
+      "vatBreakdown.{i}.natura",
+      "vatBreakdown.{i}.vatexCode",
+    ],
+  "esigibilita (FatturaPA EsigibilitaIVA) has no counterpart in the VAT breakdown": [
+    "vatBreakdown.{i}.esigibilita",
+  ],
+  "AltriDatiGestionali has no counterpart in the operation": [
+    "lines.{i}.it.altriDatiGestionali.tipoDato",
+    "lines.{i}.it.altriDatiGestionali.riferimentoTesto",
+    "lines.{i}.it.altriDatiGestionali.riferimentoNumero",
+    "lines.{i}.it.altriDatiGestionali.riferimentoData",
+  ],
+  "The payment instruction is a bank transfer or nothing: UNCL4461/ModalitaPagamento and the FatturaPA payment conditions are not carried":
+    ["payment.meansCode", "payment.meansText", "payment.italianMeansCode", "payment.conditions"],
+  "totals.vat is a three-value VAT summary; the EN 16931 document-level sums and adjustments are not carried":
+    [
+      "totals.lineExtension",
+      "totals.allowance",
+      "totals.charge",
+      "totals.prepaid",
+      "totals.rounding",
+    ],
+};
+
+export const UAPI_LOSSY_FIELD_IDS: FieldId[] = Object.values(UAPI_LOSSY_FIELDS).flat();
+
+// Fields the operation carries for some shapes and drops for others. They survive the round trip
+// because the base supplies them, but an edit only reaches the model in the shape named here.
+export const UAPI_PARTIAL_FIELDS: Record<string, FieldId[]> = {
+  "Only a VAT_RATE row has a percentage; an exemption or reverse-charge row carries none": [
+    "lines.{i}.vat.rate",
+    "vatBreakdown.{i}.rate",
+  ],
+  "identification names one identifier, so a buyer with a VAT id sends only that; its codice fiscale is preserved but not editable through the JSON":
+    ["buyer.taxId"],
+  "Only a CONSUMER recipient carries a PersonName; a BUSINESS recipient has one legal name and no forename, surname or gender":
+    ["buyer.person.forename", "buyer.person.surname", "buyer.person.gender"],
+  "The bank details only travel inside a CREDIT_TRANSFER instruction": [
+    "payment.iban",
+    "payment.accountName",
+    "payment.bic",
+  ],
+  "An UNKNOWN instruction reuses `text` for the payment terms, so a remittance reference equal to the terms is indistinguishable":
+    ["payment.remittanceInformation"],
+  "details.number is optional; without it the entry's position becomes the line id": [
+    "lines.{i}.id",
+  ],
+};
+
+export const UAPI_PARTIAL_FIELD_IDS: FieldId[] = Object.values(UAPI_PARTIAL_FIELDS).flat();
+
+// The other direction: operation fields fromInvoiceTransaction cannot store, because they are
+// projections the model computes rather than data it holds. Editing them in the JSON is undone
+// on the next toInvoiceTransaction.
+export const UAPI_DERIVED_PATHS: string[] = [
+  "entries[].data.unit.factor",
+  "entries[].data.unit.price.inclusive",
+  "entries[].data.vat.code",
+  "entries[].data.vat.amount",
+  "entries[].data.vat.exclusive",
+  "entries[].data.vat.inclusive",
+  "entries[].details.concept",
+  "breakdown[].code",
+  "breakdown[].inclusive",
+  "payments[].type",
+  "payments[].concept",
+  "recipients[].type",
+  "recipients[].identification.type",
+];
+
+const EXEMPTION_CATEGORIES: Record<string, VatCategory> = {
+  NOT_SUBJECT: "O",
+  NOT_TAXABLE: "Z",
+};
+
+export function prefixedVatId(number: string, country: string): string {
+  if (!number || !country) return number;
+  const upper = country.toUpperCase();
+  if (number.slice(0, 2).toUpperCase() === upper) return number;
+  return /^[A-Za-z]{2}/.test(number) ? number : `${upper}${number}`;
+}
+
+type UapiVatFacts = { type: string; percentage?: string; code?: string; reason?: string };
+
+// The forward map projects (category, natura) onto one SystemVatExemptionCode and (rate) onto
+// one SystemVatRateCode, both many-to-one. When the code in the JSON is still the one the base
+// invoice produces, the base row is returned untouched so Natura and VATEX survive; only a code
+// the user actually changed falls through to the coarse EN 16931 category below.
+function vatFacts(entry: UapiVatFacts, base: Vat | undefined, ctx?: UapiContext): Vat {
+  if (entry.type === "VAT_REVERSE_CHARGE") {
+    return base?.category === "AE" ? base : { category: "AE", rate: base?.rate ?? ZERO };
+  }
+  if (entry.type === "VAT_RATE") {
+    const percentage = entry.percentage ?? base?.rate ?? ZERO;
+    if (base?.category === "S" && canonical(base.rate) === canonical(percentage)) return base;
+    return { category: "S", rate: percentage };
+  }
+  const code = entry.code ?? "";
+  const reusable =
+    base &&
+    base.category !== "S" &&
+    base.category !== "AE" &&
+    exemptionCode(base.category, base.natura, ctx) === code;
+  if (reusable) {
+    return entry.reason === undefined || entry.reason === base.reason
+      ? base
+      : { ...base, reason: entry.reason };
+  }
+  return { category: EXEMPTION_CATEGORIES[code] ?? "E", rate: ZERO, reason: entry.reason };
+}
+
+function lineFrom(
+  entry: UapiEntry,
+  base: Line | undefined,
+  index: number,
+  ctx?: UapiContext,
+): Line {
+  const unit = entry.data.unit;
+  const measure =
+    unit.measure ?? (entry.details.concept === "SERVICE" ? SERVICE_UNIT : base?.unitCode);
+  return {
+    id: entry.details.number ?? base?.id ?? String(index + 1),
+    name: entry.data.text,
+    description: entry.details.description,
+    quantity: unit.quantity,
+    unitCode: measure ?? DEFAULT_UNIT,
+    unitPriceNet: unit.price.exclusive,
+    netAmount: entry.data.value.base,
+    vat: vatFacts(entry.data.vat, base?.vat, ctx),
+    it: base?.it,
+  };
+}
+
+function breakdownFrom(
+  entry: UapiBreakdownEntry,
+  base: VatBreakdownRow | undefined,
+  ctx?: UapiContext,
+): VatBreakdownRow {
+  return {
+    ...vatFacts(entry, base, ctx),
+    taxableAmount: entry.exclusive,
+    taxAmount: entry.type === "VAT_RATE" ? entry.amount : ZERO,
+    esigibilita: base?.esigibilita,
+  };
+}
+
+function channelFrom(invoicing: UapiInvoicing | undefined, base: Channel): Channel {
+  if (!invoicing) return base;
+  if (invoicing.type === "SDI") {
+    return {
+      kind: "SDI",
+      codiceDestinatario: invoicing.destination_code,
+      pec: invoicing.pec || undefined,
+    };
+  }
+  if (invoicing.type === "PEPPOL") return { kind: "PEPPOL", participantId: invoicing.identifier };
+  return { kind: "EMAIL", email: invoicing.email, format: invoicing.format };
+}
+
+// The forward map picks one identification: VAT if the buyer has a VAT id, else TAX, else OTHER.
+// A payload that names TAX or OTHER therefore asserts there is no VAT id, and keeping the base's
+// would silently undo the edit; a payload that names VAT says nothing about the codice fiscale,
+// which the base keeps.
+function buyerFrom(recipient: UapiRecipient | undefined, base: Buyer): Buyer {
+  if (!recipient) return base;
+  const address = recipient.address;
+  const country = address.country;
+  const identification = recipient.identification;
+  const isVat = identification?.type === "VAT";
+  const isTax = identification?.type === "TAX";
+  const isOther = identification?.type === "OTHER";
+  const naming =
+    recipient.type === "CONSUMER"
+      ? {
+          name: `${recipient.name.forename} ${recipient.name.surname}`,
+          person: {
+            forename: recipient.name.forename,
+            surname: recipient.name.surname,
+            gender: recipient.name.gender,
+          },
+          legalRegId: undefined,
+        }
+      : {
+          name: recipient.name,
+          person: base.person,
+          legalRegId:
+            recipient.company_id || (isOther ? identification.number || undefined : undefined),
+        };
+  return {
+    ...base,
+    ...naming,
+    vatId: isVat ? prefixedVatId(identification.number, country) : undefined,
+    taxId: isTax ? identification.number : isVat ? base.taxId : undefined,
+    address: {
+      street: address.line.street,
+      number: address.line.number || undefined,
+      city: address.city,
+      postCode: address.code,
+      region: address.region || undefined,
+      country,
+    },
+    channel: channelFrom(recipient.invoicing, base.channel),
+  };
+}
+
+function sellerFrom(operation: InvoiceTransaction, base: Party): Party {
+  const seller = operation.seller;
+  return {
+    ...base,
+    contact: seller ? { name: seller.name, phone: seller.phone, email: seller.email } : undefined,
+  };
+}
+
+function referencesFrom(
+  operation: InvoiceTransaction,
+  base: References | undefined,
+): References | undefined {
+  const refs = operation.document.references;
+  const preceding = refs?.preceding_document;
+  const value: References = {
+    buyerReference: refs?.buyer,
+    project: refs?.project,
+    contract: refs?.contract,
+    purchaseOrder: refs?.purchase_order,
+    salesOrder: base?.salesOrder,
+    despatchAdvice: refs?.despatch_advice
+      ? { number: refs.despatch_advice, issueDate: base?.despatchAdvice?.issueDate }
+      : undefined,
+    tenderOrLot: refs?.tender,
+    invoicedObject: base?.invoicedObject,
+    precedingInvoice: preceding
+      ? { number: preceding.number, issueDate: preceding.issued_at }
+      : undefined,
+  };
+  return Object.values(value).some((item) => item !== undefined) ? value : undefined;
+}
+
+function paymentFrom(operation: InvoiceTransaction, base: Payment): Payment {
+  const instruction = operation.payments[0]?.instruction;
+  const terms = operation.document.payment_terms;
+  const transfer = instruction?.type === "CREDIT_TRANSFER" ? instruction : undefined;
+  // An UNKNOWN instruction's text is `remittanceInformation ?? terms`, so a text equal to the
+  // payment terms cannot be told apart from an absent remittance reference; the base decides.
+  const text = instruction?.text;
+  return {
+    ...base,
+    terms,
+    iban: transfer ? transfer.account : base.iban,
+    accountName: transfer ? transfer.name : base.accountName,
+    bic: transfer ? transfer.payment_service_provider : base.bic,
+    remittanceInformation: transfer || text !== terms ? text : base.remittanceInformation,
+  };
+}
+
+function totalsFrom(operation: InvoiceTransaction, base: Totals): Totals {
+  const vat = operation.totals.vat;
+  return {
+    ...base,
+    taxExclusive: vat.exclusive,
+    taxAmount: vat.amount,
+    taxInclusive: vat.inclusive,
+    payable: operation.payments[0]?.details.amount ?? base.payable,
+  };
+}
+
+export function invoiceOperation(operation: UapiOperation): InvoiceTransaction {
+  return operation.type === "CORRECTION" ? operation.data : operation;
+}
+
+export function fromInvoiceTransaction(
+  operation: UapiOperation,
+  base: Invoice,
+  ctx?: UapiContext,
+): Invoice {
+  // operation.record.id on a CORRECTION is the id of the earlier TRANSACTION::INVOICE record —
+  // runtime state from a previous call, deliberately not stored on the model.
+  const invoice = invoiceOperation(operation);
+  const payment = invoice.payments[0];
+  return {
+    ...base,
+    number: invoice.document.number,
+    issueDate: invoice.document.issued_at?.slice(0, 10) ?? base.issueDate,
+    dueDate: payment?.details.date,
+    typeCode: operation.type === "CORRECTION" ? CREDIT_NOTE_TYPE_CODE : base.typeCode,
+    currency: payment?.details.currency ?? base.currency,
+    references: referencesFrom(invoice, base.references),
+    seller: sellerFrom(invoice, base.seller),
+    buyer: buyerFrom(invoice.recipients[0], base.buyer),
+    lines: invoice.entries.map((entry, index) => lineFrom(entry, base.lines[index], index, ctx)),
+    vatBreakdown: invoice.breakdown.map((entry, index) =>
+      breakdownFrom(entry, base.vatBreakdown[index], ctx),
+    ),
+    payment: paymentFrom(invoice, base.payment),
+    totals: totalsFrom(invoice, base.totals),
+  };
+}
+
+export type UapiTaxpayerRegistration = {
+  office?: string;
+  entry?: string;
+  capital?: string;
+  shareholder_status?: string;
+  liquidation_status?: string;
+  tax_regime?: string;
+};
+
+export type UapiTaxpayer = {
+  type?: string;
+  name?: { legal?: string; trade?: string };
+  address?: {
+    line?: { street?: string; number?: string };
+    code?: string;
+    city?: string;
+    country?: string;
+    region?: string;
+  };
+  country?: string;
+  vat_number?: string;
+  fiscalization?: {
+    type?: string;
+    vat_id_number?: string;
+    tax_id_number?: string;
+    registration?: UapiTaxpayerRegistration;
+  };
+};
+
+export function fromTaxpayer(taxpayer: UapiTaxpayer): Party {
+  const fiscalization = taxpayer.fiscalization;
+  const country = taxpayer.address?.country ?? taxpayer.country ?? fiscalization?.type ?? "";
+  const vatNumber = fiscalization?.vat_id_number ?? taxpayer.vat_number;
+  const vatId = vatNumber
+    ? /^[A-Za-z]{2}/.test(vatNumber)
+      ? vatNumber.toUpperCase()
+      : `${country}${vatNumber}`
+    : undefined;
+  const registration = fiscalization?.registration;
+  return {
+    name: taxpayer.name?.legal ?? "",
+    tradeName: taxpayer.name?.trade,
+    vatId,
+    taxId: fiscalization?.tax_id_number,
+    address: {
+      street: taxpayer.address?.line?.street ?? "",
+      number: taxpayer.address?.line?.number,
+      city: taxpayer.address?.city ?? "",
+      postCode: taxpayer.address?.code ?? "",
+      region: taxpayer.address?.region,
+      country,
+    },
+    it:
+      fiscalization?.type === "IT"
+        ? {
+            regimeFiscale: ITALIAN_TAX_REGIMES[registration?.tax_regime ?? "ORDINARY"] ?? "RF01",
+            rea:
+              registration?.office && registration.entry
+                ? {
+                    office: registration.office,
+                    number: registration.entry,
+                    capital: registration.capital,
+                    soleShareholder:
+                      registration.shareholder_status === "SOLE_SHAREHOLDER" ? "SU" : "SM",
+                    liquidation: registration.liquidation_status === "IN_LIQUIDATION" ? "LS" : "LN",
+                  }
+                : undefined,
+          }
+        : undefined,
+  };
+}
+
+// JSON Pointers into an InvoiceTransaction, mapped back to the model field a schema error should
+// highlight. `{i}` stands for an array index the pointer supplies. Only pointers with a genuine
+// model home are listed; a pointer that resolves to nothing leaves the finding unfielded rather
+// than pointing at a neighbouring field.
+export const UAPI_POINTER_FIELDS: Record<string, FieldId> = {
+  "/document/number": "number",
+  "/document/issued_at": "issueDate",
+  "/document/payment_terms": "payment.terms",
+  "/document/references/buyer": "references.buyerReference",
+  "/document/references/project": "references.project",
+  "/document/references/contract": "references.contract",
+  "/document/references/purchase_order": "references.purchaseOrder",
+  "/document/references/despatch_advice": "references.despatchAdvice.number",
+  "/document/references/tender": "references.tenderOrLot",
+  "/document/references/preceding_document/number": "references.precedingInvoice.number",
+  "/document/references/preceding_document/issued_at": "references.precedingInvoice.issueDate",
+  "/entries/{i}/data/text": "lines.{i}.name",
+  "/entries/{i}/data/unit/quantity": "lines.{i}.quantity",
+  "/entries/{i}/data/unit/measure": "lines.{i}.unitCode",
+  "/entries/{i}/data/unit/price/exclusive": "lines.{i}.unitPriceNet",
+  "/entries/{i}/data/value/base": "lines.{i}.netAmount",
+  "/entries/{i}/data/vat/code": "lines.{i}.vat.category",
+  "/entries/{i}/data/vat/percentage": "lines.{i}.vat.rate",
+  "/entries/{i}/data/vat/reason": "lines.{i}.vat.reason",
+  "/entries/{i}/details/description": "lines.{i}.description",
+  "/entries/{i}/details/number": "lines.{i}.id",
+  "/recipients/{i}/name": "buyer.name",
+  "/recipients/{i}/name/forename": "buyer.person.forename",
+  "/recipients/{i}/name/surname": "buyer.person.surname",
+  "/recipients/{i}/name/gender": "buyer.person.gender",
+  "/recipients/{i}/company_id": "buyer.legalRegId",
+  "/recipients/{i}/identification/number": "buyer.vatId",
+  "/recipients/{i}/address/line/street": "buyer.address.street",
+  "/recipients/{i}/address/line/number": "buyer.address.number",
+  "/recipients/{i}/address/city": "buyer.address.city",
+  "/recipients/{i}/address/code": "buyer.address.postCode",
+  "/recipients/{i}/address/region": "buyer.address.region",
+  "/recipients/{i}/address/country": "buyer.address.country",
+  "/recipients/{i}/invoicing/destination_code": "buyer.channel.codiceDestinatario",
+  "/recipients/{i}/invoicing/pec": "buyer.channel.pec",
+  "/recipients/{i}/invoicing/identifier": "buyer.channel.participantId",
+  "/recipients/{i}/invoicing/email": "buyer.channel.email",
+  "/recipients/{i}/invoicing/format": "buyer.channel.format",
+  "/payments/{i}/details/amount": "totals.payable",
+  "/payments/{i}/details/currency": "currency",
+  "/payments/{i}/details/date": "dueDate",
+  "/payments/{i}/instruction/account": "payment.iban",
+  "/payments/{i}/instruction/name": "payment.accountName",
+  "/payments/{i}/instruction/payment_service_provider": "payment.bic",
+  "/payments/{i}/instruction/text": "payment.remittanceInformation",
+  "/breakdown/{i}/code": "vatBreakdown.{i}.category",
+  "/breakdown/{i}/percentage": "vatBreakdown.{i}.rate",
+  "/breakdown/{i}/amount": "vatBreakdown.{i}.taxAmount",
+  "/breakdown/{i}/exclusive": "vatBreakdown.{i}.taxableAmount",
+  "/totals/vat/amount": "totals.taxAmount",
+  "/totals/vat/exclusive": "totals.taxExclusive",
+  "/totals/vat/inclusive": "totals.taxInclusive",
+  "/seller/name": "seller.contact.name",
+  "/seller/phone": "seller.contact.phone",
+  "/seller/email": "seller.contact.email",
+};
+
+const INDEX_SEGMENT = /^\d+$/;
+
+export function fieldForPointer(pointer: string): FieldId | undefined {
+  if (!pointer.startsWith("/")) return undefined;
+  // A CORRECTION wraps the invoice in `data`, so its pointers carry one extra segment.
+  const path = pointer.startsWith("/data/") ? pointer.slice("/data".length) : pointer;
+  const segments = path.split("/");
+  const indices: string[] = [];
+  const template = segments
+    .map((segment) => {
+      if (!INDEX_SEGMENT.test(segment)) return segment;
+      indices.push(segment);
+      return "{i}";
+    })
+    .join("/");
+  const field = UAPI_POINTER_FIELDS[template];
+  if (!field) return undefined;
+  return field.includes("{i}") && indices.length ? field.replace("{i}", indices[0]) : field;
+}

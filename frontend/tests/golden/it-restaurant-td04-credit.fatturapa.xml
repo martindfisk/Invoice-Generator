@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<p:FatturaElettronica xmlns:p="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2" versione="FPR12">
+  <FatturaElettronicaHeader>
+    <DatiTrasmissione>
+      <IdTrasmittente>
+        <IdPaese>IT</IdPaese>
+        <IdCodice>02345678901</IdCodice>
+      </IdTrasmittente>
+      <ProgressivoInvio>20260128NC</ProgressivoInvio>
+      <FormatoTrasmissione>FPR12</FormatoTrasmissione>
+      <CodiceDestinatario>M5UXCR1</CodiceDestinatario>
+    </DatiTrasmissione>
+    <CedentePrestatore>
+      <DatiAnagrafici>
+        <IdFiscaleIVA>
+          <IdPaese>IT</IdPaese>
+          <IdCodice>02345678901</IdCodice>
+        </IdFiscaleIVA>
+        <CodiceFiscale>02345678901</CodiceFiscale>
+        <Anagrafica>
+          <Denominazione>Trattoria del Colosseo S.r.l.</Denominazione>
+        </Anagrafica>
+        <RegimeFiscale>RF01</RegimeFiscale>
+      </DatiAnagrafici>
+      <Sede>
+        <Indirizzo>Via dei Fori Imperiali</Indirizzo>
+        <NumeroCivico>22</NumeroCivico>
+        <CAP>00184</CAP>
+        <Comune>Roma</Comune>
+        <Provincia>RM</Provincia>
+        <Nazione>IT</Nazione>
+      </Sede>
+      <IscrizioneREA>
+        <Ufficio>RM</Ufficio>
+        <NumeroREA>1456789</NumeroREA>
+        <CapitaleSociale>20000.00</CapitaleSociale>
+        <SocioUnico>SM</SocioUnico>
+        <StatoLiquidazione>LN</StatoLiquidazione>
+      </IscrizioneREA>
+      <Contatti>
+        <Telefono>+39065550188</Telefono>
+        <Email>amministrazione@trattoriadelcolosseo.example</Email>
+      </Contatti>
+    </CedentePrestatore>
+    <CessionarioCommittente>
+      <DatiAnagrafici>
+        <IdFiscaleIVA>
+          <IdPaese>IT</IdPaese>
+          <IdCodice>03456789012</IdCodice>
+        </IdFiscaleIVA>
+        <CodiceFiscale>03456789012</CodiceFiscale>
+        <Anagrafica>
+          <Denominazione>Studio Legale Ferrari e Associati S.t.p.</Denominazione>
+        </Anagrafica>
+      </DatiAnagrafici>
+      <Sede>
+        <Indirizzo>Via Nomentana</Indirizzo>
+        <NumeroCivico>108</NumeroCivico>
+        <CAP>00161</CAP>
+        <Comune>Roma</Comune>
+        <Provincia>RM</Provincia>
+        <Nazione>IT</Nazione>
+      </Sede>
+    </CessionarioCommittente>
+  </FatturaElettronicaHeader>
+  <FatturaElettronicaBody>
+    <DatiGenerali>
+      <DatiGeneraliDocumento>
+        <TipoDocumento>TD04</TipoDocumento>
+        <Divisa>EUR</Divisa>
+        <Data>2026-08-26</Data>
+        <Numero>IT-RM-2026-0128-NC</Numero>
+        <ImportoTotaleDocumento>84.70</ImportoTotaleDocumento>
+        <Causale>Nota di credito a storno parziale della fattura IT-RM-2026-0117</Causale>
+      </DatiGeneraliDocumento>
+      <DatiOrdineAcquisto>
+        <IdDocumento>ORD-SLF-2026-0091</IdDocumento>
+      </DatiOrdineAcquisto>
+      <DatiFattureCollegate>
+        <IdDocumento>IT-RM-2026-0117</IdDocumento>
+        <Data>2026-08-24</Data>
+      </DatiFattureCollegate>
+    </DatiGenerali>
+    <DatiBeniServizi>
+      <DettaglioLinee>
+        <NumeroLinea>1</NumeroLinea>
+        <Descrizione>Storno pranzo di lavoro - 2 coperti non consumati</Descrizione>
+        <Quantita>2.00</Quantita>
+        <UnitaMisura>C62</UnitaMisura>
+        <PrezzoUnitario>34.00</PrezzoUnitario>
+        <PrezzoTotale>68.00</PrezzoTotale>
+        <AliquotaIVA>10.00</AliquotaIVA>
+      </DettaglioLinee>
+      <DettaglioLinee>
+        <NumeroLinea>2</NumeroLinea>
+        <Descrizione>Storno bevande analcoliche - 2 coperti</Descrizione>
+        <Quantita>2.00</Quantita>
+        <UnitaMisura>C62</UnitaMisura>
+        <PrezzoUnitario>4.50</PrezzoUnitario>
+        <PrezzoTotale>9.00</PrezzoTotale>
+        <AliquotaIVA>10.00</AliquotaIVA>
+      </DettaglioLinee>
+      <DatiRiepilogo>
+        <AliquotaIVA>10.00</AliquotaIVA>
+        <ImponibileImporto>77.00</ImponibileImporto>
+        <Imposta>7.70</Imposta>
+        <EsigibilitaIVA>I</EsigibilitaIVA>
+      </DatiRiepilogo>
+    </DatiBeniServizi>
+    <DatiPagamento>
+      <CondizioniPagamento>TP02</CondizioniPagamento>
+      <DettaglioPagamento>
+        <Beneficiario>Trattoria del Colosseo S.r.l.</Beneficiario>
+        <ModalitaPagamento>MP05</ModalitaPagamento>
+        <ImportoPagamento>84.70</ImportoPagamento>
+        <IBAN>IT41W8000000292100645211151</IBAN>
+        <BIC>BCITITMMXXX</BIC>
+      </DettaglioPagamento>
+    </DatiPagamento>
+  </FatturaElettronicaBody>
+</p:FatturaElettronica>

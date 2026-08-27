@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<p:FatturaElettronica xmlns:p="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2" versione="FPR12">
+  <FatturaElettronicaHeader>
+    <DatiTrasmissione>
+      <IdTrasmittente>
+        <IdPaese>IT</IdPaese>
+        <IdCodice>02345678901</IdCodice>
+      </IdTrasmittente>
+      <ProgressivoInvio>RM20260117</ProgressivoInvio>
+      <FormatoTrasmissione>FPR12</FormatoTrasmissione>
+      <CodiceDestinatario>M5UXCR1</CodiceDestinatario>
+    </DatiTrasmissione>
+    <CedentePrestatore>
+      <DatiAnagrafici>
+        <IdFiscaleIVA>
+          <IdPaese>IT</IdPaese>
+          <IdCodice>02345678901</IdCodice>
+        </IdFiscaleIVA>
+        <CodiceFiscale>02345678901</CodiceFiscale>
+        <Anagrafica>
+          <Denominazione>Trattoria del Colosseo S.r.l.</Denominazione>
+        </Anagrafica>
+        <RegimeFiscale>RF01</RegimeFiscale>
+      </DatiAnagrafici>
+      <Sede>
+        <Indirizzo>Via dei Fori Imperiali</Indirizzo>
+        <NumeroCivico>22</NumeroCivico>
+        <CAP>00184</CAP>
+        <Comune>Roma</Comune>
+        <Provincia>RM</Provincia>
+        <Nazione>IT</Nazione>
+      </Sede>
+      <IscrizioneREA>
+        <Ufficio>RM</Ufficio>
+        <NumeroREA>1456789</NumeroREA>
+        <CapitaleSociale>20000.00</CapitaleSociale>
+        <SocioUnico>SM</SocioUnico>
+        <StatoLiquidazione>LN</StatoLiquidazione>
+      </IscrizioneREA>
+      <Contatti>
+        <Telefono>+39065550188</Telefono>
+        <Email>amministrazione@trattoriadelcolosseo.example</Email>
+      </Contatti>
+    </CedentePrestatore>
+    <CessionarioCommittente>
+      <DatiAnagrafici>
+        <IdFiscaleIVA>
+          <IdPaese>IT</IdPaese>
+          <IdCodice>03456789012</IdCodice>
+        </IdFiscaleIVA>
+        <CodiceFiscale>03456789012</CodiceFiscale>
+        <Anagrafica>
+          <Denominazione>Studio Legale Ferrari e Associati S.t.p.</Denominazione>
+        </Anagrafica>
+      </DatiAnagrafici>
+      <Sede>
+        <Indirizzo>Via Nomentana</Indirizzo>
+        <NumeroCivico>108</NumeroCivico>
+        <CAP>00161</CAP>
+        <Comune>Roma</Comune>
+        <Provincia>RM</Provincia>
+        <Nazione>IT</Nazione>
+      </Sede>
+    </CessionarioCommittente>
+  </FatturaElettronicaHeader>
+  <FatturaElettronicaBody>
+    <DatiGenerali>
+      <DatiGeneraliDocumento>
+        <TipoDocumento>TD01</TipoDocumento>
+        <Divisa>EUR</Divisa>
+        <Data>2026-08-24</Data>
+        <Numero>IT-RM-2026-0117</Numero>
+        <DatiBollo>
+          <BolloVirtuale>SI</BolloVirtuale>
+          <ImportoBollo>2.00</ImportoBollo>
+        </DatiBollo>
+        <ImportoTotaleDocumento>458.80</ImportoTotaleDocumento>
+        <Causale>Pranzo di lavoro del 24/08/2026 - sala Traiano</Causale>
+      </DatiGeneraliDocumento>
+      <DatiOrdineAcquisto>
+        <IdDocumento>ORD-SLF-2026-0091</IdDocumento>
+      </DatiOrdineAcquisto>
+      <DatiRicezione>
+        <IdDocumento>TAV12-CONTO-00451</IdDocumento>
+      </DatiRicezione>
+    </DatiGenerali>
+    <DatiBeniServizi>
+      <DettaglioLinee>
+        <NumeroLinea>1</NumeroLinea>
+        <Descrizione>Pranzo di lavoro - menu completo</Descrizione>
+        <Quantita>8.00</Quantita>
+        <UnitaMisura>C62</UnitaMisura>
+        <PrezzoUnitario>34.00</PrezzoUnitario>
+        <PrezzoTotale>272.00</PrezzoTotale>
+        <AliquotaIVA>10.00</AliquotaIVA>
+      </DettaglioLinee>
+      <DettaglioLinee>
+        <NumeroLinea>2</NumeroLinea>
+        <Descrizione>Bevande analcoliche</Descrizione>
+        <Quantita>8.00</Quantita>
+        <UnitaMisura>C62</UnitaMisura>
+        <PrezzoUnitario>4.50</PrezzoUnitario>
+        <PrezzoTotale>36.00</PrezzoTotale>
+        <AliquotaIVA>10.00</AliquotaIVA>
+      </DettaglioLinee>
+      <DettaglioLinee>
+        <NumeroLinea>3</NumeroLinea>
+        <Descrizione>Anticipazioni in nome e per conto - noleggio sala esterna</Descrizione>
+        <Quantita>1.00</Quantita>
+        <UnitaMisura>C62</UnitaMisura>
+        <PrezzoUnitario>120.00</PrezzoUnitario>
+        <PrezzoTotale>120.00</PrezzoTotale>
+        <AliquotaIVA>0.00</AliquotaIVA>
+        <Natura>N1</Natura>
+      </DettaglioLinee>
+      <DatiRiepilogo>
+        <AliquotaIVA>10.00</AliquotaIVA>
+        <ImponibileImporto>308.00</ImponibileImporto>
+        <Imposta>30.80</Imposta>
+        <EsigibilitaIVA>I</EsigibilitaIVA>
+      </DatiRiepilogo>
+      <DatiRiepilogo>
+        <AliquotaIVA>0.00</AliquotaIVA>
+        <Natura>N1</Natura>
+        <ImponibileImporto>120.00</ImponibileImporto>
+        <Imposta>0.00</Imposta>
+        <EsigibilitaIVA>I</EsigibilitaIVA>
+        <RiferimentoNormativo>Escluso art. 15 c. 1 n. 3 DPR 633/1972 - anticipazioni in nome e per conto</RiferimentoNormativo>
+      </DatiRiepilogo>
+    </DatiBeniServizi>
+    <DatiPagamento>
+      <CondizioniPagamento>TP02</CondizioniPagamento>
+      <DettaglioPagamento>
+        <Beneficiario>Trattoria del Colosseo S.r.l.</Beneficiario>
+        <ModalitaPagamento>MP05</ModalitaPagamento>
+        <DataScadenzaPagamento>2026-09-23</DataScadenzaPagamento>
+        <ImportoPagamento>458.80</ImportoPagamento>
+        <IBAN>IT41W8000000292100645211151</IBAN>
+        <BIC>BCITITMMXXX</BIC>
+      </DettaglioPagamento>
+    </DatiPagamento>
+  </FatturaElettronicaBody>
+</p:FatturaElettronica>

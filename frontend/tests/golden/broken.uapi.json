@@ -1,0 +1,136 @@
+{
+  "type": "INVOICE",
+  "document": {
+    "number": "BROKEN-0001",
+    "issued_at": "2026-08-26T00:00:00+00:00",
+    "references": {
+      "purchase_order": "PO-BROKEN-0001"
+    }
+  },
+  "entries": [
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Fornitura di materiali",
+        "unit": {
+          "quantity": "1.00",
+          "measure": "C62",
+          "factor": "1",
+          "price": {
+            "exclusive": "1000.00",
+            "inclusive": "1220.00"
+          }
+        },
+        "value": {
+          "base": "1000.00"
+        },
+        "vat": {
+          "type": "VAT_RATE",
+          "code": "STANDARD",
+          "percentage": "22.00",
+          "amount": "220.00",
+          "exclusive": "1000.00",
+          "inclusive": "1220.00"
+        }
+      },
+      "details": {
+        "concept": "GOOD",
+        "number": "1"
+      }
+    },
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Prestazione esente",
+        "unit": {
+          "quantity": "1.00",
+          "measure": "C62",
+          "factor": "1",
+          "price": {
+            "exclusive": "200.00",
+            "inclusive": "200.00"
+          }
+        },
+        "value": {
+          "base": "200.00"
+        },
+        "vat": {
+          "type": "VAT_EXEMPTION",
+          "code": "CAUSE_3"
+        }
+      },
+      "details": {
+        "concept": "GOOD",
+        "number": "2"
+      }
+    }
+  ],
+  "recipients": [
+    {
+      "type": "BUSINESS",
+      "name": "Ombra Trading S.r.l.",
+      "address": {
+        "line": {
+          "type": "STREET_NUMBER",
+          "street": "Via Senza Paese",
+          "number": "9"
+        },
+        "code": "80100",
+        "city": "Napoli",
+        "country": "",
+        "region": "NA"
+      },
+      "identification": {
+        "type": "VAT",
+        "number": "IT11111111111"
+      },
+      "invoicing": {
+        "type": "SDI",
+        "destination_code": "0000000"
+      }
+    }
+  ],
+  "payments": [
+    {
+      "type": "OUTSTANDING",
+      "details": {
+        "amount": "1410.00",
+        "currency": "EUR",
+        "date": "2026-09-25"
+      },
+      "concept": "INVOICE",
+      "instruction": {
+        "type": "UNKNOWN"
+      }
+    }
+  ],
+  "breakdown": [
+    {
+      "type": "VAT_RATE",
+      "code": "STANDARD",
+      "percentage": "22.00",
+      "amount": "220.00",
+      "exclusive": "1000.00",
+      "inclusive": "1220.00"
+    },
+    {
+      "type": "VAT_EXEMPTION",
+      "code": "CAUSE_3",
+      "exclusive": "200.00"
+    }
+  ],
+  "totals": {
+    "vat": {
+      "amount": "210.00",
+      "exclusive": "1200.00",
+      "inclusive": "1410.00"
+    }
+  },
+  "seller": {
+    "name": "Ufficio Fatturazione",
+    "phone": "+39021234567",
+    "email": "fatture@example.it"
+  }
+}

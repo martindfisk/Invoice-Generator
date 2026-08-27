@@ -1,0 +1,21 @@
+{
+  "_fixture": {
+    "source": "synthetic",
+    "note": "M0 placeholder; replace with recorded TEST responses"
+  },
+  "content": {
+    "id": "00000000-0000-4000-8000-000000000000",
+    "authentication": {
+      "type": "JWT",
+      "bearer": "***",
+      "expires_at": "2099-12-31T23:59:59Z",
+      "issued_at": "2026-08-26T08:00:00Z"
+    },
+    "organization": {
+      "id": "10000000-0000-4000-8000-000000000001"
+    },
+    "subject": {
+      "id": "20000000-0000-4000-8000-000000000001"
+    }
+  }
+}

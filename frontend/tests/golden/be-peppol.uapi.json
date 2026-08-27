@@ -1,0 +1,141 @@
+{
+  "type": "INVOICE",
+  "document": {
+    "number": "BE-INV-2026-0007",
+    "issued_at": "2026-08-26T00:00:00+00:00",
+    "payment_terms": "Payable within 30 days of the invoice date",
+    "references": {
+      "buyer": "BR-2026-77",
+      "purchase_order": "PO-BE-2026-014"
+    }
+  },
+  "entries": [
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Consultancy services",
+        "unit": {
+          "quantity": "8.00",
+          "measure": "HUR",
+          "factor": "1",
+          "price": {
+            "exclusive": "125.00",
+            "inclusive": "151.25"
+          }
+        },
+        "value": {
+          "base": "1000.00"
+        },
+        "vat": {
+          "type": "VAT_RATE",
+          "code": "STANDARD",
+          "percentage": "21.00",
+          "amount": "210.00",
+          "exclusive": "1000.00",
+          "inclusive": "1210.00"
+        }
+      },
+      "details": {
+        "concept": "SERVICE",
+        "description": "Peppol onboarding workshop",
+        "number": "1"
+      }
+    },
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Project licence",
+        "unit": {
+          "quantity": "1.00",
+          "measure": "C62",
+          "factor": "1",
+          "price": {
+            "exclusive": "250.00",
+            "inclusive": "302.50"
+          }
+        },
+        "value": {
+          "base": "250.00"
+        },
+        "vat": {
+          "type": "VAT_RATE",
+          "code": "STANDARD",
+          "percentage": "21.00",
+          "amount": "52.50",
+          "exclusive": "250.00",
+          "inclusive": "302.50"
+        }
+      },
+      "details": {
+        "concept": "GOOD",
+        "number": "2"
+      }
+    }
+  ],
+  "recipients": [
+    {
+      "type": "BUSINESS",
+      "name": "Meuse Logistics NV",
+      "address": {
+        "line": {
+          "type": "STREET_NUMBER",
+          "street": "Havenlaan",
+          "number": "86C"
+        },
+        "code": "1000",
+        "city": "Brussel",
+        "country": "BE"
+      },
+      "company_id": "0888888895",
+      "identification": {
+        "type": "VAT",
+        "number": "0888888895"
+      },
+      "invoicing": {
+        "type": "PEPPOL",
+        "identifier": "0208:0888888895"
+      }
+    }
+  ],
+  "payments": [
+    {
+      "type": "OUTSTANDING",
+      "details": {
+        "amount": "1512.50",
+        "currency": "EUR",
+        "date": "2026-09-25"
+      },
+      "concept": "INVOICE",
+      "instruction": {
+        "type": "CREDIT_TRANSFER",
+        "account": "BE68539007547034",
+        "name": "Ardennes Bureau BV",
+        "payment_service_provider": "GEBABEBB",
+        "text": "BE-INV-2026-0007"
+      }
+    }
+  ],
+  "breakdown": [
+    {
+      "type": "VAT_RATE",
+      "code": "STANDARD",
+      "percentage": "21.00",
+      "amount": "262.50",
+      "exclusive": "1250.00",
+      "inclusive": "1512.50"
+    }
+  ],
+  "totals": {
+    "vat": {
+      "amount": "262.50",
+      "exclusive": "1250.00",
+      "inclusive": "1512.50"
+    }
+  },
+  "seller": {
+    "name": "Billing",
+    "email": "billing@example.be"
+  }
+}
