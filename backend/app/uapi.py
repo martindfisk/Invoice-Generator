@@ -92,8 +92,10 @@ class UapiClient:
         headers=None,
         step="passthrough",
         idempotency_key=None,
+        step_name=None,
+        run_id=None,
     ):
-        args = (method, path, json, params, headers, step, idempotency_key)
+        args = (method, path, json, params, headers, step, idempotency_key, step_name, run_id)
         response = await self._authorized(*args)
         if response.status_code == 401:
             self._bearer = None
@@ -113,26 +115,60 @@ class UapiClient:
         if self._revision != self.store.revision(self.name):
             await self.use(self._transport)
 
-    async def _authorized(self, method, path, json, params, headers, step, idempotency_key):
+    async def _authorized(
+        self, method, path, json, params, headers, step, idempotency_key, step_name, run_id
+    ):
         sent = dict(headers or {})
         sent["Authorization"] = f"Bearer {await self.token()}"
         sent["X-Api-Version"] = self.store.api_version
         if method.upper() in IDEMPOTENT_METHODS:
             sent["X-Idempotency-Key"] = idempotency_key or str(uuid.uuid4())
-        return await self._send(method, path, json=json, params=params, headers=sent, step=step)
+        return await self._send(
+            method,
+            path,
+            json=json,
+            params=params,
+            headers=sent,
+            step=step,
+            step_name=step_name,
+            run_id=run_id,
+        )
 
-    async def _send(self, method, path, *, json=None, params=None, headers=None, step):
+    async def _send(
+        self,
+        method,
+        path,
+        *,
+        json=None,
+        params=None,
+        headers=None,
+        step,
+        step_name=None,
+        run_id=None,
+    ):
         request = self._http.build_request(method, path, json=json, params=params, headers=headers)
         started = time.perf_counter()
         try:
             response = await self._http.send(request)
         except httpx.HTTPError as exc:
-            self._record(step, request, json, started, error=f"{type(exc).__name__}: {exc}")
+            self._record(
+                step,
+                request,
+                json,
+                started,
+                error=f"{type(exc).__name__}: {exc}",
+                step_name=step_name,
+                run_id=run_id,
+            )
             raise
-        self._record(step, request, json, started, response=response)
+        self._record(
+            step, request, json, started, response=response, step_name=step_name, run_id=run_id
+        )
         return response
 
-    def _record(self, step, request, body, started, response=None, error=None):
+    def _record(
+        self, step, request, body, started, response=None, error=None, step_name=None, run_id=None
+    ):
         headers = mask_headers(_headers(request.headers))
         call_response = None
         if response is not None:
@@ -154,6 +190,8 @@ class UapiClient:
                 curl=to_curl(request.method, request.url, headers, mask_json(body)),
                 error=error,
                 record_id=_record_id(request.url.path, call_response and call_response.body),
+                run_id=run_id,
+                step_name=step_name,
             )
         )
 

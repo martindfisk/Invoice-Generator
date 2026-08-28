@@ -614,6 +614,11 @@ test.describe("resizable panes", () => {
 
 test.describe("api log lifecycle", () => {
   test("starts empty on arriving at Send and fills only once Send is pressed", async ({ page }) => {
+    // The recorder is shared, so parallel tests stream their calls to every open page. Hold
+    // the event stream back until this page has shown its cleared log, then let it flow.
+    await page.route("**/api/events", (route) =>
+      route.fulfill({ status: 200, headers: { "content-type": "text/event-stream" }, body: "" }),
+    );
     await page.goto("/");
     await page.evaluate(() => localStorage.clear());
     await page.reload();
@@ -624,12 +629,15 @@ test.describe("api log lifecycle", () => {
     await expect(log).toBeVisible();
     // Whatever the recorder already held is not this send, so it must not be shown as if it were.
     await expect(log.locator("[data-group]")).toHaveCount(0);
+    await page.unroute("**/api/events");
 
     await page
       .getByRole("button", { name: /Send to fiskaly|Send anyway/i })
       .last()
       .click();
-    await expect.poll(async () => log.locator("[data-group]").count()).toBeGreaterThan(0);
+    await expect
+      .poll(async () => log.locator("[data-group]").count(), { timeout: 15_000 })
+      .toBeGreaterThan(0);
 
     // Leaving and coming back after a send keeps that send's calls on screen.
     const sent = await log.locator("[data-group]").count();
@@ -689,5 +697,110 @@ test.describe("settings", () => {
     await page.keyboard.press("Escape");
     await expect(dialog).toHaveCount(0);
     await expect(trigger).toBeFocused();
+  });
+});
+
+test.describe("test runner", () => {
+  test("runs the German collection in MOCK and logs each call under its own step", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page
+      .getByRole("group", { name: "Section" })
+      .getByRole("button", { name: "Test runner" })
+      .click();
+
+    const runner = page.getByRole("region", { name: "Test runner" });
+    await expect(runner).toBeVisible();
+    // The API log is the point of the runner, so it is beside it from the start.
+    await expect(page.getByRole("region", { name: "API log" })).toBeVisible();
+
+    await runner.locator("[data-collection='de']").click();
+    const steps = runner.getByRole("list", { name: "Collection steps" });
+    await expect(steps).toBeVisible();
+    expect(await steps.locator("[data-runner-step]").count()).toBeGreaterThan(0);
+
+    // The published DE collection's defects are surfaced as fiskaly's, not fixed or hidden.
+    const notes = runner.getByRole("region", { name: "Published collection notes" });
+    await expect(notes).toBeVisible();
+    await expect(notes).toContainText("This is what fiskaly publishes");
+    await expect(notes).toContainText('"22.00"');
+    await expect(notes).toContainText("asserted value, not the label");
+    expect(await notes.getByRole("listitem").count()).toBe(6);
+    await notes.getByRole("button", { name: "Dismiss" }).click();
+    await expect(notes).toHaveCount(0);
+
+    // Excluded requests are listed and inspectable, not hidden.
+    const excluded = steps.locator("[data-runner-step][data-runnable='false']");
+    expect(await excluded.count()).toBeGreaterThan(0);
+
+    await runner.getByRole("button", { name: "Run all" }).click();
+    const finished = runner.getByRole("status").filter({ hasText: /^Finished/ });
+    await expect(finished).toBeVisible({ timeout: 120_000 });
+    await expect(finished).toContainText(/ in \d+(\.\d+)? s| in \d+ min/);
+
+    const runnable = steps.locator("[data-runner-step][data-runnable='true']");
+    const runnableCount = await runnable.count();
+    expect(runnableCount).toBeGreaterThan(0);
+    for (let index = 0; index < runnableCount; index += 1) {
+      await expect(runnable.nth(index)).toHaveAttribute("data-status", "passed");
+    }
+    const excludedCount = await excluded.count();
+    for (let index = 0; index < excludedCount; index += 1) {
+      await expect(excluded.nth(index)).toHaveAttribute("data-status", "skipped");
+    }
+
+    // An id captured from one response is substituted into a later step's path.
+    const capture = steps.locator("[data-captured='eInvoiceId']").first();
+    await expect(capture).toBeVisible();
+    const capturedId = ((await capture.innerText()).split("=")[1] ?? "").trim();
+    expect(capturedId).not.toBe("");
+    const retrieve = steps
+      .locator("[data-runner-step]")
+      .filter({ hasText: "Retrieve TRANSACTION::INVOICE" })
+      .first();
+    await expect(retrieve.locator("[data-resolved-path]")).toContainText(capturedId);
+
+    // The captured value also lands in the variable panel, labelled as runtime data.
+    const variables = page.getByRole("region", { name: "Runner variables" });
+    await expect(variables.locator("[data-variable='eInvoiceId']")).toContainText(capturedId);
+
+    // A finished step offers its recorded cURL — masked by the backend, never a real token.
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+    await runnable.first().getByRole("button", { name: "Copy as cURL" }).click();
+    await expect(runnable.first().getByRole("button", { name: "Copied" })).toBeVisible();
+    const copied = await page.evaluate<string>("navigator.clipboard.readText()");
+    expect(copied).toMatch(/^curl -X GET/);
+    expect(copied).toContain("Bearer $FISKALY_TOKEN");
+    expect(copied).not.toMatch(/Bearer ey/);
+
+    await runner.getByRole("button", { name: "Copy run as cURL" }).click();
+    const script = await page.evaluate<string>("navigator.clipboard.readText()");
+    expect(script).toContain("# 1. ");
+    expect(script).toContain("Create INTENTION::TRANSACTION");
+    expect(script).toContain("skipped");
+    expect((script.match(/^curl -X /gm) ?? []).length).toBeGreaterThan(10);
+    expect(script).not.toMatch(/Bearer ey/);
+
+    // The passthrough labels each call with its step name, so the log filters per step.
+    const filters = page
+      .getByRole("region", { name: "API log" })
+      .getByRole("group", { name: "Call filters" });
+    await expect(
+      filters.getByRole("button", { name: "Create INTENTION::TRANSACTION", exact: true }),
+    ).toBeVisible();
+    await expect(
+      filters.getByRole("button", { name: "Create TRANSACTION::INVOICE", exact: true }),
+    ).toBeVisible();
+  });
+
+  test("keeps the invoice flow intact behind the section switch", async ({ page }) => {
+    await page.goto("/");
+    const sections = page.getByRole("group", { name: "Section" });
+    await sections.getByRole("button", { name: "Test runner" }).click();
+    await expect(page.getByRole("region", { name: "Test runner" })).toBeVisible();
+    await sections.getByRole("button", { name: "Invoice flow" }).click();
+    await expect(picker(page)).toBeVisible();
+    await expect(page.getByRole("region", { name: "Test runner" })).toHaveCount(0);
   });
 });

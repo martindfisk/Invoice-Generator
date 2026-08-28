@@ -247,6 +247,51 @@ export function clearCredentials(persona: Persona | "all"): Promise<Settings> {
   return request("DELETE", `/api/settings/credentials?${query}`);
 }
 
+export type StepCapture = { variable: string; pointer: string };
+export type StepWait = { pointer: string; equals: string | null; timeoutS: number };
+export type StepAssert = { pointer: string; equals: string | null };
+
+export type CollectionStep = {
+  id: string;
+  name: string;
+  folder: string;
+  method: string;
+  path: string;
+  query: Record<string, string>;
+  body: unknown;
+  runnable: boolean;
+  skipReason: string | null;
+  captures: StepCapture[];
+  waitFor: StepWait | null;
+  asserts: StepAssert[];
+};
+
+export type CollectionNote = { severity: "warning" | "info"; message: string };
+
+export type CollectionSummary = {
+  id: string;
+  name: string;
+  version: string;
+  steps: number;
+  notes: number;
+};
+
+export type Collection = {
+  id: string;
+  name: string;
+  version: string;
+  steps: CollectionStep[];
+  notes: CollectionNote[];
+};
+
+export function getCollections(): Promise<CollectionSummary[]> {
+  return request("GET", "/api/collections");
+}
+
+export function getCollection(id: string): Promise<Collection> {
+  return request("GET", `/api/collections/${encodeURIComponent(id)}`);
+}
+
 export async function listCalls(): Promise<ApiCall[]> {
   const calls = await request<unknown>("GET", "/api/calls");
   if (!Array.isArray(calls)) throw new Error("GET /api/calls did not return a JSON array");
@@ -257,14 +302,15 @@ function idempotencyKey(): string {
   return crypto.randomUUID();
 }
 
-function passthrough<T>(
+export function passthrough<T>(
   method: string,
   path: string,
   persona: Persona,
   body?: unknown,
   key?: string,
+  extraHeaders?: Record<string, string>,
 ): Promise<T> {
-  const headers: Record<string, string> = { "X-Persona": persona };
+  const headers: Record<string, string> = { "X-Persona": persona, ...extraHeaders };
   if (key) headers["X-Idempotency-Key"] = key;
   return request<T>(method, `/api/uapi${path}`, body, headers);
 }

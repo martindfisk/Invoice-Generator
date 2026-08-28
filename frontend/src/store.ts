@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { normaliseMode, type ApiCall, type Persona } from "./api-log";
 import { getConfig, getSettings, type Config, type Settings } from "./uapi-client";
+import { initialRunnerUi, type RunnerUiState } from "./runner";
 import {
   initialWorkflow,
   persistWorkflow,
@@ -10,12 +11,15 @@ import {
 } from "./workflow";
 
 export type Mode = "LIVE" | "MOCK" | "unknown";
+export type Section = "flow" | "runner";
 export type Theme = "light" | "dark";
 
 export type LogFocus = { recordId: string; nonce: number } | null;
 
 export type State = {
   workflow: WorkflowState;
+  section: Section;
+  runner: RunnerUiState;
   mode: Mode;
   calls: ApiCall[];
   theme: Theme;
@@ -26,8 +30,9 @@ export type State = {
   layoutNonce: number;
 };
 
-const MAX_CALLS = 500;
+const MAX_CALLS = 1000;
 const THEME_KEY = "theme";
+const SECTION_KEY = "section";
 const SPLIT_PREFIX = "split:";
 
 function modeOf(value: unknown): Mode {
@@ -40,6 +45,14 @@ function modeOf(value: unknown): Mode {
 
 function reason(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function readSection(): Section {
+  try {
+    return localStorage.getItem(SECTION_KEY) === "runner" ? "runner" : "flow";
+  } catch {
+    return "flow";
+  }
 }
 
 function splitKeys(): string[] {
@@ -68,6 +81,8 @@ function byNewest(a: ApiCall, b: ApiCall): number {
 export function createStore(initial: Partial<State> = {}) {
   let state: State = {
     workflow: initialWorkflow(),
+    section: readSection(),
+    runner: initialRunnerUi(),
     mode: "unknown",
     calls: [],
     theme: localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light",
@@ -102,6 +117,17 @@ export function createStore(initial: Partial<State> = {}) {
     },
     dispatch,
     setPersona: (persona: Persona) => dispatch({ type: "setPersona", persona }),
+    setSection(section: Section) {
+      try {
+        localStorage.setItem(SECTION_KEY, section);
+      } catch {
+        // Site data disabled: the section simply is not remembered.
+      }
+      update({ section });
+    },
+    patchRunner(patch: Partial<RunnerUiState>) {
+      update({ runner: { ...state.runner, ...patch } });
+    },
     setMode: (mode: Mode) => update({ mode }),
     addCall(call: ApiCall) {
       const others = state.calls.filter((c) => c.id !== call.id);

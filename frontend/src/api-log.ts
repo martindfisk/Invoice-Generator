@@ -15,6 +15,8 @@ export type ApiCall = {
   curl: string;
   error?: string;
   record_id?: string;
+  step_name?: string;
+  run_id?: string;
 };
 
 export type CallGroup = {
@@ -67,6 +69,12 @@ export function parseCall(json: string): ApiCall {
   return toApiCall(JSON.parse(json));
 }
 
+// The recorder keeps `step` as its coarse bucket; a collection run labels each call with the
+// step name it belongs to via X-Step. The label is what a reader filters by.
+export function stepLabel(call: Pick<ApiCall, "step" | "step_name">): string {
+  return call.step_name ?? call.step;
+}
+
 export function pathOf(url: string): string {
   try {
     const { pathname, search } = new URL(url);
@@ -110,7 +118,7 @@ export function groupCalls(calls: ApiCall[]): CallGroup[] {
       previous.latest.method.toUpperCase() === "GET" &&
       previous.latest.url === call.url &&
       previous.latest.persona === call.persona &&
-      previous.latest.step === call.step
+      stepLabel(previous.latest) === stepLabel(call)
     ) {
       previous.calls.push(call);
       previous.repeats = previous.calls.length;

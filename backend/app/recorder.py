@@ -38,6 +38,8 @@ class CallRecord(BaseModel):
     curl: str
     error: str | None = None
     record_id: str | None = None
+    run_id: str | None = None
+    step_name: str | None = None
 
 
 class Recorder:

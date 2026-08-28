@@ -188,3 +188,55 @@ class InboxItem(BaseModel):
 class SimulateRequest(BaseModel):
     xml: str
     meta: dict[str, Any] = Field(default_factory=dict)
+
+
+class StepCapture(BaseModel):
+    variable: str
+    pointer: str
+
+
+class StepWait(BaseModel):
+    pointer: str
+    equals: Any = None
+    timeoutS: float
+
+
+class StepAssert(BaseModel):
+    pointer: str
+    equals: Any = None
+
+
+class CollectionStep(BaseModel):
+    id: str
+    name: str
+    folder: str
+    method: str
+    path: str
+    query: dict[str, str | None] = Field(default_factory=dict)
+    body: Any = None
+    runnable: bool
+    skipReason: str | None = None
+    captures: list[StepCapture] = Field(default_factory=list)
+    waitFor: StepWait | None = None
+    asserts: list[StepAssert] = Field(default_factory=list)
+
+
+class CollectionNote(BaseModel):
+    severity: Literal["warning", "info"]
+    message: str
+
+
+class CollectionSummary(BaseModel):
+    id: str
+    name: str
+    version: str
+    steps: int
+    notes: int
+
+
+class Collection(BaseModel):
+    id: str
+    name: str
+    version: str
+    steps: list[CollectionStep]
+    notes: list[CollectionNote] = Field(default_factory=list)

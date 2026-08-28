@@ -5,15 +5,46 @@ import { subscribeApiLog } from "./api-log";
 import { EnvironmentBadge, ModeBadge } from "./ModeBadge";
 import { PersonaSwitch } from "./PersonaSwitch";
 import { LIVE_BANNER, SettingsMenu } from "./SettingsDialog";
-import { store, useStore } from "./store";
+import { RunnerPane } from "./RunnerPane";
+import { store, useStore, type Section } from "./store";
 import { listCalls } from "./uapi-client";
 import { WorkflowPane } from "./WorkflowPane";
 
 const CONFIG_RETRY_MS = 5000;
 
+const SECTIONS: { id: Section; label: string }[] = [
+  { id: "flow", label: "Invoice flow" },
+  { id: "runner", label: "Test runner" },
+];
+
+function SectionSwitch({ section }: { section: Section }) {
+  return (
+    <div
+      role="group"
+      aria-label="Section"
+      className="ml-2 flex rounded-m border border-line bg-canvas p-0.5 text-xs"
+    >
+      {SECTIONS.map(({ id, label }) => (
+        <button
+          key={id}
+          type="button"
+          aria-pressed={section === id}
+          onClick={() => store.setSection(id)}
+          className={`rounded-m px-2.5 py-1 font-medium transition-colors ${
+            section === id ? "bg-surface text-ink shadow-s" : "text-muted hover:text-ink"
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function App() {
   const theme = useStore((state) => state.theme);
   const step = useStore((state) => state.workflow.step);
+  const section = useStore((state) => state.section);
   const layoutNonce = useStore((state) => state.layoutNonce);
   const environment = useStore((state) => state.settings?.environment ?? state.config?.environment);
   const [offline, setOffline] = useState(false);
@@ -45,8 +76,10 @@ export function App() {
   }, []);
 
   const nextTheme = theme === "dark" ? "light" : "dark";
-  // The pane only ever has something to say once we start talking to fiskaly.
-  const showApiLog = step === "send" || step === "receive";
+  // The pane only ever has something to say once we start talking to fiskaly. The runner
+  // talks to fiskaly with every step, so it always keeps the log beside it.
+  const showApiLog = section === "runner" || step === "send" || step === "receive";
+  const main = section === "runner" ? <RunnerPane /> : <WorkflowPane />;
 
   return (
     <div className="flex h-full flex-col">
@@ -56,6 +89,7 @@ export function App() {
           <p className="hidden text-xs text-muted md:block">
             e-invoice flow &amp; fiskaly UAPI harness
           </p>
+          <SectionSwitch section={section} />
           <div className="ml-auto flex items-center gap-3">
             {offline && (
               <span
@@ -97,12 +131,12 @@ export function App() {
           minFirst="30%"
           minSecond="25%"
           className="flex-1"
-          first={<WorkflowPane />}
+          first={main}
           second={<ApiLogPane />}
         />
       ) : (
         <div key={layoutNonce} className="min-h-0 flex-1">
-          <WorkflowPane />
+          {main}
         </div>
       )}
     </div>

@@ -10,13 +10,16 @@ Bodies are shaped against `spec/fiskaly.uapi.e-invoice-{it,be}.2026-06-01.yaml`
 `IntentionRecord`, `TransactionRecord`, `InvoiceTransaction`, `BusinessRecipient`,
 `RecipientInvoicing`, `RecordState`, `RecordMode`, `RecordLogs`, `Compliance`, `Content`).
 
-| File | Source | Notes |
-|---|---|---|
-| `POST_tokens.json` | synthetic | `_fixture.source = synthetic`; bearer is `***` |
-| `GET_systems_{id}.json` | synthetic | `compliance.state = TRANSMISSION_RECEPTION` so reception works |
-| `artifacts/fatturapa-invoice.xml` | synthetic | FatturaPA `p:FatturaElettronica versione="FPR12"`, `TD01`; served as the compliance artifact for SDI/IT records |
-| `artifacts/ubl-invoice.xml` | synthetic | UBL 2.1 `Invoice`, Peppol BIS Billing 3.0 `CustomizationID urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0`; served for PEPPOL/BE records |
-| `artifacts/sdi-receipt.xml` | synthetic | SDI `RicevutaConsegna` (messaggi v1.0); served as the **Receipt of Transmission** (`?archive-artifact`, `content.compliance.archive`) for IT records only. A different document from the compliance artifact above, which carries the invoice XML |
+| File                              | Source    | Notes                                                                                                                                                                                                                                             |
+| --------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST_tokens.json`                | synthetic | `_fixture.source = synthetic`; bearer is `***`                                                                                                                                                                                                    |
+| `GET_systems_{id}.json`           | synthetic | `compliance.state = TRANSMISSION_RECEPTION` so reception works                                                                                                                                                                                    |
+| `GET_systems.json`                | synthetic | `SystemResources` list wrapping the same system as `GET_systems_{id}.json`; answers `GET /systems?taxpayer_id=…`                                                                                                                                  |
+| `GET_taxpayers.json`              | synthetic | `TaxpayerResources` list with one Belgian `COMPANY` taxpayer; no `fiscalization` block (its `credentials` would be a secret)                                                                                                                      |
+| `GET_taxpayers_{id}.json`         | synthetic | the same taxpayer as a single `TaxpayerResource`                                                                                                                                                                                                  |
+| `artifacts/fatturapa-invoice.xml` | synthetic | FatturaPA `p:FatturaElettronica versione="FPR12"`, `TD01`; served as the compliance artifact for SDI/IT records                                                                                                                                   |
+| `artifacts/ubl-invoice.xml`       | synthetic | UBL 2.1 `Invoice`, Peppol BIS Billing 3.0 `CustomizationID urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0`; served for PEPPOL/BE records                                                                              |
+| `artifacts/sdi-receipt.xml`       | synthetic | SDI `RicevutaConsegna` (messaggi v1.0); served as the **Receipt of Transmission** (`?archive-artifact`, `content.compliance.archive`) for IT records only. A different document from the compliance artifact above, which carries the invoice XML |
 
 `app/mock.py` builds `INTENTION::TRANSACTION`, `TRANSACTION::INVOICE`, `TRANSACTION::CORRECTION`,
 `E_INVOICE::TRANSMISSION` and `E_INVOICE::RECEPTION` records **in code** (deterministic ids

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { groupCalls, statusMarker, type Persona } from "./api-log";
+import { groupCalls, statusMarker, stepLabel, type Persona } from "./api-log";
 import { ApiCallCard } from "./ApiCallCard";
 import { store, useStore } from "./store";
 
@@ -37,13 +37,13 @@ export function ApiLogPane() {
   const list = useRef<HTMLOListElement>(null);
   const handled = useRef(0);
 
-  const knownSteps = useMemo(() => [...new Set(calls.map((call) => call.step))].sort(), [calls]);
+  const knownSteps = useMemo(() => [...new Set(calls.map(stepLabel))].sort(), [calls]);
 
   const filtered = useMemo(
     () =>
       calls.filter(
         (call) =>
-          (steps.length === 0 || steps.includes(call.step)) &&
+          (steps.length === 0 || steps.includes(stepLabel(call))) &&
           (personas.length === 0 || personas.includes(call.persona)),
       ),
     [calls, steps, personas],

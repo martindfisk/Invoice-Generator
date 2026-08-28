@@ -13,7 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SPEC_DIR = ROOT / "spec"
 PRODUCTS_URL = "https://workspace.fiskaly.com/products.json"
-COUNTRIES = ("it", "be")
+COUNTRIES = ("it", "be", "de")
 SPEC_URL = "https://workspace.fiskaly.com/specs/fiskaly.uapi.e-invoice-{cc}.{v}.yaml"
 POSTMAN_URL = (
     "https://workspace.fiskaly.com/static/postman/UAPI_{v}/"

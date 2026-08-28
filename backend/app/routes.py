@@ -5,10 +5,13 @@ import httpx
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 from fastapi.responses import StreamingResponse
 
+from app.collections import load_collections
 from app.inbox import after, get_inbox_item, list_inbox, simulate_delivery, sort_inbox
 from app.mock import MockTransport
 from app.models import (
     Artifact,
+    Collection,
+    CollectionSummary,
     Config,
     CorrectionCreated,
     CorrectionRequest,
@@ -220,6 +223,38 @@ async def put_mode(body: ModeUpdate, request: Request):
     return ModeState(mode=body.mode, live_available=live_available(app))
 
 
+def collections_for(app):
+    settings = app.state.store.settings
+    collections = load_collections(settings.spec_dir, settings.poll_timeout_s)
+    if not collections:
+        raise HTTPException(503, f"no Postman collections in {settings.spec_dir}; run: make spec")
+    return collections
+
+
+@router.get("/collections", response_model=list[CollectionSummary])
+async def list_collections(request: Request):
+    return [
+        CollectionSummary(
+            id=collection["id"],
+            name=collection["name"],
+            version=collection["version"],
+            steps=len(collection["steps"]),
+            notes=len(collection["notes"]),
+        )
+        for collection in collections_for(request.app).values()
+    ]
+
+
+@router.get("/collections/{collection_id}", response_model=Collection)
+async def get_collection(collection_id: str, request: Request):
+    collections = collections_for(request.app)
+    if collection_id not in collections:
+        raise HTTPException(
+            404, f"unknown collection {collection_id!r}; expected one of {sorted(collections)}"
+        )
+    return Collection(**collections[collection_id])
+
+
 @router.get("/calls", response_model=list[CallRecord])
 async def calls(request: Request, since: int | None = None):
     return request.app.state.recorder.list(since_id=since)
@@ -404,6 +439,8 @@ async def passthrough(path: str, request: Request):
             json=body,
             step="passthrough",
             idempotency_key=request.headers.get("X-Idempotency-Key"),
+            step_name=request.headers.get("X-Step"),
+            run_id=request.headers.get("X-Run-Id"),
         )
     except httpx.HTTPStatusError as exc:
         upstream = exc.response

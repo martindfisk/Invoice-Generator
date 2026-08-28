@@ -4,6 +4,7 @@ import {
   otherHeaders,
   pathOf,
   PROMINENT_HEADERS,
+  stepLabel,
   type ApiCall,
   type CallGroup,
 } from "./api-log";
@@ -63,8 +64,29 @@ function Chip({
   );
 }
 
-function CopyButton({ text, label }: { text: string; label: string }) {
+export function CopyButton({
+  text,
+  label,
+  disabledReason,
+}: {
+  text: string;
+  label: string;
+  disabledReason?: string;
+}) {
   const [done, setDone] = useState(false);
+  if (disabledReason) {
+    return (
+      <button
+        type="button"
+        disabled
+        title={disabledReason}
+        aria-label={`${label} — ${disabledReason}`}
+        className="cursor-not-allowed rounded-m border border-line px-2 py-0.5 text-[10px] font-medium text-muted opacity-60"
+      >
+        {label}
+      </button>
+    );
+  }
   return (
     <button
       type="button"
@@ -210,7 +232,7 @@ export function ApiCallCard({ group, open, focused, onToggle }: ApiCallCardProps
           title={step ? `Open the ${step} step` : undefined}
           onClick={step ? () => store.dispatch({ type: "goToStep", step }) : undefined}
         >
-          {call.step}
+          {stepLabel(call)}
         </Chip>
         <Chip>{call.persona}</Chip>
         <Chip className={call.mode === "LIVE" ? "border-brand text-brand" : "text-warning-ink"}>
