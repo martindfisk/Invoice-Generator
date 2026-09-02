@@ -233,6 +233,11 @@ def write_sources(manifest):
     (SPEC_DIR / "SOURCES.md").write_text("\n".join(lines) + "\n")
 
 
+def _same(left, right):
+    keys = ("apiVersion", "spec", "fallback", "collections")
+    return all(left.get(key) == right.get(key) for key in keys)
+
+
 def main():
     ap = argparse.ArgumentParser(
         description="Ingest a dropped OpenAPI spec and fetch the public fiskaly UAPI specs into spec/"
@@ -295,6 +300,10 @@ def main():
         "fallback": fallback,
         "collections": collections,
     }
+    # A run that changes nothing must not dirty the tree: reuse the previous timestamp so the
+    # only reason spec.json and SOURCES.md ever move is that a file behind them actually moved.
+    if previous and _same(previous, manifest):
+        manifest["generatedAt"] = previous["generatedAt"]
 
     for name, data in blobs.items():
         (SPEC_DIR / name).write_bytes(data)

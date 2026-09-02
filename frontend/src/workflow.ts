@@ -18,11 +18,14 @@ import {
 } from "./uapi-json";
 import type { StageResult } from "./validation";
 
-export type Step = "setup" | "compose" | "validate" | "send" | "receive";
+export type Step = "setup" | "mapper" | "validate" | "send" | "receive";
 
 // "json" is the fiskaly operation the API actually accepts; "xml" is this browser's prediction
 // of the document fiskaly would generate from it. Split pairs the fields with the JSON.
-export type ViewMode = "human" | "json" | "xml" | "split";
+// The Mapper shows the fiskaly JSON always; the fields and the predicted XML flank it and can
+// each be hidden, so what is on screen is a set of panes rather than one of four modes.
+export type PaneId = "human" | "xml";
+export type Panes = Record<PaneId, boolean>;
 
 export type SelectionSource = "human" | "xml" | "json" | "finding";
 
@@ -109,7 +112,7 @@ export type WorkflowState = {
   formatId: FormatId;
   persona: Persona;
   selection: Selection;
-  view: ViewMode;
+  panes: Panes;
   groups: GroupViewState;
   edit: EditState;
   validation: ValidationState;
@@ -121,7 +124,7 @@ export type WorkflowAction =
   | { type: "goToStep"; step: Step }
   | { type: "setFormat"; formatId: FormatId }
   | { type: "select"; selection: Selection }
-  | { type: "setView"; view: ViewMode }
+  | { type: "setPane"; pane: PaneId; show: boolean }
   | { type: "setGroupOpen"; key: string; open: boolean }
   | { type: "showUncarried"; show: boolean }
   | { type: "setPersona"; persona: Persona }
@@ -169,9 +172,9 @@ export const JSON_LOSS_NOTICE =
 export const STEPS: { id: Step; label: string; blurb: string }[] = [
   { id: "setup", label: "Setup", blurb: "Pick the scenario to work from" },
   {
-    id: "compose",
-    label: "Compose",
-    blurb: "Author the fiskaly JSON, read it as fields and as predicted XML",
+    id: "mapper",
+    label: "Mapper",
+    blurb: "Map the invoice across fields, fiskaly JSON and predicted XML",
   },
   { id: "validate", label: "Validate", blurb: "Run the local validation pipeline" },
   { id: "send", label: "Send", blurb: "Hand the invoice to fiskaly" },
@@ -182,20 +185,35 @@ export const WORKFLOW_KEY = "workflow";
 
 const STEP_IDS = STEPS.map((step) => step.id);
 
-export const VIEWS: ViewMode[] = ["human", "json", "xml", "split"];
+// The step was called "compose" until 2026-09-02. A saved workflow still on it lands on the
+// renamed step rather than being bounced back to the start.
+const LEGACY_STEPS: Record<string, Step> = { compose: "mapper" };
 
-export const VIEW_VERSION = 2;
+export function migrateStep(saved: unknown): Step {
+  if (typeof saved !== "string") return "mapper";
+  if (STEP_IDS.includes(saved as Step)) return saved as Step;
+  return LEGACY_STEPS[saved] ?? "mapper";
+}
 
-// Before the UAPI JSON became the primary artifact, "xml" meant "show me the artifact". It now
-// means "show me the prediction", so a value written by that UI is migrated to the JSON pane.
-const LEGACY_VIEWS: Record<string, ViewMode> = { xml: "json", human: "human", split: "split" };
+export const PANE_IDS: PaneId[] = ["human", "xml"];
+
+export const VIEW_VERSION = 3;
+
+// Until 2026-09-02 this was a single mode: "human", "json", "xml" or "split". Each maps onto the
+// pane set that showed the same thing, so a saved layout survives the change.
+const LEGACY_PANES: Record<string, Panes> = {
+  human: { human: true, xml: false },
+  json: { human: false, xml: false },
+  xml: { human: false, xml: true },
+  split: { human: true, xml: false },
+};
 
 type Persisted = {
   step: Step;
   presetId: PresetId | null;
   formatId: FormatId;
   persona: Persona;
-  view: ViewMode;
+  panes: Panes;
   viewVersion: number;
 };
 
@@ -209,21 +227,26 @@ export function knownFormat(id: unknown): id is FormatId {
   return typeof id === "string" && id in FORMATS;
 }
 
-export function defaultView(): ViewMode {
-  return "json";
+export function defaultPanes(): Panes {
+  // All three at once: seeing one structure against the others is the point of the step.
+  return { human: true, xml: true };
 }
 
-export function knownView(id: unknown): id is ViewMode {
-  return typeof id === "string" && VIEWS.includes(id as ViewMode);
+function readPanes(saved: unknown): Panes | null {
+  if (saved === null || typeof saved !== "object") return null;
+  const value = saved as Record<string, unknown>;
+  if (typeof value.human !== "boolean" || typeof value.xml !== "boolean") return null;
+  return { human: value.human, xml: value.xml };
 }
 
-export function migrateView(saved: { view?: unknown; viewVersion?: unknown }): ViewMode {
-  if (saved.viewVersion === VIEW_VERSION) {
-    return knownView(saved.view) ? saved.view : defaultView();
-  }
-  return typeof saved.view === "string"
-    ? (LEGACY_VIEWS[saved.view] ?? defaultView())
-    : defaultView();
+export function migratePanes(saved: {
+  panes?: unknown;
+  view?: unknown;
+  viewVersion?: unknown;
+}): Panes {
+  if (saved.viewVersion === VIEW_VERSION) return readPanes(saved.panes) ?? defaultPanes();
+  if (typeof saved.view === "string") return LEGACY_PANES[saved.view] ?? defaultPanes();
+  return defaultPanes();
 }
 
 export function freshEdit(): EditState {
@@ -501,7 +524,7 @@ export function freshWorkflow(): WorkflowState {
     formatId: firstFormatId(),
     persona: "seller",
     selection: null,
-    view: defaultView(),
+    panes: defaultPanes(),
     groups: freshGroups(),
     edit: freshEdit(),
     validation: freshValidation(),
@@ -523,7 +546,7 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
         presetId: action.presetId,
         invoice,
         formatId: invoice.format,
-        step: "compose",
+        step: "mapper",
         selection: null,
         groups: { ...state.groups, open: {} },
         edit: freshEdit(),
@@ -547,8 +570,10 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
     }
     case "select":
       return { ...state, selection: action.selection };
-    case "setView":
-      return state.view === action.view ? state : { ...state, view: action.view };
+    case "setPane":
+      return state.panes[action.pane] === action.show
+        ? state
+        : { ...state, panes: { ...state.panes, [action.pane]: action.show } };
     case "setGroupOpen": {
       if (state.groups.open[action.key] === action.open) return state;
       const open = { ...state.groups.open, [action.key]: action.open };
@@ -707,7 +732,7 @@ export function persistWorkflow(state: WorkflowState): void {
     presetId: state.presetId,
     formatId: state.formatId,
     persona: state.persona,
-    view: state.view,
+    panes: state.panes,
     viewVersion: VIEW_VERSION,
   };
   localStorage.setItem(WORKFLOW_KEY, JSON.stringify(persisted));
@@ -734,7 +759,7 @@ export function initialWorkflow(): WorkflowState {
   const shell: WorkflowState = {
     ...fresh,
     persona: saved.persona === "buyer" ? "buyer" : "seller",
-    view: migrateView(saved),
+    panes: migratePanes(saved),
   };
   if (!saved.presetId) return shell;
 
@@ -749,7 +774,7 @@ export function initialWorkflow(): WorkflowState {
     presetId: saved.presetId,
     invoice,
     formatId: knownFormat(saved.formatId) ? saved.formatId : invoice.format,
-    step: STEP_IDS.includes(saved.step as Step) ? (saved.step as Step) : "compose",
+    step: migrateStep(saved.step),
   };
 }
 

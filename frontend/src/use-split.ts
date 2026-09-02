@@ -39,12 +39,17 @@ export type GridSplit = {
   };
 };
 
+// `bounds` exists for the three-pane Mapper: each separator is limited by where its neighbour
+// sits, so dragging one can never push it past the other and invert the columns.
 export function useGridSplit(
   key: string,
   horizontal: boolean,
   label: string,
   fallback = 50,
+  bounds?: { min?: number; max?: number },
 ): GridSplit {
+  const lo = Math.max(MIN, bounds?.min ?? MIN);
+  const hi = Math.min(MAX, bounds?.max ?? MAX);
   const [ratio, setRatio] = useState(() => load(key, fallback));
   // Deliberately state, not a ref: the container is read inside a pointer handler, and a ref
   // would make every consumer of this hook look ref-like to the React compiler.
@@ -52,11 +57,11 @@ export function useGridSplit(
 
   const commit = useCallback(
     (next: number) => {
-      const clamped = Math.min(MAX, Math.max(MIN, next));
+      const clamped = Math.min(hi, Math.max(lo, next));
       setRatio(clamped);
       save(key, clamped);
     },
-    [key],
+    [hi, key, lo],
   );
 
   const onPointerDown = useCallback(
@@ -70,7 +75,7 @@ export function useGridSplit(
         const span = horizontal ? rect.width : rect.height;
         if (span <= 0) return;
         const offset = horizontal ? moved.clientX - rect.left : moved.clientY - rect.top;
-        const clamped = Math.min(MAX, Math.max(MIN, (offset / span) * 100));
+        const clamped = Math.min(hi, Math.max(lo, (offset / span) * 100));
         setRatio(clamped);
       };
       const done = () => {
@@ -85,7 +90,7 @@ export function useGridSplit(
       handle.addEventListener("pointermove", move);
       handle.addEventListener("pointerup", done);
     },
-    [box, horizontal, key],
+    [box, hi, horizontal, key, lo],
   );
 
   const onKeyDown = useCallback(
@@ -95,12 +100,12 @@ export function useGridSplit(
       const step = event.shiftKey ? 10 : 2;
       if (event.key === back) commit(ratio - step);
       else if (event.key === forward) commit(ratio + step);
-      else if (event.key === "Home") commit(MIN);
-      else if (event.key === "End") commit(MAX);
+      else if (event.key === "Home") commit(lo);
+      else if (event.key === "End") commit(hi);
       else return;
       event.preventDefault();
     },
-    [commit, horizontal, ratio],
+    [commit, hi, horizontal, lo, ratio],
   );
 
   const separatorProps = useMemo(
@@ -110,15 +115,19 @@ export function useGridSplit(
         tabIndex: 0,
         "aria-orientation": horizontal ? "vertical" : "horizontal",
         "aria-valuenow": Math.round(ratio),
-        "aria-valuemin": MIN,
-        "aria-valuemax": MAX,
+        "aria-valuemin": Math.round(lo),
+        "aria-valuemax": Math.round(hi),
         "aria-label": label,
         onPointerDown,
         onKeyDown,
         onDoubleClick: () => commit(fallback),
       }) as GridSplit["separatorProps"],
-    [commit, fallback, horizontal, label, onKeyDown, onPointerDown, ratio],
+    [commit, fallback, hi, horizontal, label, lo, onKeyDown, onPointerDown, ratio],
   );
 
-  return useMemo(() => ({ ratio, measure, separatorProps }), [measure, ratio, separatorProps]);
+  const bounded = Math.min(hi, Math.max(lo, ratio));
+  return useMemo(
+    () => ({ ratio: bounded, measure, separatorProps }),
+    [bounded, measure, separatorProps],
+  );
 }

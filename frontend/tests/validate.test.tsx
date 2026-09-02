@@ -112,7 +112,8 @@ async function settled() {
 
 async function validating(presetId: PresetId = "broken") {
   store.dispatch({ type: "choosePreset", presetId });
-  store.dispatch({ type: "setView", view: "human" });
+  store.dispatch({ type: "setPane", pane: "human", show: true });
+  store.dispatch({ type: "setPane", pane: "xml", show: false });
   store.dispatch({ type: "goToStep", step: "validate" });
   render(<WorkflowPane />);
   await settled();

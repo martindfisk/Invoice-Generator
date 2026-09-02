@@ -173,3 +173,21 @@ def test_spec_check_reports_a_pending_drop_and_a_tampered_file(monkeypatch, tmp_
     (spec_dir / "fiskaly.unified-api.all.2026-06-01.yaml").write_text(body + "# tampered\n")
     errors = spec_check.check(include_types=False)
     assert any("changed after ingestion" in error for error in errors)
+
+
+def test_a_run_that_changes_nothing_keeps_the_previous_timestamp():
+    # generatedAt is the only field that moves on every run, so without this `make spec` would
+    # dirty spec.json and SOURCES.md every time and hide a real change in the noise.
+    previous = {
+        "generatedAt": "2026-09-02T16:42:00Z",
+        "apiVersion": "2026-06-01",
+        "spec": {"file": "a.yaml", "sha256": "x"},
+        "fallback": [],
+        "collections": [],
+    }
+    unchanged = {**previous, "generatedAt": "2026-09-02T16:51:37Z"}
+    assert fetch_spec._same(previous, unchanged)
+
+    moved = {**unchanged, "spec": {"file": "a.yaml", "sha256": "y"}}
+    assert not fetch_spec._same(previous, moved)
+    assert not fetch_spec._same(previous, {**unchanged, "apiVersion": "2027-03-01"})

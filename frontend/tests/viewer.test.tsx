@@ -24,13 +24,14 @@ function pickFirstPreset() {
   fireEvent.click(presetCard(first.id));
 }
 
+// The Mapper opens with all three panes; the old "Split" was fields + JSON, so hide the XML.
 function pickFirstPresetSplit() {
   pickFirstPreset();
-  fireEvent.click(
-    within(screen.getByRole("tablist", { name: "Invoice view mode" })).getByRole("tab", {
-      name: "Split",
-    }),
-  );
+  fireEvent.click(paneToggle("Predicted XML"));
+}
+
+function paneToggle(name: string) {
+  return within(screen.getByRole("group", { name: "Mapper panes" })).getByRole("button", { name });
 }
 
 describe("workflow pane", () => {
@@ -71,28 +72,26 @@ describe("workflow pane", () => {
     expect(screen.getByText(`\u00b7 ${first.legalBasis}`)).toBeInTheDocument();
   });
 
-  it("opens on the fiskaly JSON, the artifact the Unified API actually accepts", () => {
+  it("opens with all three structures side by side, the JSON in the middle", () => {
     render(<WorkflowPane />);
     pickFirstPreset();
 
-    expect(store.getState().workflow.view).toBe("json");
-    expect(screen.getByRole("tabpanel", { name: "fiskaly JSON view" })).toBeInTheDocument();
-    expect(screen.queryByRole("tabpanel", { name: "Fields view" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("tabpanel", { name: "Predicted XML view" })).not.toBeInTheDocument();
-    expect(
-      within(screen.getByRole("tablist", { name: "Invoice view mode" }))
-        .getAllByRole("tab")
-        .map((tab) => tab.textContent),
-    ).toEqual(["Fields", "fiskaly JSON", "Predicted XML", "Split"]);
+    expect(store.getState().workflow.panes).toEqual({ human: true, xml: true });
+    expect(screen.getByRole("region", { name: "Fields view" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "fiskaly JSON view" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Predicted XML view" })).toBeInTheDocument();
+    expect(document.querySelector("[data-panes]")?.getAttribute("data-panes")).toBe(
+      "human+json+xml",
+    );
   });
 
   it("choosing a preset loads the invoice and renders the human view", () => {
     render(<WorkflowPane />);
     pickFirstPresetSplit();
 
-    expect(store.getState().workflow).toMatchObject({ presetId: first.id, step: "compose" });
+    expect(store.getState().workflow).toMatchObject({ presetId: first.id, step: "mapper" });
     expect(screen.getByRole("region", { name: "Invoice viewer" })).toBeInTheDocument();
-    expect(screen.getByRole("tabpanel", { name: "Fields view" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Fields view" })).toBeInTheDocument();
     expect(screen.getAllByText(preset(first.id).seller.name).length).toBeGreaterThan(0);
     expect(
       screen.getByText("Visualisation for review — the XML is the legally valid invoice."),
@@ -157,23 +156,59 @@ describe("workflow pane", () => {
     });
   });
 
-  it("switches the view mode from the segmented control", () => {
+  it("names the structures that carry the selected field, and the one that does not", () => {
     render(<WorkflowPane />);
     pickFirstPreset();
 
-    const tabs = screen.getByRole("tablist", { name: "Invoice view mode" });
-    fireEvent.click(within(tabs).getByRole("tab", { name: "Fields" }));
-    expect(store.getState().workflow.view).toBe("human");
-    expect(within(tabs).getByRole("tab", { name: "Fields" })).toHaveAttribute(
-      "aria-selected",
+    const strip = () => document.querySelector("[data-presence-strip]");
+    expect(strip()?.textContent).toMatch(/Select a field in any pane/);
+
+    fireEvent.click(document.querySelector("[data-field='number']")!);
+    expect(strip()?.getAttribute("data-presence-strip")).toBe("number");
+    expect(strip()?.getAttribute("data-missing")).toBe("0");
+    for (const structure of ["human", "json", "xml"]) {
+      expect(
+        strip()?.querySelector(`[data-structure='${structure}']`)?.getAttribute("data-present"),
+      ).toBe("true");
+    }
+  });
+
+  it("flags a field the operation cannot carry so an unsupported field is visible", () => {
+    render(<WorkflowPane />);
+    pickFirstPreset();
+
+    // The seller comes from the commissioned taxpayer, so BT-27 reaches the XML but never the
+    // payload — the case this strip exists to make obvious.
+    fireEvent.click(document.querySelector("[data-field='seller.name']")!);
+    const strip = document.querySelector("[data-presence-strip]");
+    expect(strip?.getAttribute("data-missing")).toBe("1");
+    expect(strip?.querySelector("[data-structure='json']")?.getAttribute("data-present")).toBe(
+      "false",
+    );
+    expect(strip?.querySelector("[data-structure='xml']")?.getAttribute("data-present")).toBe(
       "true",
     );
-    expect(screen.queryByRole("tabpanel", { name: "fiskaly JSON view" })).not.toBeInTheDocument();
+    expect(strip?.textContent).toMatch(/taxpayer resource/);
+  });
 
-    fireEvent.click(within(tabs).getByRole("tab", { name: "Predicted XML" }));
-    expect(store.getState().workflow.view).toBe("xml");
-    expect(screen.getByRole("tabpanel", { name: "Predicted XML view" })).toBeInTheDocument();
+  it("folds the flanking panes away and back, keeping the JSON on screen", () => {
+    render(<WorkflowPane />);
+    pickFirstPreset();
+
+    fireEvent.click(paneToggle("Fields"));
+    expect(store.getState().workflow.panes).toEqual({ human: false, xml: true });
+    expect(paneToggle("Fields")).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByRole("region", { name: "Fields view" })).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "fiskaly JSON view" })).toBeInTheDocument();
     expect(screen.getByText(/what this browser expects fiskaly to generate/)).toBeInTheDocument();
+
+    fireEvent.click(paneToggle("Predicted XML"));
+    expect(store.getState().workflow.panes).toEqual({ human: false, xml: false });
+    expect(document.querySelector("[data-panes]")?.getAttribute("data-panes")).toBe("json");
+    expect(screen.queryByRole("region", { name: "Predicted XML view" })).not.toBeInTheDocument();
+
+    fireEvent.click(paneToggle("Fields"));
+    expect(screen.getByRole("region", { name: "Fields view" })).toBeInTheDocument();
   });
 
   it("offers the formats that can render the invoice and switches between them", () => {

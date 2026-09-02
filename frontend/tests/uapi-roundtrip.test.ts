@@ -416,8 +416,16 @@ describe("fieldForPointer", () => {
     expect(fieldForPointer("/tax_representative/name")).toBeUndefined();
   });
 
-  it("only names fields the registry knows", () => {
+  it("only names fields the model actually has", () => {
+    // Operation-only fields (lines.{i}.uapi.*, uapi.*) are deliberately kept out of the Compose
+    // form, so the registry does not list them — but they are real model paths and must address
+    // a pointer, or the Mapper cannot highlight them across panes.
     const known = new Set(allFields().map((spec) => spec.field));
-    for (const field of Object.values(UAPI_POINTER_FIELDS)) expect(known).toContain(field);
+    // `uapi.*` and `lines.{i}.uapi.*` are the operation-only escape hatch: real model paths that
+    // the Compose form deliberately does not render, so the registry does not list them.
+    const operationOnly = /^(uapi\.|lines\.\{i\}\.uapi\.)/;
+    for (const field of Object.values(UAPI_POINTER_FIELDS)) {
+      expect(known.has(field) || operationOnly.test(field), field).toBe(true);
+    }
   });
 });

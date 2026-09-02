@@ -3,7 +3,7 @@ import { json } from "@codemirror/lang-json";
 import { foldGutter, foldKeymap } from "@codemirror/language";
 import { Compartment, EditorState, StateEffect, StateField } from "@codemirror/state";
 import { Decoration, EditorView, keymap, lineNumbers, type DecorationSet } from "@codemirror/view";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 
 type Range = { from: number; to: number };
 
@@ -117,10 +117,18 @@ const THEME = EditorView.theme({
   },
 });
 
+const FLOW_THEME = EditorView.theme({
+  "&": { height: "auto", maxHeight: "none" },
+  ".cm-scroller": { overflow: "visible" },
+});
+
 export type JsonViewProps = {
   text: string;
   label: string;
   maxHeight?: number;
+  // Let the editor grow to its full content height and hand the scrollbar to `scrollHost`.
+  flow?: boolean;
+  scrollHost?: RefObject<HTMLElement | null>;
   range?: Range;
   annotations?: JsonAnnotation[];
   scrollTo?: boolean;
@@ -133,6 +141,8 @@ export function JsonView({
   text,
   label,
   maxHeight,
+  flow = false,
+  scrollHost,
   range,
   annotations,
   scrollTo = false,
@@ -143,6 +153,7 @@ export function JsonView({
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const config = useRef(new Compartment());
+  const flowTheme = useRef(new Compartment());
   const doc = useRef(text);
   const pick = useRef(onPickOffset);
   const change = useRef(onChange);
@@ -169,6 +180,7 @@ export function JsonView({
           selectedRange,
           annotationField,
           THEME,
+          flowTheme.current.of([]),
           EditorView.updateListener.of((update) => {
             if (!update.docChanged) return;
             const next = update.state.doc.toString();
@@ -230,22 +242,33 @@ export function JsonView({
   useEffect(() => {
     const editor = view.current;
     if (!editor) return;
+    editor.dispatch({ effects: flowTheme.current.reconfigure(flow ? FLOW_THEME : []) });
+  }, [flow]);
+
+  useEffect(() => {
+    const editor = view.current;
+    if (!editor) return;
     editor.dispatch({ effects: setSelectedRange.of(range ?? null) });
     if (!range || !scrollTo) return;
+    // CodeMirror measures unrendered positions itself and walks up to the nearest scrollable
+    // ancestor, so this works whether the scrollbar belongs to .cm-scroller or, in flow layout,
+    // to the container that also holds the caveats below the editor.
     editor.dispatch({
       effects: EditorView.scrollIntoView(Math.min(range.from, editor.state.doc.length), {
         y: "start",
-        yMargin: Math.round(editor.dom.clientHeight / 3),
+        yMargin: Math.round((scrollHost?.current?.clientHeight ?? editor.dom.clientHeight) / 3),
       }),
     });
-  }, [text, range, scrollTo]);
+  }, [text, range, scrollTo, flow, scrollHost]);
 
   return (
     <div
       ref={host}
       role="group"
       aria-label={label}
-      className="min-h-0 flex-1 overflow-hidden rounded-m border border-line bg-canvas"
+      className={`rounded-m border border-line bg-canvas ${
+        flow ? "min-h-full shrink-0" : "min-h-0 flex-1 overflow-hidden"
+      }`}
       style={maxHeight === undefined ? undefined : { maxHeight }}
     />
   );

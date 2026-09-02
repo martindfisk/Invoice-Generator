@@ -13,15 +13,38 @@ A browser-based showcase of the e-invoice lifecycle — **create → validate �
 
 ```bash
 make setup      # install frontend + backend dependencies
-make doctor     # check node, python, docker, .env, spec/version.txt
-make spec       # fetch latest UAPI specs into spec/ (committed cache)
-make gen-types  # generate TypeScript types from the fetched spec
+make doctor     # check node, python, docker, .env, spec manifest, SEF freshness
+make spec       # ingest spec/drop/*.yaml, else fetch the latest into spec/ (committed cache)
+make gen-types  # generate TypeScript types from whichever spec is active
 make schemas    # vendor XSD/XSLT validation assets into vendor/
 make sef        # compile Schematron XSLT to SEF for the browser validator
 make dev        # run frontend + backend
 ```
 
 Other targets: `make test` (Vitest + pytest), `make e2e` (Playwright against MOCK), `make lint`, `make docker` (compose build).
+
+## Updating the OpenAPI spec
+
+The fiskaly OpenAPI document changes with each major version. To move to a new one:
+
+```bash
+cp <whatever-you-were-sent>.yaml spec/drop/
+make spec        # identifies it by content, renames it canonically, moves it into spec/
+make gen-types   # regenerate the TypeScript types from it
+```
+
+`make spec` reads `info.version` and `info.title` from inside the file rather than trusting its
+name, so the download can be called anything. It writes `spec/spec.json` (the active spec, the
+per-country fallback, a sha256 per file) and `spec/version.txt`, which is where the backend's
+`X-Api-Version` comes from — so the header follows the upgrade automatically. An empty `spec/drop/`
+afterwards means the file was consumed; `make doctor` says so if one is still sitting there.
+
+`make spec-check` (run by `make doctor` and in CI) fails when a vendored spec no longer matches its
+recorded hash, when `version.txt` and the manifest disagree, or when the generated types are older
+than the spec. Nothing is deleted except files the previous manifest listed.
+
+If you drop nothing, `make spec` fetches the per-country specs from `workspace.fiskaly.com` exactly
+as before, so a fresh clone and the offline path are unchanged.
 
 ## `.env` setup
 
@@ -52,8 +75,10 @@ Every UAPI call made along the way appears live in the right-hand API log pane, 
 Invoice Generator/
 ├── frontend/                  React + TS + Vite SPA
 ├── backend/                   FastAPI proxy
-├── spec/                      fetched UAPI specs + Postman + version.txt (committed cache)
-├── tools/fetch_spec.py        stdlib-only fetch/refresh of spec/
+├── spec/                      UAPI specs + Postman + version.txt + spec.json (committed cache)
+│   └── drop/                  drop a new OpenAPI YAML here, then run make spec
+├── tools/fetch_spec.py        stdlib-only drop-in ingest + fetch/refresh of spec/
+├── tools/spec_check.py        fails on a stale, tampered or un-ingested spec/
 ├── docs/
 │   ├── ARCHITECTURE.md
 │   ├── DEMO-SCRIPT.md

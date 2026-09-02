@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { StepCompose } from "./StepCompose";
+import { StepMapper } from "./StepMapper";
 import { StepReceive } from "./StepReceive";
 import { StepSend } from "./StepSend";
 import { StepSetup } from "./StepSetup";
@@ -9,7 +9,7 @@ import { STEPS, stepLock, type Step } from "./workflow";
 
 const CONTENT: Record<Step, ComponentType> = {
   setup: StepSetup,
-  compose: StepCompose,
+  mapper: StepMapper,
   validate: StepValidate,
   send: StepSend,
   receive: StepReceive,

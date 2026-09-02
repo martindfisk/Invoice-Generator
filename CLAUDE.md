@@ -3,14 +3,14 @@
 Browser tool: **create → validate → send → receive** e-invoices (FatturaPA via SDI, Peppol BIS 3.0 via Belgium) with a split screen — workflow left, live fiskaly UAPI calls right. Dual track: the browser generates the *expected* XML; fiskaly generates and transmits the real one (`?compliance-artifact`); the DiffView compares both.
 
 ## Commands
-`make setup` (Node via brew, npm install, venv, spec fetch, type gen) · `make doctor` · `make dev` (backend :8000 + Vite :5173) · `make test` · `make e2e` (Playwright, MOCK) · `make lint` · `make spec` (refresh `spec/` from workspace.fiskaly.com) · `make schemas` / `make sef` (validation assets) · `make docker`.
+`make setup` (Node via brew, npm install, venv, spec fetch, type gen) · `make doctor` · `make dev` (backend :8000 + Vite :5173) · `make test` · `make e2e` (Playwright, MOCK) · `make lint` · `make spec` (ingest `spec/drop/*.yaml`, else refresh from workspace.fiskaly.com) · `make spec-check` · `make schemas` / `make sef` (validation assets) · `make docker`.
 
 ## Layout
-`frontend/` React+TS+Vite (flat `src/`) · `backend/` FastAPI proxy (flat `app/`) · `spec/` fetched UAPI specs (`version.txt` = `X-Api-Version`) · `tools/` stdlib scripts · `docs/` ARCHITECTURE, DEMO-SCRIPT, adr/, design/ · `.claude/` agents, skills, rules, hooks, workflows.
+`frontend/` React+TS+Vite (flat `src/`) · `backend/` FastAPI proxy (flat `app/`) · `spec/` UAPI specs (`version.txt` = `X-Api-Version`, `spec.json` = provenance, `drop/` = drop a new OAS here) · `tools/` stdlib scripts · `docs/` ARCHITECTURE, DEMO-SCRIPT, adr/, design/ · `.claude/` agents, skills, rules, hooks, workflows.
 
 ## Rules that matter most
 - Secrets only in `.env`; the browser never sees credentials; hooks block `.env*` writes.
-- `spec/*.yaml` is the API authority; bodex/Postman `2026-05-04` bodies are v4 and stale.
+- `spec/*.yaml` is the API authority; `spec/spec.json` names which one is active. bodex/Postman `2026-05-04` bodies are v4 and stale.
 - Money = decimal strings. Mapping tables are data; writers emit only through them.
 - Live and mock share one code path (mock = httpx transport). Never compile Schematron at runtime.
 - Before fetching a standard from the web, check `/Users/martin.dutzler/Documents/GitHub/E-Invoicing-Formats-and-Profiles/local_specs_index.md`.

@@ -44,7 +44,7 @@ vi.mock("../src/field-fate", async (importOriginal) => {
 });
 
 function jsonPane(): HTMLElement {
-  return screen.getByRole("tabpanel", { name: "fiskaly JSON view" });
+  return screen.getByRole("region", { name: "fiskaly JSON view" });
 }
 
 function markCount(): number {
@@ -55,7 +55,9 @@ describe("field-fate annotations in the JSON pane", () => {
   beforeEach(() => {
     localStorage.clear();
     store.dispatch({ type: "choosePreset", presetId: "it-b2b-sdi" });
-    store.dispatch({ type: "setView", view: "json" });
+    store.dispatch({ type: "setPane", pane: "human", show: false });
+    store.dispatch({ type: "setPane", pane: "human", show: true });
+    store.dispatch({ type: "setPane", pane: "xml", show: false });
   });
   afterEach(cleanup);
 

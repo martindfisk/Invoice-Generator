@@ -4,12 +4,12 @@ import type { FormatId } from "../src/model";
 import { listPresets } from "../src/presets";
 import { emptyRun, stagesFor, type StageResult } from "../src/validation";
 import {
-  defaultView,
+  defaultPanes,
   freshWorkflow,
   initialWorkflow,
   JSON_LOSS_NOTICE,
   LOSS_NOTICE,
-  migrateView,
+  migratePanes,
   persistWorkflow,
   stepLock,
   STEPS,
@@ -60,7 +60,7 @@ describe("workflow reducer", () => {
     expect(state.presetId).toBe(first.id);
     expect(state.invoice?.number).toBeTruthy();
     expect(state.formatId).toBe(state.invoice?.format);
-    expect(state.step).toBe("compose");
+    expect(state.step).toBe("mapper");
     expect(STEPS.every((step) => stepLock(state, step.id) === undefined)).toBe(true);
   });
 
@@ -117,8 +117,8 @@ describe("workflow reducer", () => {
       type: "select",
       selection: { field: "number", source: "human" },
     });
-    expect(workflowReducer(state, { type: "setView", view: "xml" })).toMatchObject({
-      view: "xml",
+    expect(workflowReducer(state, { type: "setPane", pane: "human", show: false })).toMatchObject({
+      panes: { human: false, xml: true },
       selection: { field: "number" },
     });
     expect(workflowReducer(state, { type: "setPersona", persona: "buyer" })).toMatchObject({
@@ -151,7 +151,9 @@ describe("workflow reducer", () => {
 
   it("returns the same state for a no-op action", () => {
     const state = chosen();
-    expect(workflowReducer(state, { type: "setView", view: state.view })).toBe(state);
+    expect(
+      workflowReducer(state, { type: "setPane", pane: "human", show: state.panes.human }),
+    ).toBe(state);
     expect(workflowReducer(state, { type: "setPersona", persona: state.persona })).toBe(state);
     expect(workflowReducer(state, { type: "goToStep", step: state.step })).toBe(state);
     expect(
@@ -180,7 +182,7 @@ describe("workflow persistence", () => {
       presetId: state.presetId,
       formatId: state.formatId,
       persona: "buyer",
-      view: state.view,
+      panes: state.panes,
     });
     expect(restored.invoice).toEqual(state.invoice);
   });
@@ -191,10 +193,10 @@ describe("workflow persistence", () => {
     const raw = localStorage.getItem(WORKFLOW_KEY) ?? "";
     expect(Object.keys(JSON.parse(raw)).sort()).toEqual([
       "formatId",
+      "panes",
       "persona",
       "presetId",
       "step",
-      "view",
       "viewVersion",
     ]);
     expect(raw).not.toContain(state.invoice?.seller.name ?? "seller name");
@@ -448,25 +450,28 @@ describe("view mode", () => {
     localStorage.clear();
   });
 
-  it("opens on the fiskaly JSON, the artifact the API accepts", () => {
-    expect(defaultView()).toBe("json");
-    expect(freshWorkflow().view).toBe("json");
+  it("opens with all three structures on screen", () => {
+    expect(defaultPanes()).toEqual({ human: true, xml: true });
+    expect(freshWorkflow().panes).toEqual({ human: true, xml: true });
   });
 
-  it("migrates a view written before the JSON became the primary artifact", () => {
-    // The old UI's "xml" meant "show me the artifact"; the artifact is now the JSON.
-    expect(migrateView({ view: "xml" })).toBe("json");
-    expect(migrateView({ view: "human" })).toBe("human");
-    expect(migrateView({ view: "split" })).toBe("split");
-    expect(migrateView({ view: "json" })).toBe("json");
-    expect(migrateView({ view: "nonsense" })).toBe("json");
-    expect(migrateView({})).toBe("json");
+  it("migrates a single view mode written before the Mapper had panes", () => {
+    // Each old mode maps onto the pane set that showed the same thing.
+    expect(migratePanes({ view: "human" })).toEqual({ human: true, xml: false });
+    expect(migratePanes({ view: "split" })).toEqual({ human: true, xml: false });
+    expect(migratePanes({ view: "json" })).toEqual({ human: false, xml: false });
+    expect(migratePanes({ view: "xml" })).toEqual({ human: false, xml: true });
+    expect(migratePanes({ view: "nonsense" })).toEqual({ human: true, xml: true });
+    expect(migratePanes({})).toEqual({ human: true, xml: true });
   });
 
-  it("keeps a view written by this UI, including a deliberate Predicted XML", () => {
-    expect(migrateView({ view: "xml", viewVersion: VIEW_VERSION })).toBe("xml");
-    expect(migrateView({ view: "human", viewVersion: VIEW_VERSION })).toBe("human");
-    expect(migrateView({ view: "gone", viewVersion: VIEW_VERSION })).toBe("json");
+  it("keeps a pane set written by this UI", () => {
+    const saved = { panes: { human: false, xml: true }, viewVersion: VIEW_VERSION };
+    expect(migratePanes(saved)).toEqual({ human: false, xml: true });
+    expect(migratePanes({ panes: { human: 1 }, viewVersion: VIEW_VERSION })).toEqual({
+      human: true,
+      xml: true,
+    });
   });
 
   it("migrates through initialWorkflow and re-persists the new version", () => {
@@ -475,17 +480,23 @@ describe("view mode", () => {
       JSON.stringify({ step: "compose", presetId: first.id, persona: "seller", view: "xml" }),
     );
     const restored = initialWorkflow();
-    expect(restored.view).toBe("json");
+    // The step was renamed at the same time, so both halves of the old save migrate.
+    expect(restored.step).toBe("mapper");
+    expect(restored.panes).toEqual({ human: false, xml: true });
 
     persistWorkflow(restored);
     const raw: unknown = JSON.parse(localStorage.getItem(WORKFLOW_KEY) ?? "{}");
-    expect(raw).toMatchObject({ view: "json", viewVersion: VIEW_VERSION });
+    expect(raw).toMatchObject({
+      step: "mapper",
+      panes: { human: false, xml: true },
+      viewVersion: VIEW_VERSION,
+    });
   });
 
-  it("round-trips a Predicted XML choice across a reload", () => {
-    const state = { ...chosen(), view: "xml" as const };
+  it("round-trips a hidden pane across a reload", () => {
+    const state = { ...chosen(), panes: { human: false, xml: true } };
     persistWorkflow(state);
-    expect(initialWorkflow().view).toBe("xml");
+    expect(initialWorkflow().panes).toEqual({ human: false, xml: true });
   });
 });
 

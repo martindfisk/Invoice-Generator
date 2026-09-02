@@ -16,7 +16,7 @@ Where the two disagree, both are recorded below — that disagreement is itself 
 
 ## The rule that matters most
 
-**Four different fates await a field you send.** Our Compose step presents the JSON as *the* artifact,
+**Four different fates await a field you send.** Our Mapper step presents the JSON as *the* artifact,
 so a field that is silently discarded is actively misleading. The four categories:
 
 | Fate | Meaning |

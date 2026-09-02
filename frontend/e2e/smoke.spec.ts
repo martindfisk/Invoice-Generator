@@ -4,14 +4,31 @@ function picker(page: Page) {
   return page.getByRole("region", { name: "Preset picker" });
 }
 
-type Mode = "Fields" | "fiskaly JSON" | "Predicted XML" | "Split";
+type Pane = "Fields" | "Predicted XML";
 
-async function viewMode(page: Page, mode: Mode) {
-  await page
-    .getByRole("tablist", { name: "Invoice view mode" })
-    .getByRole("tab", { name: mode, exact: true })
-    .click();
+function paneToggle(page: Page, pane: Pane) {
+  return page
+    .getByRole("group", { name: "Mapper panes" })
+    .getByRole("button", { name: pane, exact: true });
 }
+
+async function showOnly(page: Page, ...panes: Pane[]) {
+  for (const pane of ["Fields", "Predicted XML"] as Pane[]) {
+    const toggle = paneToggle(page, pane);
+    const shown = (await toggle.getAttribute("aria-pressed")) === "true";
+    if (shown !== panes.includes(pane)) await toggle.click();
+  }
+}
+
+// The old single-mode helper, expressed as pane sets: "Split" was fields + JSON.
+async function viewMode(page: Page, mode: "Fields" | "fiskaly JSON" | "Predicted XML" | "Split") {
+  if (mode === "Fields" || mode === "Split") return showOnly(page, "Fields");
+  if (mode === "Predicted XML") return showOnly(page, "Predicted XML");
+  return showOnly(page);
+}
+
+const XML_EDITOR = ".cm-content[data-language='xml']";
+const JSON_EDITOR = ".cm-content[data-language='json']";
 
 async function chooseItalianPreset(page: Page) {
   await picker(page).locator("[data-preset='it-b2b-sdi']").click();
@@ -31,7 +48,7 @@ test.describe("shell", () => {
     await expect(page).toHaveTitle(/Invoice Generator/);
     await expect(picker(page)).toBeVisible();
     expect(await picker(page).getByRole("button").count()).toBeGreaterThan(0);
-    // Setup, Compose and Validate make no fiskaly calls, so the pane would only take space.
+    // Setup, Mapper and Validate make no fiskaly calls, so the pane would only take space.
     await expect(page.getByRole("region", { name: "API log" })).toHaveCount(0);
   });
 
@@ -76,7 +93,7 @@ test.describe("setup", () => {
     await expect(picker(page).getByText("broken on purpose").first()).toBeVisible();
   });
 
-  test("loads the preset picked out of the Italian B2G cell into Compose", async ({ page }) => {
+  test("loads the preset picked out of the Italian B2G cell into the Mapper", async ({ page }) => {
     const card = picker(page).locator("[data-cell='IT:B2G']").getByRole("button").first();
     const label = (await card.locator("span").first().innerText()).trim();
     const format = (await card.getAttribute("title"))?.split("\n")[2] ?? "";
@@ -85,52 +102,94 @@ test.describe("setup", () => {
 
     await expect(page.getByRole("region", { name: "Invoice viewer" })).toBeVisible();
     await expect(page.getByRole("heading", { name: label })).toBeVisible();
-    await expect(page.getByRole("tabpanel", { name: "fiskaly JSON view" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "fiskaly JSON view" })).toBeVisible();
     expect(format).not.toEqual("");
     await expect(page.getByText(format, { exact: true })).toBeVisible();
   });
 });
 
-test.describe("compose", () => {
+test.describe("mapper", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
   });
 
   test("keeps the later steps locked until a preset is chosen", async ({ page }) => {
     const stepper = page.getByRole("region", { name: "Workflow" }).getByRole("list");
-    const compose = stepper.getByRole("button", { name: /Compose$/ });
-    await expect(compose).toBeDisabled();
-    await expect(compose).toHaveAttribute("title", /preset/i);
+    const mapper = stepper.getByRole("button", { name: /Mapper$/ });
+    await expect(mapper).toBeDisabled();
+    await expect(mapper).toHaveAttribute("title", /preset/i);
 
     await chooseItalianPreset(page);
-    await expect(stepper.getByRole("button", { name: /Compose$/ })).toBeEnabled();
+    await expect(stepper.getByRole("button", { name: /Mapper$/ })).toBeEnabled();
     await expect(stepper.getByRole("button", { name: /Receive$/ })).toBeEnabled();
   });
 
-  test("opens on the fiskaly JSON and toggles Fields, Predicted XML and Split", async ({
+  test("keeps the JSON editor full height and puts the caveats past the payload", async ({
     page,
   }) => {
     await chooseItalianPreset(page);
-    await expect(page.getByRole("tabpanel", { name: "fiskaly JSON view" })).toBeVisible();
-    await expect(page.getByRole("tabpanel", { name: "Fields view" })).toHaveCount(0);
-    await expect(page.getByRole("tabpanel", { name: "Predicted XML view" })).toHaveCount(0);
-    await expect(page.getByText(/The Unified API accepts this JSON, not XML/)).toBeVisible();
+    const pane = page.getByRole("region", { name: "fiskaly JSON view" });
+    const scroller = pane.locator("div.overflow-y-auto").first();
+    const caveat = pane.locator("[data-uncarried-by-operation]");
 
-    await viewMode(page, "Predicted XML");
-    await expect(page.getByRole("tabpanel", { name: "fiskaly JSON view" })).toHaveCount(0);
-    await expect(page.getByRole("tabpanel", { name: "Predicted XML view" })).toBeVisible();
+    // One scrollbar for the pane, and the editor is taller than it — the caveats are past the end.
+    const box = await pane.boundingBox();
+    const paneBottom = box!.y + box!.height;
+    expect((await caveat.boundingBox())!.y).toBeGreaterThan(paneBottom);
+
+    await scroller.evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
+    await expect.poll(async () => (await caveat.boundingBox())!.y < paneBottom).toBe(true);
+
+    // Scrolling is still driven by selection: a field deep in the payload brings itself into view.
+    await scroller.evaluate((el) => el.scrollTo({ top: 0 }));
+    await page.locator("[data-field='payment.iban']").first().click();
+    await expect.poll(async () => scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    await expect(pane.locator(".cm-selected-range")).not.toHaveCount(0);
+  });
+
+  test("maps the selected field across the three panes and names what is missing", async ({
+    page,
+  }) => {
+    await chooseItalianPreset(page);
+    const strip = page.locator("[data-presence-strip]");
+    await expect(strip).toContainText(/Select a field in any pane/);
+
+    await page.locator("[data-field='number']").first().click();
+    await expect(strip).toHaveAttribute("data-presence-strip", "number");
+    await expect(strip).toHaveAttribute("data-missing", "0");
+    // The same field is highlighted in the JSON and the predicted XML at once.
+    await expect(page.locator(JSON_EDITOR).locator(".cm-selected-range")).not.toHaveCount(0);
+    await expect(page.locator(XML_EDITOR).locator(".cm-selected-range")).not.toHaveCount(0);
+
+    // The seller is the commissioned taxpayer, so BT-27 reaches the XML but never the payload.
+    await page.locator("[data-field='seller.name']").first().click();
+    await expect(strip).toHaveAttribute("data-missing", "1");
+    await expect(strip.locator("[data-structure='json']")).toHaveAttribute("data-present", "false");
+    await expect(strip.locator("[data-structure='xml']")).toHaveAttribute("data-present", "true");
+    await expect(strip).toContainText(/taxpayer resource/);
+  });
+
+  test("opens with all three structures and folds each flank away", async ({ page }) => {
+    await chooseItalianPreset(page);
+    await expect(page.getByRole("region", { name: "Fields view" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "fiskaly JSON view" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Predicted XML view" })).toBeVisible();
+    await expect(page.locator("[data-panes]")).toHaveAttribute("data-panes", "human+json+xml");
+    await expect(page.getByText(/The Unified API accepts this JSON, not XML/)).toBeVisible();
     await expect(page.getByText(/what this browser expects fiskaly to generate/)).toBeVisible();
 
-    await viewMode(page, "Fields");
-    await expect(page.getByRole("tabpanel", { name: "Predicted XML view" })).toHaveCount(0);
-    await expect(page.getByRole("tabpanel", { name: "Fields view" })).toBeVisible();
-    await expect(
-      page.getByText("Visualisation for review — the XML is the legally valid invoice."),
-    ).toBeVisible();
+    await paneToggle(page, "Fields").click();
+    await expect(page.getByRole("region", { name: "Fields view" })).toHaveCount(0);
+    await expect(page.locator("[data-panes]")).toHaveAttribute("data-panes", "json+xml");
 
-    await viewMode(page, "Split");
-    await expect(page.getByRole("tabpanel", { name: "Fields view" })).toBeVisible();
-    await expect(page.getByRole("tabpanel", { name: "fiskaly JSON view" })).toBeVisible();
+    await paneToggle(page, "Predicted XML").click();
+    await expect(page.getByRole("region", { name: "Predicted XML view" })).toHaveCount(0);
+    // The JSON is the payload the step explains, so it can never be folded away.
+    await expect(page.getByRole("region", { name: "fiskaly JSON view" })).toBeVisible();
+    await expect(page.locator("[data-panes]")).toHaveAttribute("data-panes", "json");
+
+    await paneToggle(page, "Fields").click();
+    await expect(page.getByRole("region", { name: "Fields view" })).toBeVisible();
   });
 
   test("highlights the JSON range of the field the user clicks", async ({ page }) => {
@@ -199,8 +258,8 @@ test.describe("compose", () => {
     await input.press("Enter");
 
     await viewMode(page, "Predicted XML");
-    await expect(page.locator(".cm-content")).toContainText("ActualDeliveryDate");
-    await expect(page.locator(".cm-content")).toContainText("2026-09-01");
+    await expect(page.locator(XML_EDITOR)).toContainText("ActualDeliveryDate");
+    await expect(page.locator(XML_EDITOR)).toContainText("2026-09-01");
     await viewMode(page, "Split");
     await expect(page.locator("[data-field='delivery.date']")).not.toHaveText(/—/);
     await expect(head).toHaveAccessibleName(/1 of 1 set/);
@@ -222,7 +281,7 @@ test.describe("compose", () => {
     page,
   }) => {
     await chooseItalianPreset(page);
-    const pane = page.getByRole("tabpanel", { name: "fiskaly JSON view" });
+    const pane = page.getByRole("region", { name: "fiskaly JSON view" });
     await expect(pane.locator("[data-fate-notice='totals']")).toBeVisible();
     await expect(pane.locator("[data-fate-notice='totals']")).toContainText(
       "breakdown and totals are discarded",
@@ -250,8 +309,8 @@ test.describe("compose", () => {
 
 async function splitView(page: Page) {
   await viewMode(page, "Split");
-  await expect(page.getByRole("tabpanel", { name: "fiskaly JSON view" })).toBeVisible();
-  await expect(page.getByRole("tabpanel", { name: "Fields view" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "fiskaly JSON view" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Fields view" })).toBeVisible();
 }
 
 declare const document: {
@@ -263,39 +322,75 @@ declare const document: {
   createRange(): {
     setStart(node: unknown, offset: number): void;
     setEnd(node: unknown, offset: number): void;
-    getBoundingClientRect(): { left: number; top: number; height: number };
+    getBoundingClientRect(): { left: number; right: number; top: number; height: number };
   };
 };
 
 const SHOW_TEXT = 4;
 
-async function tokenEdge(page: Page, token: string, edge: "start" | "end") {
-  const point = await page.evaluate(
-    ({ needle, side, show }) => {
-      const content = document.querySelector(".cm-content");
-      if (!content) return null;
-      const walker = document.createTreeWalker(content, show);
-      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-        const index = (node.textContent ?? "").indexOf(needle);
-        if (index === -1) continue;
-        const offset = side === "start" ? index : index + needle.length;
-        const range = document.createRange();
-        range.setStart(node, offset);
-        range.setEnd(node, offset);
-        const rect = range.getBoundingClientRect();
-        return { x: rect.left, y: rect.top + rect.height / 2 };
-      }
-      return null;
-    },
-    { needle: token, side: edge, show: SHOW_TEXT },
-  );
-  if (!point) throw new Error(`e2e: "${token}" is not rendered in the XML pane`);
-  return point;
+// Both edges are measured in one pass: CodeMirror re-renders between evaluate() calls, and two
+// independent DOM walks could return coordinates from different renders.
+//
+// The rect is also polled until it stops moving. The JSON pane's header grows after first paint —
+// the field-fate table is a lazy import and the spec coverage panel is a fetch — so a rect taken
+// too early is ~30px above where the token ends up, and the drag then selects the wrong range.
+async function tokenBox(page: Page, token: string, editor: string = XML_EDITOR) {
+  const measure = () =>
+    page.evaluate(
+      ({ needle, show, selector }) => {
+        const content = document.querySelector(selector);
+        if (!content) return null;
+        const walker = document.createTreeWalker(content, show);
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          const index = (node.textContent ?? "").indexOf(needle);
+          if (index === -1) continue;
+          const range = document.createRange();
+          range.setStart(node, index);
+          range.setEnd(node, index + needle.length);
+          const rect = range.getBoundingClientRect();
+          return { left: rect.left, right: rect.right, middle: rect.top + rect.height / 2 };
+        }
+        return null;
+      },
+      { needle: token, show: SHOW_TEXT, selector: editor },
+    );
+
+  // Wait for the two things that grow the JSON pane's header after first paint: the spec
+  // coverage fetch and the lazily imported field-fate table. Until both land, the editor is
+  // ~30px lower than it will be, and a drag measured now selects the wrong range.
+  await page
+    .locator("[data-spec-coverage]:not([data-spec-coverage='pending'])")
+    .first()
+    .waitFor({ timeout: 15000 })
+    .catch(() => undefined);
+
+  let previous = await measure();
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    await page.waitForTimeout(100);
+    const current = await measure();
+    if (
+      previous &&
+      current &&
+      current.middle === previous.middle &&
+      current.left === previous.left
+    ) {
+      return {
+        start: { x: current.left, y: current.middle },
+        end: { x: current.right, y: current.middle },
+      };
+    }
+    previous = current;
+  }
+  throw new Error(`e2e: "${token}" never settled in ${editor}`);
 }
 
-async function replaceInXml(page: Page, token: string, replacement: string) {
-  const start = await tokenEdge(page, token, "start");
-  const end = await tokenEdge(page, token, "end");
+async function replaceInXml(
+  page: Page,
+  token: string,
+  replacement: string,
+  editor: string = XML_EDITOR,
+) {
+  const { start, end } = await tokenBox(page, token, editor);
   await page.mouse.move(start.x, start.y);
   await page.mouse.down();
   await page.mouse.move(end.x, end.y);
@@ -389,12 +484,12 @@ test.describe("two-way editing", () => {
     await input.press("Enter");
 
     await expect(page.locator("[data-field='number']").first()).toContainText("E2E-1234");
-    await expect(page.locator(".cm-content")).toContainText("E2E-1234");
+    await expect(page.locator(JSON_EDITOR)).toContainText("E2E-1234");
     expect(before).not.toContain("E2E-1234");
 
-    await replaceInXml(page, "E2E-1234", "E2E-9999");
+    await replaceInXml(page, "E2E-1234", "E2E-9999", JSON_EDITOR);
     await expect(page.locator("[data-field='number']").first()).toContainText("E2E-9999");
-    await expect(page.locator(".cm-content")).toContainText("E2E-9999");
+    await expect(page.locator(JSON_EDITOR)).toContainText("E2E-9999");
   });
 
   test("an unparseable JSON edit reports the parser and keeps the last good invoice", async ({
@@ -405,13 +500,13 @@ test.describe("two-way editing", () => {
     const input = page.getByRole("textbox", { name: "Invoice number" });
     await input.fill("E2E-KEEP");
     await input.press("Enter");
-    await expect(page.locator(".cm-content")).toContainText("E2E-KEEP");
+    await expect(page.locator(JSON_EDITOR)).toContainText("E2E-KEEP");
 
-    await replaceInXml(page, '"E2E-KEEP"', '"E2E-KEEP');
+    await replaceInXml(page, '"E2E-KEEP"', '"E2E-KEEP', JSON_EDITOR);
     await expect(page.getByRole("alert").first()).toBeVisible();
     await expect(page.locator("[data-field='number']").first()).toContainText("E2E-KEEP");
 
-    await replaceInXml(page, '"E2E-KEEP', '"E2E-BACK"');
+    await replaceInXml(page, '"E2E-KEEP', '"E2E-BACK"', JSON_EDITOR);
     await expect(page.locator("[data-field='number']").first()).toContainText("E2E-BACK");
     await expect(page.getByRole("alert")).toHaveCount(0);
   });
@@ -426,7 +521,7 @@ test.describe("two-way editing", () => {
     await input.press("Enter");
 
     await viewMode(page, "Predicted XML");
-    await expect(page.locator(".cm-content")).toContainText("E2E-XML");
+    await expect(page.locator(XML_EDITOR)).toContainText("E2E-XML");
     await replaceInXml(page, "E2E-XML", "<<<");
     await expect(page.getByRole("alert").first()).toBeVisible();
 
@@ -537,19 +632,21 @@ test.describe("the JSON is the artifact", () => {
     await page.goto("/");
     await chooseItalianPreset(page);
 
-    // The Unified API takes JSON, so that is what the tool opens on.
-    await expect(page.getByRole("tabpanel", { name: "fiskaly JSON view" })).toBeVisible();
-    await expect(page.getByRole("tabpanel", { name: "Predicted XML view" })).toHaveCount(0);
+    // The Unified API takes JSON, so it is the pane that can never be folded away — and the
+    // Mapper opens with the two structures it is mapped against already beside it.
+    await expect(page.getByRole("region", { name: "fiskaly JSON view" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Fields view" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Predicted XML view" })).toBeVisible();
 
     await splitView(page);
-    const composed = await page.locator(".cm-content").innerText();
+    const composed = await page.locator(JSON_EDITOR).innerText();
     const before = /"number":\s*"([^"]+)"/.exec(composed)?.[1];
     if (!before) throw new Error("e2e: the JSON pane shows no document number");
-    await replaceInXml(page, before, "E2E-JSON-FIRST");
+    await replaceInXml(page, before, "E2E-JSON-FIRST", JSON_EDITOR);
 
     await expect(page.locator("[data-field='number']").first()).toContainText("E2E-JSON-FIRST");
     await viewMode(page, "Predicted XML");
-    await expect(page.locator(".cm-content")).toContainText("E2E-JSON-FIRST");
+    await expect(page.locator(XML_EDITOR)).toContainText("E2E-JSON-FIRST");
 
     await stepper(page)
       .getByRole("button", { name: /Validate$/ })
@@ -567,15 +664,14 @@ test.describe("the JSON is the artifact", () => {
 });
 
 test.describe("resizable panes", () => {
-  test("drags the compose splitter and remembers the size", async ({ page }) => {
+  test("drags the mapper splitters and remembers the sizes", async ({ page }) => {
     await page.goto("/");
     await page.evaluate(() => localStorage.clear());
     await page.reload();
     await chooseItalianPreset(page);
-    await page.getByRole("tab", { name: "Split" }).click();
 
-    const fields = page.getByRole("tabpanel", { name: "Fields view" });
-    const separator = page.getByRole("separator", { name: /Resize the fields and JSON/i }).first();
+    const fields = page.getByRole("region", { name: "Fields view" });
+    const separator = page.getByRole("separator", { name: /Resize the fields pane/i }).first();
     const before = (await fields.boundingBox())!.width;
     const bar = (await separator.boundingBox())!;
     await page.mouse.move(bar.x + bar.width / 2, bar.y + bar.height / 2);
@@ -591,6 +687,17 @@ test.describe("resizable panes", () => {
     await expect
       .poll(async () => Math.abs((await fields.boundingBox())!.width - after))
       .toBeLessThan(25);
+
+    // The second separator moves the predicted XML pane independently of the first.
+    const xml = page.getByRole("region", { name: "Predicted XML view" });
+    const wide = (await xml.boundingBox())!.width;
+    const right = page.getByRole("separator", { name: /Resize the predicted XML pane/i }).first();
+    const handle = (await right.boundingBox())!;
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(handle.x - 200, handle.y + handle.height / 2, { steps: 10 });
+    await page.mouse.up();
+    expect((await xml.boundingBox())!.width).toBeGreaterThan(wide + 100);
   });
 
   test("resizes the validate panes vertically", async ({ page }) => {

@@ -227,9 +227,7 @@ describe("CollectionNotesPanel", () => {
       />,
     );
     const panel = screen.getByRole("region", { name: "Published collection notes" });
-    expect(
-      within(panel).getByText(/This is what fiskaly publishes/),
-    ).toBeInTheDocument();
+    expect(within(panel).getByText(/This is what fiskaly publishes/)).toBeInTheDocument();
     expect(within(panel).getByText(/Nothing below is an error in this tool/)).toBeInTheDocument();
     expect(
       within(panel).getByText("Italian standard rate on a German invoice."),

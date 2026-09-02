@@ -255,9 +255,7 @@ describe("Send step", () => {
     const payload = screen.getByRole("group", { name: "Operation payload" });
     const editor = EditorView.findFromDOM(payload.querySelector(".cm-editor") as HTMLElement);
     expect(editor?.state.doc.toString()).toBe(composed.text);
-    expect(
-      screen.getByText(/This is the JSON you composed, posted unchanged/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/This is the JSON you composed, posted unchanged/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Send to fiskaly" }));
     await waitFor(() => expect(sendInvoice).toHaveBeenCalled());

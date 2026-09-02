@@ -34,7 +34,7 @@ import {
   type FieldIndex,
   type XmlIndex,
 } from "./xml-locate";
-import { composeOperation, type ViewMode } from "./workflow";
+import { composeOperation } from "./workflow";
 
 const RUN_DEBOUNCE_MS = 250;
 
@@ -337,15 +337,10 @@ function actionLine(
   return `${contract} Every stage passed.`;
 }
 
-function showsJson(view: ViewMode): boolean {
-  return view === "json" || view === "split";
-}
-
 function Validating({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }) {
   const formatId = useStore((state) => state.workflow.formatId);
   const selection = useStore((state) => state.workflow.selection);
   const validation = useStore((state) => state.workflow.validation);
-  const view = useStore((state) => state.workflow.view);
   const workflow = useStore((state) => state.workflow);
   const operation = composeOperation(workflow);
   const jsonPrefix = operation.prefix;
@@ -407,11 +402,8 @@ function Validating({ invoice, presetId }: { invoice: Invoice; presetId: PresetI
 
   const onSelect = (row: FindingRow) => {
     setSelectedKey(row.key);
-    // A contract finding addresses the JSON, so open that pane if it is not already up. Split
-    // is preferred over JSON-only so the fields stay on screen next to it.
-    if (row.pointer && !showsJson(view)) {
-      store.dispatch({ type: "setView", view: view === "human" ? "split" : "json" });
-    }
+    // The JSON pane is always on screen in the Mapper, so a contract finding needs no pane
+    // switch — selecting it is enough for every pane to scroll to its own rendering of it.
     store.dispatch({
       type: "select",
       selection: { field: row.field, path: row.path, pointer: row.pointer, source: "finding" },
@@ -484,7 +476,7 @@ function Validating({ invoice, presetId }: { invoice: Invoice; presetId: PresetI
         </button>
         <button
           type="button"
-          onClick={() => store.dispatch({ type: "goToStep", step: "compose" })}
+          onClick={() => store.dispatch({ type: "goToStep", step: "mapper" })}
           className="rounded-m border border-line px-3 py-1.5 text-xs font-medium text-muted hover:border-brand hover:text-ink"
         >
           Back to Compose

@@ -40,7 +40,8 @@ describe("compose editing", () => {
   beforeEach(() => {
     localStorage.clear();
     store.dispatch({ type: "choosePreset", presetId: first.id });
-    store.dispatch({ type: "setView", view: "human" });
+    store.dispatch({ type: "setPane", pane: "human", show: true });
+    store.dispatch({ type: "setPane", pane: "xml", show: false });
   });
   afterEach(cleanup);
 
@@ -61,7 +62,11 @@ describe("compose editing", () => {
     render(<WorkflowPane />);
     openEditor(/^Invoice number/);
     commit("Invoice number", "SHOWN-IN-XML");
-    act(() => store.dispatch({ type: "setView", view: "xml" }));
+    act(() => {
+      store.dispatch({ type: "setPane", pane: "human", show: false });
+      store.dispatch({ type: "setPane", pane: "xml", show: true });
+      store.dispatch({ type: "setPane", pane: "xml", show: true });
+    });
 
     expect(editorText()).toContain("SHOWN-IN-XML");
   });
@@ -113,7 +118,8 @@ describe("compose editing", () => {
   });
 
   it("keeps the last good invoice and reports the parser message on a broken XML edit", () => {
-    store.dispatch({ type: "setView", view: "xml" });
+    store.dispatch({ type: "setPane", pane: "human", show: false });
+    store.dispatch({ type: "setPane", pane: "xml", show: true });
     render(<WorkflowPane />);
     const before = invoice();
     act(() => store.dispatch({ type: "editXml", text: "<FatturaElettronica" }));

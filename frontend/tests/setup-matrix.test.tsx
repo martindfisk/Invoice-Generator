@@ -173,7 +173,7 @@ describe("preset matrix", () => {
 
     fireEvent.click(within(cell(target.country, target.audience)).getByText(meta.label));
 
-    expect(store.getState().workflow).toMatchObject({ presetId: meta.id, step: "compose" });
+    expect(store.getState().workflow).toMatchObject({ presetId: meta.id, step: "mapper" });
     expect(screen.getByRole("region", { name: "Invoice viewer" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: meta.label })).toBeInTheDocument();
   });

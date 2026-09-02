@@ -11,7 +11,9 @@ describe("field-fate degradation without the evidence table", () => {
   beforeEach(() => {
     localStorage.clear();
     store.dispatch({ type: "choosePreset", presetId: "it-b2b-sdi" });
-    store.dispatch({ type: "setView", view: "json" });
+    store.dispatch({ type: "setPane", pane: "human", show: false });
+    store.dispatch({ type: "setPane", pane: "human", show: true });
+    store.dispatch({ type: "setPane", pane: "xml", show: false });
   });
   afterEach(cleanup);
 
@@ -24,7 +26,7 @@ describe("field-fate degradation without the evidence table", () => {
 
   it("still renders the JSON pane and the FatturaPA notices", () => {
     render(<WorkflowPane />);
-    const pane = screen.getByRole("tabpanel", { name: "fiskaly JSON view" });
+    const pane = screen.getByRole("region", { name: "fiskaly JSON view" });
     expect(pane.querySelector("[data-fate-notice='totals']")).not.toBeNull();
     expect(pane.querySelector("[data-fate-notice='seller']")).not.toBeNull();
     expect(Number(pane.getAttribute("data-fate-marks"))).toBeGreaterThanOrEqual(0);

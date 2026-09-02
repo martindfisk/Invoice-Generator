@@ -57,7 +57,7 @@ describe("store", () => {
     store.subscribe(listener);
     const presetId = listPresets()[0].id;
     store.dispatch({ type: "choosePreset", presetId });
-    expect(store.getState().workflow).toMatchObject({ presetId, step: "compose" });
+    expect(store.getState().workflow).toMatchObject({ presetId, step: "mapper" });
     expect(JSON.parse(localStorage.getItem(WORKFLOW_KEY) ?? "{}")).toMatchObject({ presetId });
     expect(listener).toHaveBeenCalledTimes(1);
   });
@@ -75,7 +75,7 @@ describe("store", () => {
   it("rehydrates the persisted workflow", () => {
     const presetId = listPresets()[0].id;
     createStore().dispatch({ type: "choosePreset", presetId });
-    expect(createStore().getState().workflow).toMatchObject({ presetId, step: "compose" });
+    expect(createStore().getState().workflow).toMatchObject({ presetId, step: "mapper" });
   });
 
   it("addCall orders newest first and replaces an existing id in place", () => {

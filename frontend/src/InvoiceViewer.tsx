@@ -1,9 +1,9 @@
-import { useCallback, useId, useMemo, useState, type KeyboardEvent } from "react";
+import { useCallback, useId, useMemo, useRef, useState } from "react";
 import { FATE_LEGEND, FATE_TONE, fateEntry, fateLabel, formatFateNotices } from "./field-fate";
 import type { FormatPlugin } from "./formats";
 import { HumanView, type EditContext } from "./HumanView";
 import { useIsWide } from "./use-media";
-import { useGridSplit } from "./use-split";
+import { useGridSplit, type GridSplit } from "./use-split";
 import { CoveragePanel } from "./CoveragePanel";
 import { JsonView, type JsonAnnotation } from "./JsonView";
 import type { FieldId, FormatId, Invoice } from "./model";
@@ -23,7 +23,9 @@ import {
   type LossyGroup,
 } from "./uapi-json";
 import type { Finding, Severity } from "./validation";
-import type { EditState, ViewMode } from "./workflow";
+import { fieldPresence } from "./field-presence";
+import { PresenceStrip } from "./PresenceStrip";
+import type { EditState, PaneId } from "./workflow";
 import {
   buildFieldIndex,
   indexXml,
@@ -33,12 +35,33 @@ import {
 } from "./xml-locate";
 import { XmlView } from "./XmlView";
 
-const MODES: { id: ViewMode; label: string }[] = [
+// The fiskaly JSON is the payload the step exists to explain, so it is always on screen; the
+// two structures it is mapped against flank it and can each be folded away.
+const TOGGLES: { id: PaneId; label: string }[] = [
   { id: "human", label: "Fields" },
-  { id: "json", label: "fiskaly JSON" },
   { id: "xml", label: "Predicted XML" },
-  { id: "split", label: "Split" },
 ];
+
+const MIN_PANE = 14;
+
+function Separator({ split, wide }: { split: GridSplit; wide: boolean }) {
+  return (
+    <div
+      {...split.separatorProps}
+      title="Drag to resize · double-click to reset · arrow keys to nudge"
+      className={`group grid place-items-center bg-transparent transition-colors focus-visible:outline-none ${
+        wide ? "cursor-col-resize" : "cursor-row-resize"
+      }`}
+    >
+      <span
+        aria-hidden="true"
+        className={`rounded-full bg-line transition-colors group-hover:bg-brand group-focus-visible:bg-brand group-active:bg-brand ${
+          wide ? "h-full w-px group-hover:w-0.5" : "h-px w-full group-hover:h-0.5"
+        }`}
+      />
+    </div>
+  );
+}
 
 export const XML_PREDICTION_NOTE =
   "Predicted XML — what this browser expects fiskaly to generate. Nothing here is transmitted; " +
@@ -174,12 +197,13 @@ export function InvoiceViewer({
   onEditJson,
   onDismissNotice,
 }: InvoiceViewerProps) {
-  const view = useStore((state) => state.workflow.view);
+  const panes = useStore((state) => state.workflow.panes);
   const selection = useStore((state) => state.workflow.selection);
   const [editing, setEditing] = useState<FieldId | null>(null);
   const panelId = useId();
 
   const [showFates, setShowFates] = useState(true);
+  const jsonScroll = useRef<HTMLDivElement>(null);
 
   const xmlIndex = useMemo(() => indexXml(xmlText), [xmlText]);
   const jsonIndex = useMemo(() => indexJson(jsonText), [jsonText]);
@@ -283,39 +307,44 @@ export function InvoiceViewer({
     [findings.byField, onEditField],
   );
 
-  const showXml = view === "xml";
-  const showJson = view === "json" || view === "split";
-  const showHuman = view === "human" || view === "split";
+  const showHuman = panes.human;
+  const showXml = panes.xml;
+  const showJson = true;
   const wideViewer = useIsWide();
-  const {
-    ratio: splitRatio,
-    measure: splitMeasure,
-    separatorProps: splitSeparator,
-  } = useGridSplit("viewer", wideViewer, "Resize the fields and JSON panes");
-
-  const controls = (mode: ViewMode): string | undefined => {
-    if (mode === "human" || mode === "split") return showHuman ? `${panelId}-human` : undefined;
-    if (mode === "json") return showJson ? `${panelId}-json` : undefined;
-    return showXml ? `${panelId}-xml` : undefined;
-  };
-
-  const onModeKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const current = MODES.findIndex((mode) => mode.id === view);
-    const next =
-      event.key === "ArrowRight"
-        ? current + 1
-        : event.key === "ArrowLeft"
-          ? current - 1
-          : event.key === "Home"
-            ? 0
-            : event.key === "End"
-              ? MODES.length - 1
-              : undefined;
-    if (next === undefined) return;
-    event.preventDefault();
-    const mode = MODES[Math.max(0, Math.min(MODES.length - 1, next))];
-    store.dispatch({ type: "setView", view: mode.id });
-  };
+  const both = showHuman && showXml;
+  const left = useGridSplit("mapper-left", wideViewer, "Resize the fields pane", 30, {
+    max: both ? 100 - MIN_PANE * 2 : undefined,
+  });
+  const right = useGridSplit("mapper-right", wideViewer, "Resize the predicted XML pane", 70, {
+    min: both ? left.ratio + MIN_PANE : undefined,
+  });
+  // Both separators measure the same container. Depend on the setters, which are stable, not on
+  // the hook objects: those change identity whenever a ratio moves, and a ref callback that
+  // changes identity every render re-runs on every render.
+  const measureLeft = left.measure;
+  const measureRight = right.measure;
+  const measurePanes = useCallback(
+    (node: HTMLElement | null) => {
+      measureLeft(node);
+      measureRight(node);
+    },
+    [measureLeft, measureRight],
+  );
+  const selectedField = selection?.field ?? null;
+  const presence = useMemo(
+    () =>
+      selectedField
+        ? fieldPresence(selectedField, { invoice, format, fields, jsonIndex, jsonPrefix })
+        : null,
+    [selectedField, invoice, format, fields, jsonIndex, jsonPrefix],
+  );
+  const columns = both
+    ? `${left.ratio}% 6px ${right.ratio - left.ratio}% 6px ${100 - right.ratio}%`
+    : showHuman
+      ? `${left.ratio}% 6px ${100 - left.ratio}%`
+      : showXml
+        ? `${right.ratio}% 6px ${100 - right.ratio}%`
+        : "minmax(0,1fr)";
 
   return (
     <section
@@ -333,25 +362,27 @@ export function InvoiceViewer({
     >
       <div className="flex shrink-0 flex-wrap items-center gap-2.5 border-b border-line px-3 py-2">
         <div
-          role="tablist"
-          aria-label="Invoice view mode"
-          onKeyDown={onModeKeyDown}
-          className="inline-flex gap-0.5 rounded-m border border-line bg-canvas p-0.5"
+          role="group"
+          aria-label="Mapper panes"
+          className="inline-flex items-center gap-0.5 rounded-m border border-line bg-canvas p-0.5"
         >
-          {MODES.map((mode) => (
+          <span className="rounded-m bg-surface px-2.5 py-1 text-xs font-medium text-ink shadow-s">
+            fiskaly JSON
+          </span>
+          {TOGGLES.map((toggle) => (
             <button
-              key={mode.id}
+              key={toggle.id}
               type="button"
-              role="tab"
-              aria-selected={view === mode.id}
-              aria-controls={controls(mode.id)}
-              tabIndex={view === mode.id ? 0 : -1}
-              onClick={() => store.dispatch({ type: "setView", view: mode.id })}
+              aria-pressed={panes[toggle.id]}
+              aria-controls={panes[toggle.id] ? `${panelId}-${toggle.id}` : undefined}
+              onClick={() =>
+                store.dispatch({ type: "setPane", pane: toggle.id, show: !panes[toggle.id] })
+              }
               className={`rounded-m px-2.5 py-1 text-xs font-medium ${
-                view === mode.id ? "bg-surface text-ink shadow-s" : "text-muted hover:text-ink"
+                panes[toggle.id] ? "bg-surface text-ink shadow-s" : "text-muted hover:text-ink"
               }`}
             >
-              {mode.label}
+              {toggle.label}
             </button>
           ))}
         </div>
@@ -418,23 +449,18 @@ export function InvoiceViewer({
         </div>
       )}
 
+      <PresenceStrip field={selectedField} presence={presence ?? []} />
+
       <div
-        ref={splitMeasure}
-        style={
-          showHuman && showJson
-            ? ({ "--split-a": `${splitRatio}%` } as React.CSSProperties)
-            : undefined
-        }
-        className={
-          showHuman && showJson
-            ? "grid min-h-0 flex-1 grid-rows-[var(--split-a)_6px_minmax(0,1fr)] xl:grid-cols-[var(--split-a)_6px_minmax(0,1fr)] xl:grid-rows-[minmax(0,100%)]"
-            : "grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)]"
-        }
+        ref={measurePanes}
+        data-panes={[showHuman && "human", "json", showXml && "xml"].filter(Boolean).join("+")}
+        style={{ "--panes": columns } as React.CSSProperties}
+        className="grid min-h-0 flex-1 grid-rows-[var(--panes)] xl:grid-cols-[var(--panes)] xl:grid-rows-[minmax(0,100%)]"
       >
         {showHuman && (
           <div
             id={`${panelId}-human`}
-            role="tabpanel"
+            role="region"
             aria-label="Fields view"
             className="flex min-h-0 min-w-0 flex-col"
           >
@@ -450,26 +476,11 @@ export function InvoiceViewer({
             />
           </div>
         )}
-        {showHuman && showJson && (
-          <div
-            {...splitSeparator}
-            title="Drag to resize · double-click to reset · arrow keys to nudge"
-            className={`group grid place-items-center bg-transparent transition-colors focus-visible:outline-none ${
-              wideViewer ? "cursor-col-resize" : "cursor-row-resize"
-            }`}
-          >
-            <span
-              aria-hidden="true"
-              className={`rounded-full bg-line transition-colors group-hover:bg-brand group-focus-visible:bg-brand group-active:bg-brand ${
-                wideViewer ? "h-full w-px group-hover:w-0.5" : "h-px w-full group-hover:h-0.5"
-              }`}
-            />
-          </div>
-        )}
+        {showHuman && <Separator split={left} wide={wideViewer} />}
         {showJson && (
           <div
             id={`${panelId}-json`}
-            role="tabpanel"
+            role="region"
             aria-label="fiskaly JSON view"
             data-fate-marks={showFates ? fateMarks.length : 0}
             className="flex min-h-0 min-w-0 flex-col bg-canvas"
@@ -479,26 +490,7 @@ export function InvoiceViewer({
                 <span className="font-mono font-semibold">{jsonLabel}</span> —{" "}
                 {OPERATION_PRIMARY_NOTE}
               </p>
-              <OperationCaveat invoice={invoice} />
-              {parsedOperation !== undefined && (
-                <CoveragePanel
-                  operation={parsedOperation}
-                  country={country ?? invoice.seller.address.country}
-                  formatId={format.id}
-                  jsonPrefix={jsonPrefix}
-                  onInsert={insertFields}
-                />
-              )}
               {jsonNote && <p className="mt-0.5 text-[11px] text-warning-ink">{jsonNote}</p>}
-              {fateNotices.length > 0 && (
-                <div className="mt-1 rounded-m bg-warning-soft px-2 py-1.5 text-[11px] text-warning-ink">
-                  {fateNotices.map((notice) => (
-                    <p key={notice.id} data-fate-notice={notice.id} className="mt-1 first:mt-0">
-                      {notice.text}
-                    </p>
-                  ))}
-                </div>
-              )}
               {fateMarks.length > 0 && (
                 <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted">
                   <span className="font-semibold">Field fates:</span>
@@ -530,7 +522,11 @@ export function InvoiceViewer({
                 {jsonError}
               </p>
             )}
-            <div className="flex min-h-0 flex-1 flex-col p-1.5">
+            {/* One scroller for the pane: the editor keeps the full height of the window and the
+                caveats sit past the end of the payload, reached by scrolling through it. They
+                also grow after first paint (a lazy import and a fetch), and anywhere above the
+                editor that pushed the text out from under the pointer mid-drag. */}
+            <div ref={jsonScroll} className="min-h-0 flex-1 overflow-y-auto">
               <JsonView
                 text={jsonText}
                 label={`${jsonLabel} operation, editable`}
@@ -538,16 +534,40 @@ export function InvoiceViewer({
                 annotations={showFates ? fateMarks : NO_MARKS}
                 scrollTo={selection?.source !== "json" && edit.source !== "json"}
                 editable
+                flow
+                scrollHost={jsonScroll}
                 onPickOffset={selectPointer}
                 onChange={onEditJson}
               />
+              <div className="border-t border-line px-3 py-1.5">
+                <OperationCaveat invoice={invoice} />
+                {parsedOperation !== undefined && (
+                  <CoveragePanel
+                    operation={parsedOperation}
+                    country={country ?? invoice.seller.address.country}
+                    formatId={format.id}
+                    jsonPrefix={jsonPrefix}
+                    onInsert={insertFields}
+                  />
+                )}
+                {fateNotices.length > 0 && (
+                  <div className="mt-1 rounded-m bg-warning-soft px-2 py-1.5 text-[11px] text-warning-ink">
+                    {fateNotices.map((notice) => (
+                      <p key={notice.id} data-fate-notice={notice.id} className="mt-1 first:mt-0">
+                        {notice.text}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
+        {showXml && <Separator split={right} wide={wideViewer} />}
         {showXml && (
           <div
             id={`${panelId}-xml`}
-            role="tabpanel"
+            role="region"
             aria-label="Predicted XML view"
             className="flex min-h-0 min-w-0 flex-col"
           >

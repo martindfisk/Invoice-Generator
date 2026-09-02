@@ -32,7 +32,7 @@ function operationText(): string {
 }
 
 function jsonPane(): HTMLElement {
-  return screen.getByRole("tabpanel", { name: "fiskaly JSON view" });
+  return screen.getByRole("region", { name: "fiskaly JSON view" });
 }
 
 function paneText(pane: HTMLElement): string {
@@ -58,7 +58,8 @@ describe("compose — the fiskaly JSON pane", () => {
   beforeEach(() => {
     localStorage.clear();
     store.dispatch({ type: "choosePreset", presetId: first.id });
-    store.dispatch({ type: "setView", view: "split" });
+    store.dispatch({ type: "setPane", pane: "human", show: true });
+    store.dispatch({ type: "setPane", pane: "xml", show: false });
   });
   afterEach(cleanup);
 
@@ -81,7 +82,11 @@ describe("compose — the fiskaly JSON pane", () => {
       within(jsonPane()).getByText(/The Unified API accepts this JSON, not XML/),
     ).toBeInTheDocument();
 
-    act(() => store.dispatch({ type: "setView", view: "xml" }));
+    act(() => {
+      store.dispatch({ type: "setPane", pane: "human", show: false });
+      store.dispatch({ type: "setPane", pane: "xml", show: true });
+      store.dispatch({ type: "setPane", pane: "xml", show: true });
+    });
     expect(screen.getByText(/what this browser expects fiskaly to generate/)).toBeInTheDocument();
   });
 
@@ -116,8 +121,12 @@ describe("compose — the fiskaly JSON pane", () => {
       "FROM-THE-JSON",
     );
 
-    act(() => store.dispatch({ type: "setView", view: "xml" }));
-    expect(paneDoc(screen.getByRole("tabpanel", { name: "Predicted XML view" }))).toContain(
+    act(() => {
+      store.dispatch({ type: "setPane", pane: "human", show: false });
+      store.dispatch({ type: "setPane", pane: "xml", show: true });
+      store.dispatch({ type: "setPane", pane: "xml", show: true });
+    });
+    expect(paneDoc(screen.getByRole("region", { name: "Predicted XML view" }))).toContain(
       "<Numero>FROM-THE-JSON</Numero>",
     );
   });
@@ -258,7 +267,8 @@ describe("validate — a contract finding lands in the JSON", () => {
   beforeEach(() => {
     localStorage.clear();
     store.dispatch({ type: "choosePreset", presetId: "it-b2b-sdi" });
-    store.dispatch({ type: "setView", view: "human" });
+    store.dispatch({ type: "setPane", pane: "human", show: true });
+    store.dispatch({ type: "setPane", pane: "xml", show: false });
     store.dispatch({ type: "goToStep", step: "validate" });
     store.dispatch({
       type: "validationStarted",
@@ -284,9 +294,12 @@ describe("validate — a contract finding lands in the JSON", () => {
     ).toBeInTheDocument();
   });
 
-  it("opens the JSON pane and highlights the offending range when the finding is clicked", () => {
+  it("highlights the offending range when the finding is clicked", () => {
     render(<WorkflowPane />);
-    expect(screen.queryByRole("tabpanel", { name: "fiskaly JSON view" })).not.toBeInTheDocument();
+    // The Mapper keeps the JSON on screen, so a contract finding needs no pane switch — it only
+    // has to select, and every visible pane scrolls to its own rendering of the same field.
+    const panes = store.getState().workflow.panes;
+    expect(screen.getByRole("region", { name: "fiskaly JSON view" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("option", { name: /uapi\/required/ }));
 
@@ -295,7 +308,7 @@ describe("validate — a contract finding lands in the JSON", () => {
       field: "buyer.channel.codiceDestinatario",
       source: "finding",
     });
-    expect(store.getState().workflow.view).toBe("split");
+    expect(store.getState().workflow.panes).toEqual(panes);
     expect(jsonPane().querySelectorAll(".cm-selected-range")).not.toHaveLength(0);
   });
 });

@@ -20,7 +20,7 @@ function xml(): string {
 }
 
 function human(): HTMLElement {
-  return screen.getByRole("tabpanel", { name: "Fields view" });
+  return screen.getByRole("region", { name: "Fields view" });
 }
 
 function headers(): HTMLElement[] {
@@ -63,7 +63,8 @@ describe("human view groups", () => {
     localStorage.clear();
     store.dispatch({ type: "goToStep", step: "setup" });
     store.dispatch({ type: "choosePreset", presetId: first.id });
-    store.dispatch({ type: "setView", view: "human" });
+    store.dispatch({ type: "setPane", pane: "human", show: true });
+    store.dispatch({ type: "setPane", pane: "xml", show: false });
     render(<WorkflowPane />);
   });
   afterEach(cleanup);
@@ -174,7 +175,7 @@ describe("human view groups", () => {
     );
 
     act(() => store.dispatch({ type: "goToStep", step: "send" }));
-    act(() => store.dispatch({ type: "goToStep", step: "compose" }));
+    act(() => store.dispatch({ type: "goToStep", step: "mapper" }));
 
     expect(header(new RegExp(`^${name.split(" · ")[0]} · `))).toHaveAttribute(
       "aria-expanded",

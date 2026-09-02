@@ -22,10 +22,12 @@ The two are diffed against each other: the local prediction vs. `GET /records/{t
 | Shell | `main.tsx`, `app.tsx`, `theme.css` | Split shell, theming |
 | Domain (pure TS) | `model.ts`, `decimal.ts`, `presets.ts`, `model-rules.ts`, `formats.ts`, `bt-catalog.json` | Canonical `Invoice` model (decimal strings, never floats), `FieldId` addressing (`"lines.2.netAmount"`), presets, arithmetic/consistency rules, format-plugin registry |
 | Serializers | `xml-writer.ts`, `ubl-map/write/parse.ts`, `fatturapa-map/write/parse.ts`, `uapi-map.ts` | Mapping tables are data (`{field, path, bt\|fpa, label}`); writers call `el(row, value)` so serialisation and tooltips cannot drift |
+| Mapping presence | `field-presence.ts`, `PresenceStrip.tsx` | For the selected field, whether the model, the operation and the chosen syntax each carry it — quoting the reason `UAPI_LOSSY_FIELDS`, `UAPI_PARTIAL_FIELDS` and the fate evidence already declare, so a non-supported field is named rather than guessed at |
 | Locate / diff | `xml-locate.ts`, `xml-diff.ts` | Path index (from the CodeMirror Lezer tree) resolves field↔node both ways; semantic DOM diff by path |
 | Validation | `validation.ts`, `schematron.worker.ts`, `xsd-client.ts`, `fatturapa-rules.ts` | Pipeline + `Finding` model, see below |
-| Workflow | `workflow.ts`, `send.ts`, `inbox.ts`, `uapi-client.ts`, `store.ts` | Steps `setup → compose → validate → send → receive`, persona `seller\|buyer`, persisted to `localStorage` (never tokens) |
-| Views | `WorkflowPane.tsx`, `Step{Setup,Compose,Validate,Send,Receive}.tsx`, `InvoiceViewer.tsx`, `XmlView.tsx`, `HumanView.tsx`, `Field.tsx`, `DiffView.tsx`, `FindingsPanel.tsx`, `ApiLogPane.tsx`, `ApiCallCard.tsx`, `PersonaSwitch.tsx`, `ModeBadge.tsx` | See Visualisation below |
+| Spec coverage | `uapi-fields-client.ts`, `uapi-fields.ts`, `CoveragePanel.tsx` | Reads the field catalogue from the backend, measures the composed JSON against it branch-relatively, and offers each unpopulated field for insertion — refusing any insert that would not validate |
+| Workflow | `workflow.ts`, `send.ts`, `inbox.ts`, `uapi-client.ts`, `store.ts` | Steps `setup → mapper → validate → send → receive`, persona `seller\|buyer`, persisted to `localStorage` (never tokens) |
+| Views | `WorkflowPane.tsx`, `Step{Setup,Mapper,Validate,Send,Receive}.tsx`, `InvoiceViewer.tsx`, `XmlView.tsx`, `HumanView.tsx`, `Field.tsx`, `DiffView.tsx`, `FindingsPanel.tsx`, `ApiLogPane.tsx`, `ApiCallCard.tsx`, `PersonaSwitch.tsx`, `ModeBadge.tsx`, `PresenceStrip.tsx` | See Visualisation below |
 | Build scripts | `scripts/gen-types.mjs`, `scripts/build-sef.mjs`, `scripts/build-bt-catalog.mjs` (+ `tools/fetch_assets.py` → `vendor/`) | Type generation from `spec/`, SEF compilation, BT catalog build; XSD/XSLT vendoring via `make schemas` |
 
 ## Backend modules (`backend/app/`, flat)
@@ -39,7 +41,9 @@ The two are diffed against each other: the local prediction vs. `GET /records/{t
 | `recorder.py`, `mask.py` | Ring buffer of `CallRecord`, SSE with `Last-Event-ID` replay; masks secrets and long base64 payloads; builds the cURL command |
 | `workflow.py` | Typed choreography: intention → transaction → poll `used_in` → poll transmission → artifact |
 | `inbox.py` | Buyer inbox: live `E_INVOICE::RECEPTION` listing + simulated entries (`source: "uapi"\|"simulated"`) |
-| `validate.py` | lxml `XMLSchema` for UBL 2.1 Invoice/CreditNote and FatturaPA 1.2.x |
+| `spec.py` | Resolves the active spec through `spec/spec.json` (dropped spec first, per-country fallback second) and parses `components.schemas` once, memoised on file identity |
+| `validate.py` | lxml `XMLSchema` for UBL 2.1 Invoice/CreditNote and FatturaPA 1.2.x; `UapiSchemaValidator` compiles `InvoiceTransaction`/`CorrectionTransaction` to Draft 2020-12, keyed on the spec's content rather than on the country |
+| `fields.py` | Walks the `InvoiceTransaction` closure into a flat `{i}`-templated pointer catalogue — constraints, conditional required-ness, per-country applicability parsed from the spec's prose, and spec examples with generic base-type placeholders suppressed |
 | `routes.py`, `models.py` | Contract below; UAPI bodies are pass-through `dict`s (no model duplication) |
 
 ## Validation pipeline
@@ -57,7 +61,7 @@ The two are diffed against each other: the local prediction vs. `GET /records/{t
 
 ## Spec fetched at build time
 
-`tools/fetch_spec.py` (stdlib `urllib`/`json`) reads `products.json`, picks the latest CalVer per product for `e-invoice-it` and `e-invoice-be`, downloads specs + Postman collections into `spec/`, writes `spec/version.txt`, verifies `info.version`. Network failure with a cache → loud warning, continue; no cache → error. `make spec` refreshes; `make setup` calls it. Downstream: `openapi-typescript` generates `frontend/src/gen/uapi.d.ts` from the IT spec (superset; BE kept for a drift test); backend defaults `UAPI_API_VERSION` from `version.txt`; fixtures are validated against `components.schemas` with `jsonschema`. See [ADR-0002](adr/0002-spec-fetched-at-build-time.md).
+`tools/fetch_spec.py` (stdlib `urllib`/`json`) resolves the spec in two ways. A YAML dropped into `spec/drop/` wins: it is identified **by content** (`info.version` and `info.title` read from the document head, not from the filename), renamed to `fiskaly.unified-api.all.<version>.yaml` and **moved** into `spec/`, so an empty `spec/drop/` is the "consumed" signal. Otherwise the per-country specs are fetched from `products.json` at the latest CalVer for `it`, `be` and `de`, together with the Postman collections. `spec/spec.json` records the active spec, the fallback and a sha256 per file, and cleanup unlinks **only** files the previous manifest listed. Network failure with a cache → loud warning, continue; no cache → error. `make spec` refreshes, `make spec-check` (in `make doctor` and CI) fails on a stale, tampered or un-ingested `spec/`, and `make setup` calls both. Downstream: `openapi-typescript` generates `frontend/src/gen/uapi.d.ts` from whichever spec the manifest names active; backend defaults `UAPI_API_VERSION` from `version.txt`; fixtures are validated against `components.schemas` with `jsonschema`. See [ADR-0002](adr/0002-spec-fetched-at-build-time.md) and [ADR-0006](adr/0006-drop-in-spec-and-field-metadata.md).
 
 ## UAPI choreography
 
@@ -86,7 +90,8 @@ The two are diffed against each other: the local prediction vs. `GET /records/{t
 ## Frontend ↔ backend contract
 
 - `GET /api/health`
-- `GET /api/config` → `{mode, environment, api_version, personas: {seller: {IT?: {...}, BE?: {...}}, buyer: {...}}}`
+- `GET /api/config` → `{mode, environment, api_version, spec_source, spec_sha256, spec_origin, spec_ingested_at, personas: {seller: {IT?: {...}, BE?: {...}}, buyer: {...}}}`
+- `GET /api/spec/fields?country=IT&operation=INVOICE` → the field catalogue above, `ETag`-keyed on the spec's sha256 (`304` on `If-None-Match`). Deliberately **not** under `/api/uapi/`, which is a catch-all proxy that would forward it upstream
 - `PUT /api/mode {mode}`
 - `POST /api/invoices {persona, country, operation, idempotency_key?}` → `{intention_id, transaction_id, state, mode, logs}`
 - `GET /api/invoices/{transaction_id}/wait?timeout=60`

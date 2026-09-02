@@ -1,7 +1,7 @@
 import { InvoiceWorkbench } from "./InvoiceWorkbench";
 import { store, useStore } from "./store";
 
-export function StepCompose() {
+export function StepMapper() {
   const workflow = useStore((state) => state.workflow);
   const { invoice, presetId } = workflow;
 
