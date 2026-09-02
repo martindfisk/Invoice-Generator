@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { CopyButton } from "./ApiCallCard";
 import type { Persona } from "./api-log";
+import { EntityTree } from "./EntityTree";
 import { Modal } from "./Modal";
+import { Split } from "./Split";
+import { useIsWide } from "./use-media";
+import { ensureRunnerLoaded, selectCollection } from "./runner-actions";
 import {
   finishLine,
-  initialRunnerUi,
   matchStepCalls,
   missingVariables,
   pendingResult,
@@ -22,17 +25,7 @@ import {
 } from "./runner";
 import { RunnerStepRow } from "./RunnerStep";
 import { store, useStore } from "./store";
-import {
-  ApiError,
-  getCollection,
-  getCollections,
-  passthrough,
-  type CollectionNote,
-} from "./uapi-client";
-
-export const NO_COLLECTIONS_API =
-  "The backend is not serving /api/collections yet, so there is nothing to run. Once the " +
-  "backend milestone lands, the published fiskaly Postman collections (IT, BE, DE) appear here.";
+import { passthrough, type CollectionNote } from "./uapi-client";
 
 const PRIMARY =
   "rounded-m bg-brand px-3 py-1.5 text-xs font-semibold text-bunker transition-opacity " +
@@ -41,36 +34,6 @@ const PRIMARY =
 const SECONDARY =
   "rounded-m border border-line px-3 py-1.5 text-xs font-medium text-muted transition-colors " +
   "hover:border-brand hover:text-ink disabled:cursor-not-allowed disabled:opacity-60";
-
-function errorText(error: unknown): string {
-  if (error instanceof ApiError && error.status === 404) return NO_COLLECTIONS_API;
-  return error instanceof Error ? error.message : String(error);
-}
-
-async function loadCollections(): Promise<void> {
-  store.patchRunner({ loading: true, collectionsError: null });
-  try {
-    const collections = await getCollections();
-    store.patchRunner({ collections, loading: false });
-  } catch (error) {
-    store.patchRunner({ collections: null, collectionsError: errorText(error), loading: false });
-  }
-}
-
-async function selectCollection(id: string): Promise<void> {
-  store.patchRunner({
-    ...initialRunnerUi(),
-    collections: store.getState().runner.collections,
-    collectionId: id,
-    loading: true,
-  });
-  try {
-    const collection = await getCollection(id);
-    store.patchRunner({ collection, loading: false });
-  } catch (error) {
-    store.patchRunner({ collectionError: errorText(error), loading: false });
-  }
-}
 
 let controller: AbortController | null = null;
 
@@ -249,12 +212,11 @@ export function RunnerPane() {
   const persona = useStore((state) => state.workflow.persona);
   const mode = useStore((state) => state.mode);
   const calls = useStore((state) => state.calls);
+  const wide = useIsWide();
   const [liveGuard, setLiveGuard] = useState<{ from: number; to?: number } | null>(null);
 
   useEffect(() => {
-    if (!runner.collections && !runner.collectionsError && !runner.loading) {
-      void loadCollections();
-    }
+    if (!runner.collectionsError) void ensureRunnerLoaded();
     // Load once on first mount; the Retry button re-triggers explicitly.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -308,8 +270,8 @@ export function RunnerPane() {
         )
       : 0;
 
-  return (
-    <section aria-label="Test runner" className="flex h-full flex-col overflow-y-auto bg-canvas">
+  const collectionPane = (
+    <div className="flex h-full min-h-0 flex-col overflow-y-auto">
       <header className="shrink-0 border-b border-line bg-surface px-4 py-3">
         <h2 className="text-sm font-semibold text-ink">Test runner</h2>
         <p className="mt-0.5 text-xs text-muted">
@@ -358,7 +320,7 @@ export function RunnerPane() {
             <button
               type="button"
               className={`${SECONDARY} mt-3`}
-              onClick={() => void loadCollections()}
+              onClick={() => void ensureRunnerLoaded()}
             >
               Retry
             </button>
@@ -455,6 +417,22 @@ export function RunnerPane() {
           </>
         )}
       </div>
+    </div>
+  );
+
+  return (
+    <section aria-label="Test runner" className="flex h-full min-h-0 flex-col bg-canvas">
+      <Split
+        id="runner-entities"
+        orientation={wide ? "horizontal" : "vertical"}
+        label="Resize the entity tree and the collection steps"
+        defaultFirst={38}
+        minFirst="20%"
+        minSecond="35%"
+        className="flex-1"
+        first={<EntityTree />}
+        second={collectionPane}
+      />
 
       <Modal
         open={liveGuard !== null}

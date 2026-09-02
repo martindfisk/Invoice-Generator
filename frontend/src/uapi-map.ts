@@ -12,6 +12,8 @@ import type {
   Vat,
   VatBreakdownRow,
   VatCategory,
+  UapiExtras,
+  UapiLineExtras,
 } from "./model";
 
 const AMOUNT_DP = 2;
@@ -74,9 +76,26 @@ export type UapiEntry = {
     };
     value: { base: string; discount?: string; surcharge?: string };
     vat: UapiVat;
+    product?: UapiProduct;
   };
-  details: { concept: "GOOD" | "SERVICE"; description?: string; number?: string };
+  details: {
+    concept: "GOOD" | "SERVICE";
+    description?: string;
+    number?: string;
+    purpose?: "STANDARD" | "GIFT";
+    regulatory?: string;
+    label?: string;
+  };
 };
+
+export type UapiProduct = {
+  type: "OTHER";
+  number: string;
+  code?: string;
+  details: { name: string };
+};
+
+export type UapiShipping = { address: UapiAddress; name?: string; date?: string };
 
 export type UapiAddress = {
   line: { type: "STREET_NUMBER"; street: string; number: string };
@@ -106,7 +125,10 @@ export type UapiBusinessRecipient = {
   type: "BUSINESS";
   name: string;
   address: UapiAddress;
+  buyer_id?: string;
   company_id?: string;
+  origin?: "NATIONAL" | "INTERNATIONAL";
+  shipping?: UapiShipping;
   identification: UapiIdentification;
   invoicing: UapiInvoicing;
 };
@@ -143,10 +165,15 @@ export type UapiPayment = {
 
 export type UapiDocument = {
   number: string;
+  series?: string;
+  activity_code?: string;
+  operation_date?: string;
   issued_at: string;
+  text?: string;
   payment_terms?: string;
   references?: {
     buyer?: string;
+    buyer_routing?: string;
     project?: string;
     contract?: string;
     purchase_order?: string;
@@ -180,7 +207,6 @@ export const FALLBACK_VAT_RATES: Record<string, Record<string, string>> = {
   IT: { "22": "STANDARD", "10": "REDUCED_1", "5": "REDUCED_2", "4": "REDUCED_3" },
   BE: { "21": "STANDARD", "12": "REDUCED_1", "6": "REDUCED_2" },
   DE: { "19": "STANDARD", "7": "REDUCED_1" },
-  FR: { "20": "STANDARD", "10": "REDUCED_1", "5.5": "REDUCED_2", "2.1": "REDUCED_3" },
 };
 
 export const FALLBACK_VAT_EXEMPTIONS: Record<string, string> = {
@@ -311,13 +337,21 @@ function entry(line: Line, country: string, ctx?: UapiContext): UapiEntry {
         factor: UNIT_FACTOR,
         price: { exclusive: money(line.unitPriceNet), inclusive },
       },
-      value: { base: money(line.netAmount) },
+      value: {
+        base: money(line.netAmount),
+        discount: line.uapi?.allowance,
+        surcharge: line.uapi?.surcharge,
+      },
       vat: lineVat(line, country, ctx),
+      product: product(line),
     },
     details: {
       concept: line.unitCode === "HUR" ? "SERVICE" : "GOOD",
       description: line.description,
       number: line.id,
+      purpose: line.uapi?.purpose,
+      regulatory: line.uapi?.regulatory,
+      label: line.uapi?.label,
     },
   };
 }
@@ -386,9 +420,40 @@ function recipient(invoice: Invoice): UapiRecipient {
     type: "BUSINESS",
     name: buyer.name,
     address: recipientAddress(buyer),
+    buyer_id: invoice.uapi?.buyer?.buyerId,
     company_id: buyer.legalRegId,
+    origin: invoice.uapi?.buyer?.origin,
+    shipping: shipping(invoice),
     identification: identification(buyer),
     invoicing: invoicing(buyer.channel),
+  };
+}
+
+// Shipping requires an address, so BT-72 (delivery.date) and BT-70 can only ride along once
+// BG-15 is present. Without an address the block is omitted entirely rather than sent partial.
+function shipping(invoice: Invoice): UapiShipping | undefined {
+  const address = invoice.uapi?.delivery?.address;
+  if (!address) return undefined;
+  return {
+    address: {
+      line: { type: "STREET_NUMBER", street: address.street, number: address.number ?? "" },
+      code: address.postCode,
+      city: address.city,
+      country: address.country,
+      region: address.region,
+    },
+    name: invoice.uapi?.delivery?.name,
+    date: invoice.delivery?.date,
+  };
+}
+
+function product(line: Line): UapiProduct | undefined {
+  if (!line.uapi?.itemNumber) return undefined;
+  return {
+    type: "OTHER",
+    number: line.uapi.itemNumber,
+    code: line.uapi.itemCode,
+    details: { name: line.name },
   };
 }
 
@@ -417,10 +482,10 @@ function payment(invoice: Invoice): UapiPayment {
 }
 
 function documentReferences(invoice: Invoice): UapiDocument["references"] {
-  const references = invoice.references;
-  if (!references) return undefined;
+  const references = invoice.references ?? {};
   const value = {
     buyer: references.buyerReference,
+    buyer_routing: invoice.uapi?.buyerAccountingRef,
     project: references.project,
     contract: references.contract,
     purchase_order: references.purchaseOrder,
@@ -436,6 +501,14 @@ function documentReferences(invoice: Invoice): UapiDocument["references"] {
   return Object.values(value).some((item) => item !== undefined) ? value : undefined;
 }
 
+function seller(contact: Party["contact"]): InvoiceTransaction["seller"] {
+  if (!contact) return undefined;
+  // Seller declares minProperties: 1, so a contact whose three fields are all unset has to be
+  // omitted rather than sent as an empty object the API would reject.
+  const block = { name: contact.name, phone: contact.phone, email: contact.email };
+  return Object.values(block).some((value) => value) ? block : undefined;
+}
+
 export function toInvoiceTransaction(invoice: Invoice, ctx?: UapiContext): InvoiceTransaction {
   const country = invoice.seller.address.country;
   const contact = invoice.seller.contact;
@@ -443,7 +516,11 @@ export function toInvoiceTransaction(invoice: Invoice, ctx?: UapiContext): Invoi
     type: "INVOICE",
     document: {
       number: invoice.number,
+      series: invoice.uapi?.series,
+      activity_code: invoice.uapi?.activityCode,
+      operation_date: invoice.uapi?.operationDate,
       issued_at: `${invoice.issueDate}T00:00:00+00:00`,
+      text: invoice.note || undefined,
       payment_terms: invoice.payment.terms,
       references: documentReferences(invoice),
     },
@@ -458,9 +535,7 @@ export function toInvoiceTransaction(invoice: Invoice, ctx?: UapiContext): Invoi
         inclusive: money(invoice.totals.taxInclusive),
       },
     },
-    seller: contact
-      ? { name: contact.name, phone: contact.phone, email: contact.email }
-      : undefined,
+    seller: seller(contact),
   };
 }
 
@@ -504,8 +579,6 @@ export const UAPI_LOSSY_FIELDS: Record<string, FieldId[]> = {
   "BT-3 is derived by fiskaly; the operation only distinguishes INVOICE from CORRECTION": [
     "typeCode",
   ],
-  "The operation has no free-text document note (BT-22); `reason` on a CORRECTION is a different field":
-    ["note"],
   "document.references carries neither BT-14 nor BT-18, and despatch_advice is a bare number without BT-16's date":
     ["references.salesOrder", "references.invoicedObject", "references.despatchAdvice.issueDate"],
   "The Italian document extras (bollo virtuale, CUP, CIG) have no counterpart in the operation": [
@@ -514,7 +587,6 @@ export const UAPI_LOSSY_FIELDS: Record<string, FieldId[]> = {
     "it.cup",
     "it.cig",
   ],
-  "BT-72 has no counterpart in the operation": ["delivery.date"],
   "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)":
     [
       "seller.name",
@@ -602,6 +674,8 @@ export const UAPI_PARTIAL_FIELDS: Record<string, FieldId[]> = {
   "details.number is optional; without it the entry's position becomes the line id": [
     "lines.{i}.id",
   ],
+  "BT-72 only travels inside recipients[].shipping, which requires BG-15: without a delivery address there is nowhere to put it":
+    ["delivery.date"],
 };
 
 export const UAPI_PARTIAL_FIELD_IDS: FieldId[] = Object.values(UAPI_PARTIAL_FIELDS).flat();
@@ -685,7 +759,52 @@ function lineFrom(
     netAmount: entry.data.value.base,
     vat: vatFacts(entry.data.vat, base?.vat, ctx),
     it: base?.it,
+    uapi: lineExtrasFrom(entry),
   };
+}
+
+function lineExtrasFrom(entry: UapiEntry): UapiLineExtras | undefined {
+  const value: UapiLineExtras = {
+    allowance: entry.data.value.discount,
+    surcharge: entry.data.value.surcharge,
+    itemNumber: entry.data.product?.number,
+    itemCode: entry.data.product?.code,
+    purpose: entry.details.purpose,
+    regulatory: entry.details.regulatory,
+    label: entry.details.label,
+  };
+  return Object.values(value).some((item) => item !== undefined) ? value : undefined;
+}
+
+function extrasFrom(operation: InvoiceTransaction): UapiExtras | undefined {
+  const recipient = operation.recipients[0];
+  const business = recipient?.type === "BUSINESS" ? recipient : undefined;
+  const ship = business?.shipping;
+  const buyer =
+    business && (business.buyer_id !== undefined || business.origin !== undefined)
+      ? { buyerId: business.buyer_id, origin: business.origin }
+      : undefined;
+  const value: UapiExtras = {
+    series: operation.document.series,
+    activityCode: operation.document.activity_code,
+    operationDate: operation.document.operation_date,
+    buyerAccountingRef: operation.document.references?.buyer_routing,
+    buyer,
+    delivery: ship
+      ? {
+          name: ship.name,
+          address: {
+            street: ship.address.line.street,
+            number: ship.address.line.number || undefined,
+            city: ship.address.city,
+            postCode: ship.address.code,
+            region: ship.address.region,
+            country: ship.address.country,
+          },
+        }
+      : undefined,
+  };
+  return Object.values(value).some((item) => item !== undefined) ? value : undefined;
 }
 
 function breakdownFrom(
@@ -836,6 +955,7 @@ export function fromInvoiceTransaction(
   return {
     ...base,
     number: invoice.document.number,
+    note: invoice.document.text ?? base.note,
     issueDate: invoice.document.issued_at?.slice(0, 10) ?? base.issueDate,
     dueDate: payment?.details.date,
     typeCode: operation.type === "CORRECTION" ? CREDIT_NOTE_TYPE_CODE : base.typeCode,
@@ -849,7 +969,19 @@ export function fromInvoiceTransaction(
     ),
     payment: paymentFrom(invoice, base.payment),
     totals: totalsFrom(invoice, base.totals),
+    delivery: deliveryFrom(invoice, base.delivery),
+    uapi: extrasFrom(invoice),
   };
+}
+
+function deliveryFrom(
+  operation: InvoiceTransaction,
+  base: Invoice["delivery"],
+): Invoice["delivery"] {
+  const recipient = operation.recipients[0];
+  const shipped = recipient?.type === "BUSINESS" ? recipient.shipping : undefined;
+  if (!shipped) return base;
+  return shipped.date ? { date: shipped.date } : undefined;
 }
 
 export type UapiTaxpayerRegistration = {
@@ -988,20 +1120,33 @@ export const UAPI_POINTER_FIELDS: Record<string, FieldId> = {
 
 const INDEX_SEGMENT = /^\d+$/;
 
-export function fieldForPointer(pointer: string): FieldId | undefined {
+// Normalises an RFC 6901 pointer into an InvoiceTransaction to the `{i}` template form every
+// pointer-keyed table uses (UAPI_POINTER_FIELDS here, FATTURAPA_FATES in uapi-field-fate.ts):
+// the CORRECTION `data` wrapper is stripped and each numeric segment becomes `{i}`, with the
+// original indices returned alongside.
+export function pointerTemplate(
+  pointer: string,
+): { template: string; indices: string[] } | undefined {
   if (!pointer.startsWith("/")) return undefined;
   // A CORRECTION wraps the invoice in `data`, so its pointers carry one extra segment.
   const path = pointer.startsWith("/data/") ? pointer.slice("/data".length) : pointer;
-  const segments = path.split("/");
   const indices: string[] = [];
-  const template = segments
+  const template = path
+    .split("/")
     .map((segment) => {
       if (!INDEX_SEGMENT.test(segment)) return segment;
       indices.push(segment);
       return "{i}";
     })
     .join("/");
-  const field = UAPI_POINTER_FIELDS[template];
+  return { template, indices };
+}
+
+export function fieldForPointer(pointer: string): FieldId | undefined {
+  const parsed = pointerTemplate(pointer);
+  if (!parsed) return undefined;
+  const field = UAPI_POINTER_FIELDS[parsed.template];
   if (!field) return undefined;
+  const { indices } = parsed;
   return field.includes("{i}") && indices.length ? field.replace("{i}", indices[0]) : field;
 }

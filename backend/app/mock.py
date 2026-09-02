@@ -44,6 +44,10 @@ USED_IN_READS = 2
 FINISHED_READS = 3
 DEFAULT_LIMIT = 10
 MAX_LIMIT = 100
+RESOURCE_KINDS = ("organizations", "subjects", "taxpayers", "locations", "systems")
+MUTABLE_KINDS = ("taxpayers", "systems")
+PEPPOL_SCHEMES = {"BE": "0208", "DE": "9930", "IT": "0211"}
+COMPLIANCE_SOFTWARE = {"name": "fiskaly e-invoice service", "version": "5.5.0"}
 
 
 class MockTransport(httpx.MockTransport):
@@ -55,6 +59,7 @@ class MockTransport(httpx.MockTransport):
         self.reads = {}
         self.receptions = []
         self.replays = {}
+        self.resources = {kind: {} for kind in RESOURCE_KINDS}
         self.ids = 0
         self.requests = 0
         self._xml_cache = {}
@@ -71,6 +76,10 @@ class MockTransport(httpx.MockTransport):
                 return response
         if segments[0] == "files" and len(segments) == 2 and segments[1].endswith(".zip"):
             return self._zip(segments[1].removesuffix(".zip"), headers)
+        if segments[0] in RESOURCE_KINDS:
+            response = self._resources(request, segments, headers)
+            if response is not None:
+                return response
         fixture = self._find(request.method, segments)
         if fixture is None:
             expected = f"{request.method}_{'_'.join(segments)}.json"
@@ -175,6 +184,165 @@ class MockTransport(httpx.MockTransport):
             content["operation"] = json.dumps(plan["operation"], separators=(",", ":"))
         return httpx.Response(200, json={"content": content}, headers=headers)
 
+    def _resources(self, request, segments, headers):
+        kind = segments[0]
+        if request.method == "GET" and len(segments) == 1:
+            return self._resource_list(request, kind, headers)
+        if request.method == "GET" and len(segments) == 2:
+            resource = self.resources[kind].get(segments[1])
+            if resource is None:
+                return None
+            return httpx.Response(200, json={"content": resource}, headers=headers)
+        if kind not in MUTABLE_KINDS:
+            return None
+        if request.method == "POST" and len(segments) == 1:
+            return self._replay(
+                request, headers, lambda: self._create_resource(kind, request, headers)
+            )
+        if request.method == "PATCH" and len(segments) == 2:
+            return self._replay(
+                request, headers, lambda: self._update_resource(kind, segments[1], request, headers)
+            )
+        return None
+
+    def _replay(self, request, headers, build):
+        key = request.headers.get("X-Idempotency-Key")
+        if key in self.replays:
+            return httpx.Response(
+                200, json=self.replays[key], headers={**headers, "X-Idempotency-Replayed": "true"}
+            )
+        response = build()
+        if key and response.status_code < 400:
+            self.replays[key] = json.loads(response.content)
+            response.headers["X-Idempotency-Replayed"] = "false"
+        return response
+
+    def _resource_list(self, request, kind, headers):
+        params = request.url.params
+        results = list(reversed(self.resources[kind].values()))
+        if kind == "systems":
+            bound_to = params.get("taxpayer_id") or params.get("location_id")
+            if bound_to:
+                results = [r for r in results if (r.get("location") or {}).get("id") == bound_to]
+        limit = _limit(params.get("limit"))
+        if limit is None:
+            message = f"limit must be an integer between 1 and {MAX_LIMIT}"
+            return _error(400, "E_BAD_REQUEST", "Bad Request", message, headers)
+        offset = _offset(params.get("token"))
+        body = {"results": [{"content": r} for r in results[offset : offset + limit]]}
+        if offset + limit < len(results):
+            token = base64.b64encode(str(offset + limit).encode()).decode()
+            path = str(request.url.copy_set_param("token", token))
+            body["pagination"] = {"next": path, "token": token, "limit": limit}
+        return httpx.Response(200, json=body, headers=headers)
+
+    def _create_resource(self, kind, request, headers):
+        content = _content(request)
+        if kind == "taxpayers":
+            return self._create_taxpayer(content, headers)
+        return self._create_system(content, headers)
+
+    def _create_taxpayer(self, content, headers):
+        if content.get("type") not in ("COMPANY", "INDIVIDUAL"):
+            message = "content.type must be COMPANY or INDIVIDUAL"
+            return _error(400, "E_BAD_REQUEST", "Bad Request", message, headers)
+        missing = [field for field in ("name", "address") if not content.get(field)]
+        if missing:
+            message = f"content.{missing[0]} is required for a Taxpayer"
+            return _error(400, "E_BAD_REQUEST", "Bad Request", message, headers)
+        fiscalization = dict(content.get("fiscalization") or {})
+        credentials = fiscalization.pop("credentials", None)
+        if isinstance(credentials, dict) and credentials.get("type"):
+            fiscalization["credentials"] = {"type": credentials["type"]}
+        country = fiscalization.get("type") or (content.get("address") or {}).get("country")
+        resource = {
+            "id": self.next_id(),
+            "type": content["type"],
+            "state": "ACQUIRED",
+            "mode": "INACTIVE",
+            "country": country,
+            "name": content["name"],
+            "address": content["address"],
+            "locations": [{"type": "HEAD_OFFICE", "description": "Head office"}],
+            "created_at": _timestamp(self.ids),
+            "updated_at": _timestamp(self.ids),
+        }
+        if fiscalization:
+            resource["fiscalization"] = fiscalization
+        if fiscalization.get("vat_id_number"):
+            resource["vat_number"] = f"{country}{fiscalization['vat_id_number']}"
+        self.resources["taxpayers"][resource["id"]] = resource
+        return httpx.Response(200, json={"content": resource}, headers=headers)
+
+    def _create_system(self, content, headers):
+        if content.get("type") != "E_INVOICE_SERVICE":
+            message = "content.type must be E_INVOICE_SERVICE"
+            return _error(400, "E_BAD_REQUEST", "Bad Request", message, headers)
+        location_id = (content.get("location") or {}).get("id")
+        if not location_id:
+            message = "content.location.id is required for a System"
+            return _error(400, "E_BAD_REQUEST", "Bad Request", message, headers)
+        if not content.get("software"):
+            message = "content.software is required for a System"
+            return _error(400, "E_BAD_REQUEST", "Bad Request", message, headers)
+        taxpayer = self.resources["taxpayers"].get(location_id)
+        if taxpayer is None:
+            message = f"location {location_id!r} does not exist"
+            return _error(404, "E_NOT_FOUND", "Not Found", message, headers)
+        country = taxpayer.get("country")
+        registrations = content.get("registrations") or [
+            {"type": "SDI" if country == "IT" else "PEPPOL"}
+        ]
+        resource = {
+            "id": self.next_id(),
+            "type": "E_INVOICE_SERVICE",
+            "state": "ACQUIRED",
+            "mode": "INACTIVE",
+            "location": {"id": location_id},
+            "software": content["software"],
+            "registrations": registrations,
+            "compliance": {"software": COMPLIANCE_SOFTWARE, "state": "TRANSMISSION_RECEPTION"},
+            "created_at": _timestamp(self.ids),
+            "updated_at": _timestamp(self.ids),
+        }
+        self.resources["systems"][resource["id"]] = resource
+        return httpx.Response(200, json={"content": resource}, headers=headers)
+
+    def _update_resource(self, kind, resource_id, request, headers):
+        resource = self.resources[kind].get(resource_id)
+        if resource is None:
+            message = f"{kind[:-1]} {resource_id!r} does not exist"
+            return _error(404, "E_NOT_FOUND", "Not Found", message, headers)
+        content = _content(request)
+        if content.get("registrations"):
+            resource["registrations"] = content["registrations"]
+        state = content.get("state")
+        if state:
+            resource["state"] = state
+            if state == "COMMISSIONED":
+                resource["mode"] = "OPERATIVE"
+                if kind == "systems":
+                    self._annotate(resource)
+        resource["updated_at"] = _timestamp(self.requests)
+        return httpx.Response(200, json={"content": resource}, headers=headers)
+
+    def _annotate(self, system):
+        if not any(r.get("type") == "PEPPOL" for r in system.get("registrations") or []):
+            return
+        taxpayer = self.resources["taxpayers"].get((system.get("location") or {}).get("id")) or {}
+        country = taxpayer.get("country")
+        fiscalization = taxpayer.get("fiscalization") or {}
+        number = fiscalization.get("tax_id_number") or fiscalization.get("vat_id_number") or ""
+        if country == "DE":
+            number = f"DE{fiscalization.get('vat_id_number') or '123456789'}"
+        scheme = PEPPOL_SCHEMES.get(country, "9999")
+        system["annotations"] = {"peppol_id": f"{scheme}:{number or '0123456789'}"}
+
+    def _system_country(self, system_id):
+        system = self.resources["systems"].get(system_id) or {}
+        taxpayer = self.resources["taxpayers"].get((system.get("location") or {}).get("id")) or {}
+        return taxpayer.get("country")
+
     def _intention(self, system_id):
         record_id = self.next_id()
         record = self._record(record_id, INTENTION_TYPE, system_id, "ACCEPTED", "PROCESSING")
@@ -196,7 +364,7 @@ class MockTransport(httpx.MockTransport):
             "system_id": system_id,
             "operation": operation,
             "invoice": invoice,
-            "format": _format(invoice, system_id),
+            "format": _format(invoice, system_id, self._system_country(system_id)),
             "fails": number.startswith(FAIL_PREFIX),
             "invoiced": _invoiced(invoice),
         }
@@ -336,13 +504,15 @@ def _content(request):
     return content if isinstance(content, dict) else {}
 
 
-def _format(operation, system_id):
+def _format(operation, system_id, country=None):
     for recipient in operation.get("recipients") or []:
         invoicing = (recipient.get("invoicing") or {}).get("type")
         if invoicing == "SDI":
             return "fatturapa"
         if invoicing == "PEPPOL":
             return "ubl"
+    if country:
+        return "fatturapa" if country == "IT" else "ubl"
     return "fatturapa" if "it" in (system_id or "").lower() else "ubl"
 
 

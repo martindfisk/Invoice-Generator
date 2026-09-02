@@ -76,6 +76,13 @@
       <DatiOrdineAcquisto>
         <IdDocumento>PO-2026-0042</IdDocumento>
       </DatiOrdineAcquisto>
+      <DatiContratto>
+        <IdDocumento>CTR-2026-114</IdDocumento>
+      </DatiContratto>
+      <DatiDDT>
+        <NumeroDDT>DDT-2026-0077</NumeroDDT>
+        <DataDDT>2026-08-23</DataDDT>
+      </DatiDDT>
     </DatiGenerali>
     <DatiBeniServizi>
       <DettaglioLinee>

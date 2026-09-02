@@ -1,6 +1,13 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Persona } from "./api-log";
+import { FIELD_FATE_PROVENANCE } from "./field-fate";
 import { Modal } from "./Modal";
+import {
+  loadSefManifest,
+  ruleSetsByOrder,
+  SCHEMATRON_RULE_SETS,
+  type SefManifest,
+} from "./schematron-sets";
 import { store, useStore, type Mode, type Theme } from "./store";
 import {
   clearCredentials,
@@ -20,7 +27,7 @@ import {
 const TITLE_ID = "settings-dialog-title";
 const DESCRIPTION_ID = "settings-dialog-blurb";
 
-const COUNTRIES: SettingsCountry[] = ["IT", "BE"];
+const COUNTRIES: SettingsCountry[] = ["DE", "IT", "BE"];
 
 const PERSONAS: { id: Persona; label: string }[] = [
   { id: "seller", label: "Seller" },
@@ -40,6 +47,16 @@ export const MOCK_BLURB =
 export const NO_SETTINGS_API =
   "The backend is not serving /api/settings, so environment, credentials and identifiers cannot " +
   "be changed from here.";
+
+export const VALIDATION_RULES_SECTION_ID = "settings-validation-rules";
+
+export const RULES_FALLBACK_NOTE =
+  "public/sef/manifest.json is not built yet — run make sef. Validation falls back to the " +
+  "built-in rule-set list below; versions are unknown until the manifest exists.";
+
+export const RULES_BLURB =
+  "The compiled Schematron rule sets the Validate step runs, read-only. Versions are pinned " +
+  "in tools/rulesets.json and rebuilt by make schemas && make sef.";
 
 export const SECRET_BLURB =
   "Keys are posted to the backend and never stored in this browser. After a save the field is " +
@@ -85,16 +102,16 @@ function identifiersOf(
   const known = personaOf(settings, persona);
   const systems = known?.systems ?? config?.personas?.[persona];
   return {
-    systems: {
-      IT: {
-        system_id: text(systems?.IT?.system_id),
-        taxpayer_id: text(systems?.IT?.taxpayer_id),
-      },
-      BE: {
-        system_id: text(systems?.BE?.system_id),
-        taxpayer_id: text(systems?.BE?.taxpayer_id),
-      },
-    },
+    // Built from COUNTRIES so a new country cannot be added to the list and silently miss a field.
+    systems: Object.fromEntries(
+      COUNTRIES.map((country) => [
+        country,
+        {
+          system_id: text(systems?.[country]?.system_id),
+          taxpayer_id: text(systems?.[country]?.taxpayer_id),
+        },
+      ]),
+    ) as Identifiers["systems"],
     sdi_destination_code: text(known?.recipients?.sdi_destination_code),
     peppol_id: text(known?.recipients?.peppol_id),
   };
@@ -223,9 +240,105 @@ function Choice({
   );
 }
 
+export function ValidationRulesSection() {
+  const [manifest, setManifest] = useState<SefManifest | null | undefined>(undefined);
+
+  useEffect(() => {
+    let mounted = true;
+    void loadSefManifest().then((loaded) => {
+      if (mounted) setManifest(loaded);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  return (
+    <Section id={VALIDATION_RULES_SECTION_ID} title="Validation rules" blurb={RULES_BLURB}>
+      {manifest === undefined ? (
+        <p role="status" className="text-[11px] text-muted">
+          Loading the rule-set manifest…
+        </p>
+      ) : manifest === null ? (
+        <div>
+          <p
+            role="status"
+            className="rounded-m bg-warning-soft px-3 py-2 text-[11px] text-warning-ink"
+          >
+            {RULES_FALLBACK_NOTE}
+          </p>
+          <ul className="mt-2 flex flex-col gap-1">
+            {[...new Set(Object.values(SCHEMATRON_RULE_SETS).flat())].map((id) => (
+              <li key={id} className="font-mono text-xs text-ink">
+                {id}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <table className="w-full text-left text-xs">
+          <thead>
+            <tr className="text-[11px] text-muted">
+              <th scope="col" className="py-1 pr-2 font-medium">
+                Rule set
+              </th>
+              <th scope="col" className="py-1 pr-2 font-medium">
+                Version
+              </th>
+              <th scope="col" className="py-1 pr-2 font-medium">
+                Licence
+              </th>
+              <th scope="col" className="py-1 font-medium">
+                Built
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {ruleSetsByOrder(manifest).map((entry) => (
+              <tr
+                key={entry.id}
+                data-rule-set={entry.id}
+                className="border-t border-line align-top"
+              >
+                <td className="py-1 pr-2">
+                  <span className="font-mono text-ink">{entry.id}</span>
+                  <span className="block text-[10px] text-muted">{entry.title}</span>
+                </td>
+                <td className="py-1 pr-2 font-mono text-ink">{entry.version}</td>
+                <td className="py-1 pr-2 text-muted">{entry.licence}</td>
+                <td className="py-1 font-mono text-muted">
+                  {entry.sef.buildDateTime?.slice(0, 10) ?? "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <p data-provenance="field-fate" className="mt-3 text-[11px] text-muted">
+        {FIELD_FATE_PROVENANCE}
+      </p>
+    </Section>
+  );
+}
+
 export function SettingsMenu() {
   const [open, setOpen] = useState(false);
-  const close = useCallback(() => setOpen(false), []);
+  const [focusSection, setFocusSection] = useState<string | undefined>(undefined);
+  const request = useStore((state) => state.settingsRequest);
+  // Seeded with the nonce at mount: only a request made after this menu exists opens it.
+  const handled = useRef(store.getState().settingsRequest?.nonce ?? 0);
+  const close = useCallback(() => {
+    setOpen(false);
+    setFocusSection(undefined);
+  }, []);
+
+  useEffect(() => {
+    if (request && request.nonce !== handled.current) {
+      handled.current = request.nonce;
+      setFocusSection(request.section);
+      setOpen(true);
+    }
+  }, [request]);
 
   return (
     <>
@@ -234,20 +347,23 @@ export function SettingsMenu() {
         aria-label="Settings"
         aria-haspopup="dialog"
         aria-expanded={open}
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setFocusSection(undefined);
+          setOpen(true);
+        }}
         className="flex items-center gap-1.5 rounded-m border border-line px-2.5 py-1 text-xs text-muted transition-colors hover:border-brand hover:text-ink"
       >
         <GearIcon />
         <span className="hidden md:inline">Settings</span>
       </button>
       <Modal open={open} labelledBy={TITLE_ID} describedBy={DESCRIPTION_ID} onClose={close}>
-        <SettingsBody onClose={close} />
+        <SettingsBody onClose={close} focusSection={focusSection} />
       </Modal>
     </>
   );
 }
 
-function SettingsBody({ onClose }: { onClose: () => void }) {
+function SettingsBody({ onClose, focusSection }: { onClose: () => void; focusSection?: string }) {
   const settings = useStore((state) => state.settings);
   const settingsError = useStore((state) => state.settingsError);
   const config = useStore((state) => state.config);
@@ -294,6 +410,11 @@ function SettingsBody({ onClose }: { onClose: () => void }) {
       () => undefined,
     );
   }, []);
+
+  useEffect(() => {
+    if (!focusSection) return;
+    document.getElementById(focusSection)?.scrollIntoView?.({ block: "start" });
+  }, [focusSection]);
 
   const run = async (action: () => Promise<Settings>, success: string): Promise<boolean> => {
     setBusy(true);
@@ -674,6 +795,8 @@ function SettingsBody({ onClose }: { onClose: () => void }) {
             </Group>
           ))}
         </Section>
+
+        <ValidationRulesSection />
 
         <Section
           id="settings-local"

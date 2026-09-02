@@ -17,6 +17,10 @@ frontend/src/gen/
 frontend/playwright-report/
 frontend/test-results/
 
+# hand-dropped OpenAPI specs — make spec moves them into spec/ and records them in spec/spec.json
+spec/drop/*
+!spec/drop/.gitkeep
+
 # vendored standards (make schemas)
 vendor/
 

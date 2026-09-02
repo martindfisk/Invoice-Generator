@@ -79,8 +79,6 @@ describe("toInvoiceTransaction", () => {
     expect(rateCode("6.00", "BE")).toBe("REDUCED_2");
     expect(rateCode("19.00", "DE")).toBe("STANDARD");
     expect(rateCode("7.00", "DE")).toBe("REDUCED_1");
-    expect(rateCode("20.00", "FR")).toBe("STANDARD");
-    expect(rateCode("5.50", "FR")).toBe("REDUCED_2");
     expect(() => rateCode("17.00", "IT")).toThrow(/no VAT rate code for 17%/);
   });
 

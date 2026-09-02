@@ -1,0 +1,105 @@
+{
+  "generatedAt": "2026-09-02T06:47:02Z",
+  "saxonJs": "2.7.0",
+  "ruleSets": [
+    {
+      "id": "en16931-ubl",
+      "title": "CEN/TC 434 EN 16931 UBL 1.3.15",
+      "version": "1.3.15",
+      "licence": "EUPL-1.2 (CEN/TC 434 validation artefacts)",
+      "formats": [],
+      "order": 0,
+      "sourceSha": "c1caf4926947a3b6da52c8247dcf9e67ba4cf5fbd562bdf0528b2b8c51af2d0d",
+      "sef": {
+        "sha256": "8ab5023bf82bb994cc10f0d31eaa957f2d19555fa4178b08482cca61748574fb",
+        "bytes": 6827150,
+        "saxonVersion": "SaxonJS 2.7",
+        "buildDateTime": "2026-09-02T08:46:39.452+02:00"
+      }
+    },
+    {
+      "id": "en16931-cii",
+      "title": "CEN/TC 434 EN 16931 CII 1.3.15",
+      "version": "1.3.15",
+      "licence": "EUPL-1.2 (CEN/TC 434 validation artefacts)",
+      "formats": [
+        "cii"
+      ],
+      "order": 0,
+      "sourceSha": "e55f1b01ffcbcc037dd1b9d01c52423a3f91f45a2e966e6bc8a56ea6c69188b6",
+      "sef": {
+        "sha256": "0d5364c7ed64a6040e682595b774c3953300709374a79597bb9916d546eac642",
+        "bytes": 4886126,
+        "saxonVersion": "SaxonJS 2.7",
+        "buildDateTime": "2026-09-02T08:46:45.289+02:00"
+      }
+    },
+    {
+      "id": "peppol-ubl",
+      "title": "Peppol BIS Billing 3.0.20",
+      "version": "3.0.20",
+      "licence": "OpenPeppol AISBL (redistribution with attribution)",
+      "formats": [
+        "ubl"
+      ],
+      "order": 1,
+      "sourceSha": "5ddf3a2f6633147b20b7805df9902d825af1a984f10014fcee186d4170364b1d",
+      "sef": {
+        "sha256": "de7765321eb7e8e6202c7eea23641a265fcd6fce1a6f0d908bca3fbc1e5c2bcc",
+        "bytes": 1857643,
+        "saxonVersion": "SaxonJS 2.7",
+        "buildDateTime": "2026-09-02T08:46:49.979+02:00"
+      }
+    },
+    {
+      "id": "cen-ubl",
+      "title": "CEN/TC 434 EN 16931 UBL 1.3.15",
+      "version": "1.3.15",
+      "licence": "EUPL-1.2 (CEN/TC 434), redistributed by OpenPeppol",
+      "formats": [
+        "ubl",
+        "xrechnung"
+      ],
+      "order": 0,
+      "sourceSha": "bdcbb7b702cce55c7f8c789bef0cb9bebf6d376140c1776e683bd6d9bc0ad331",
+      "sef": {
+        "sha256": "445673e01b8f750350bb1f0a1e4d43b9741d4a5d340b9b6349e147addf518526",
+        "bytes": 8227437,
+        "saxonVersion": "SaxonJS 2.7",
+        "buildDateTime": "2026-09-02T08:46:56.064+02:00"
+      }
+    },
+    {
+      "id": "xrechnung-ubl",
+      "title": "KoSIT XRechnung 3.0.2 UBL Schematron 2.5.0",
+      "version": "2.5.0",
+      "licence": "Apache-2.0 (KoSIT xrechnung-schematron)",
+      "formats": [
+        "xrechnung"
+      ],
+      "order": 1,
+      "sourceSha": "0cadcbde2eb320c2e7e83a8057b93bc48076e223dda36308e31704684ee9ecf3",
+      "sef": {
+        "sha256": "a1f5304f43b38ce96def6f349f35fd821e61e5ac8d3ca380b7189163cb264862",
+        "bytes": 1832215,
+        "saxonVersion": "SaxonJS 2.7",
+        "buildDateTime": "2026-09-02T08:46:59.854+02:00"
+      }
+    },
+    {
+      "id": "xrechnung-cii",
+      "title": "KoSIT XRechnung 3.0.2 CII Schematron 2.5.0",
+      "version": "2.5.0",
+      "licence": "Apache-2.0 (KoSIT xrechnung-schematron)",
+      "formats": [],
+      "order": 1,
+      "sourceSha": "ce8f257114eccb49d369a2c77c6cccd7d3cd9f1286e9ff158b543a1311182b2a",
+      "sef": {
+        "sha256": "63188e1ba57a3186222b2705de26d9900b7d79b9b605b4ffe42c44ef40768767",
+        "bytes": 1691393,
+        "saxonVersion": "SaxonJS 2.7",
+        "buildDateTime": "2026-09-02T08:47:01.873+02:00"
+      }
+    }
+  ]
+}

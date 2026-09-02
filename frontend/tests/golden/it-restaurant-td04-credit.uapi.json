@@ -3,6 +3,7 @@
   "document": {
     "number": "IT-RM-2026-0128-NC",
     "issued_at": "2026-08-26T00:00:00+00:00",
+    "text": "Nota di credito a storno parziale della fattura IT-RM-2026-0117",
     "payment_terms": "Importo a credito da compensare sulla prossima fattura",
     "references": {
       "purchase_order": "ORD-SLF-2026-0091",

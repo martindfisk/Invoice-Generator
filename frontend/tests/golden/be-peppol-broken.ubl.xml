@@ -19,6 +19,7 @@
         <cbc:AdditionalStreetName>16</cbc:AdditionalStreetName>
         <cbc:CityName>Bruxelles</cbc:CityName>
         <cbc:PostalZone>1000</cbc:PostalZone>
+        <cbc:CountrySubentity>BE-BRU</cbc:CountrySubentity>
         <cac:Country>
           <cbc:IdentificationCode>BE</cbc:IdentificationCode>
         </cac:Country>
@@ -47,6 +48,7 @@
         <cbc:AdditionalStreetName>86C</cbc:AdditionalStreetName>
         <cbc:CityName>Brussel</cbc:CityName>
         <cbc:PostalZone>1000</cbc:PostalZone>
+        <cbc:CountrySubentity>BE-BRU</cbc:CountrySubentity>
         <cac:Country>
           <cbc:IdentificationCode>BE</cbc:IdentificationCode>
         </cac:Country>

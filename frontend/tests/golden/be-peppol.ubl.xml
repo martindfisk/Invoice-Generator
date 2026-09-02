@@ -11,6 +11,12 @@
   <cac:OrderReference>
     <cbc:ID>PO-BE-2026-014</cbc:ID>
   </cac:OrderReference>
+  <cac:ContractDocumentReference>
+    <cbc:ID>CTR-BE-2026-9</cbc:ID>
+  </cac:ContractDocumentReference>
+  <cac:ProjectReference>
+    <cbc:ID>PRJ-BE-2026-3</cbc:ID>
+  </cac:ProjectReference>
   <cac:AccountingSupplierParty>
     <cac:Party>
       <cbc:EndpointID schemeID="0208">0999999922</cbc:EndpointID>
@@ -19,6 +25,7 @@
         <cbc:AdditionalStreetName>16</cbc:AdditionalStreetName>
         <cbc:CityName>Bruxelles</cbc:CityName>
         <cbc:PostalZone>1000</cbc:PostalZone>
+        <cbc:CountrySubentity>BE-BRU</cbc:CountrySubentity>
         <cac:Country>
           <cbc:IdentificationCode>BE</cbc:IdentificationCode>
         </cac:Country>
@@ -47,6 +54,7 @@
         <cbc:AdditionalStreetName>86C</cbc:AdditionalStreetName>
         <cbc:CityName>Brussel</cbc:CityName>
         <cbc:PostalZone>1000</cbc:PostalZone>
+        <cbc:CountrySubentity>BE-BRU</cbc:CountrySubentity>
         <cac:Country>
           <cbc:IdentificationCode>BE</cbc:IdentificationCode>
         </cac:Country>

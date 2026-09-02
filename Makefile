@@ -5,10 +5,10 @@ PY := "$(ROOT)/backend/.venv/bin/python"
 PIP := "$(ROOT)/backend/.venv/bin/pip"
 NPM := npm --prefix "$(ROOT)/frontend"
 
-.PHONY: help setup doctor node spec gen-types schemas sef dev test e2e lint docker clean
+.PHONY: help setup doctor node spec spec-check spec-integrity gen-types schemas sef sef-check dev test e2e lint docker clean
 
 help:
-	echo "Targets: setup doctor spec gen-types schemas sef dev test e2e lint docker clean"
+	echo "Targets: setup doctor spec spec-check gen-types schemas sef sef-check dev test e2e lint docker clean"
 
 node:
 	command -v node >/dev/null 2>&1 || brew install node
@@ -26,17 +26,26 @@ doctor:
 	python3 -c 'import sys; sys.exit(0 if sys.version_info[:2]>=(3,13) else 1)' && echo "python    ok ($$(python3 --version))" || { echo "python    NEEDS 3.13+"; ok=0; }; \
 	[ -x $(PY) ] && echo "venv      ok" || { echo "venv      missing (make setup)"; ok=0; }; \
 	[ -d "$(ROOT)/frontend/node_modules" ] && echo "node_mods ok" || { echo "node_mods missing (make setup)"; ok=0; }; \
-	[ -f "$(ROOT)/spec/version.txt" ] && echo "spec      ok (X-Api-Version $$(cat "$(ROOT)/spec/version.txt"))" || { echo "spec      missing (make spec)"; ok=0; }; \
+	if out=$$(python3 "$(ROOT)/tools/spec_check.py" --types 2>&1); then echo "spec      $${out#spec }"; else echo "spec      $$(echo "$$out" | head -1 | sed 's/^ERROR: //')"; ok=0; fi; \
 	[ -f "$(ROOT)/.env" ] && echo ".env      ok" || echo ".env      missing (cp .env.example .env)"; \
 	docker info >/dev/null 2>&1 && echo "docker    ok" || echo "docker    not running (optional)"; \
 	[ -x "$(ROOT)/.claude/hooks/format.sh" ] && [ -x "$(ROOT)/.claude/hooks/guard.sh" ] && echo "hooks     ok" || { echo "hooks     not executable (chmod +x .claude/hooks/*.sh)"; ok=0; }; \
+	sd=$${STANDARDS_DIRS:-$$(grep -E '^STANDARDS_DIRS=' "$(ROOT)/.env" 2>/dev/null | cut -d= -f2-)}; \
+	if [ -n "$$sd" ]; then echo "standards ok (STANDARDS_DIRS=$$sd)"; else echo "standards unset (STANDARDS_DIRS; make schemas downloads everything)"; fi; \
+	(cd "$(ROOT)/frontend" && node scripts/build-sef.mjs --check >/dev/null 2>&1) && echo "sef       ok (fresh)" || { echo "sef       stale or missing (make schemas && make sef)"; ok=0; }; \
 	python3 "$(ROOT)/tools/check_env_example.py" 2>/dev/null || true; \
 	[ $$ok = 1 ]
 
 spec:
 	python3 "$(ROOT)/tools/fetch_spec.py"
 
-gen-types:
+spec-check:
+	python3 "$(ROOT)/tools/spec_check.py" --types
+
+spec-integrity:
+	python3 "$(ROOT)/tools/spec_check.py"
+
+gen-types: spec-integrity
 	cd "$(ROOT)/frontend" && npm run gen-types
 
 schemas:
@@ -44,6 +53,9 @@ schemas:
 
 sef:
 	cd "$(ROOT)/frontend" && node scripts/build-sef.mjs
+
+sef-check:
+	cd "$(ROOT)/frontend" && node scripts/build-sef.mjs --check
 
 dev:
 	@trap 'kill 0' EXIT INT TERM; \

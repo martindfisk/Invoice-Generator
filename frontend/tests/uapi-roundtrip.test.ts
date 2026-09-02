@@ -274,7 +274,6 @@ describe("UAPI_LOSSY_FIELDS", () => {
     expect(UAPI_LOSSY_FIELD_IDS).toEqual([
       "format",
       "typeCode",
-      "note",
       "references.salesOrder",
       "references.invoicedObject",
       "references.despatchAdvice.issueDate",
@@ -282,7 +281,6 @@ describe("UAPI_LOSSY_FIELDS", () => {
       "it.bollo.amount",
       "it.cup",
       "it.cig",
-      "delivery.date",
       "seller.name",
       "seller.tradeName",
       "seller.person.forename",
@@ -372,6 +370,10 @@ describe("UAPI_LOSSY_FIELDS", () => {
 
   // The one preset that populates every lossy group: the whole invoice still comes back, and it
   // comes back only because the base supplies these fields — an edited JSON cannot change them.
+  // `note` is deliberately absent: BT-22 rides on document.text, so it is restored from the
+  // operation rather than from the base. `delivery.date` stays in the diff because BT-72 travels
+  // inside recipients[].shipping, and this preset sets no delivery address to hang it on — the
+  // partial-carry case UAPI_PARTIAL_FIELDS declares.
   it("restores a preset that populates every lossy group, from the base alone", () => {
     const base = preset("de-hotel-b2g-xrechnung");
     const stripped: Invoice = {
@@ -384,7 +386,7 @@ describe("UAPI_LOSSY_FIELDS", () => {
     };
     const operation = toInvoiceTransaction(base);
     expect(modelDiff(fromInvoiceTransaction(operation, stripped), base).sort()).toEqual(
-      ["delivery.date", "note", "references.invoicedObject", "totals.lineExtension"].sort(),
+      ["delivery.date", "references.invoicedObject", "totals.lineExtension"].sort(),
     );
   });
 });

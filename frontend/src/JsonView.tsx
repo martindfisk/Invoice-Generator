@@ -7,7 +7,42 @@ import { useEffect, useRef } from "react";
 
 type Range = { from: number; to: number };
 
+export type JsonAnnotation = { from: number; to: number; kind: string; title: string };
+
 const setSelectedRange = StateEffect.define<Range | null>();
+
+const setAnnotations = StateEffect.define<JsonAnnotation[]>();
+
+// A fate annotation marks only the key's own line — the point is a quiet cue on the member,
+// not a highlight across a whole nested block.
+function annotate(state: EditorState, annotations: JsonAnnotation[]): DecorationSet {
+  const decorations = [];
+  for (const annotation of annotations) {
+    const from = Math.min(annotation.from, state.doc.length);
+    const to = Math.min(annotation.to, state.doc.lineAt(from).to);
+    if (to <= from) continue;
+    decorations.push(
+      Decoration.mark({
+        class: `cm-fate cm-fate-${annotation.kind}`,
+        attributes: { title: annotation.title },
+      }).range(from, to),
+    );
+  }
+  return Decoration.set(decorations, true);
+}
+
+const annotationField = StateField.define<DecorationSet>({
+  create: () => Decoration.none,
+  update(value, transaction) {
+    let next = value.map(transaction.changes);
+    for (const effect of transaction.effects) {
+      if (!effect.is(setAnnotations)) continue;
+      next = annotate(transaction.state, effect.value);
+    }
+    return next;
+  },
+  provide: (field) => EditorView.decorations.from(field),
+});
 
 function decorate(state: EditorState, range: Range): DecorationSet {
   const decorations = [];
@@ -64,6 +99,15 @@ const THEME = EditorView.theme({
     padding: "0 4px",
   },
   ".cm-selected-line": { boxShadow: "inset 2px 0 0 var(--fsk-brand)" },
+  ".cm-fate": {
+    textDecorationLine: "underline",
+    textDecorationStyle: "dotted",
+    textDecorationThickness: "1.5px",
+    textUnderlineOffset: "3px",
+  },
+  ".cm-fate-discarded": { textDecorationColor: "var(--fsk-severity-warning-ink)" },
+  ".cm-fate-not-rendered": { textDecorationColor: "var(--fsk-ink-muted)" },
+  ".cm-fate-platform": { textDecorationColor: "var(--fsk-severity-info)" },
   ".cm-selected-range": {
     backgroundColor: "var(--fsk-select-bg)",
     textDecoration: "underline",
@@ -78,6 +122,7 @@ export type JsonViewProps = {
   label: string;
   maxHeight?: number;
   range?: Range;
+  annotations?: JsonAnnotation[];
   scrollTo?: boolean;
   editable?: boolean;
   onPickOffset?: (offset: number) => void;
@@ -89,6 +134,7 @@ export function JsonView({
   label,
   maxHeight,
   range,
+  annotations,
   scrollTo = false,
   editable = false,
   onPickOffset,
@@ -121,6 +167,7 @@ export function JsonView({
           keymap.of([...defaultKeymap, ...historyKeymap, ...foldKeymap]),
           config.current.of([]),
           selectedRange,
+          annotationField,
           THEME,
           EditorView.updateListener.of((update) => {
             if (!update.docChanged) return;
@@ -173,6 +220,12 @@ export function JsonView({
     doc.current = text;
     editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: text } });
   }, [text]);
+
+  useEffect(() => {
+    const editor = view.current;
+    if (!editor) return;
+    editor.dispatch({ effects: setAnnotations.of(annotations ?? []) });
+  }, [text, annotations]);
 
   useEffect(() => {
     const editor = view.current;

@@ -126,6 +126,7 @@ async def test_put_then_get_round_trip(api):
                 "systems": {
                     "IT": {"system_id": "sess-sys-it", "taxpayer_id": "sess-tax-it"},
                     "BE": {"system_id": "seller-system-be", "taxpayer_id": "seller-taxpayer-be"},
+                    "DE": {"system_id": None, "taxpayer_id": None},
                 },
                 "recipients": {
                     "sdi_destination_code": "ZZZ9999",
@@ -137,6 +138,7 @@ async def test_put_then_get_round_trip(api):
                 "systems": {
                     "IT": {"system_id": None, "taxpayer_id": None},
                     "BE": {"system_id": "buyer-system-be", "taxpayer_id": "buyer-taxpayer-be"},
+                    "DE": {"system_id": None, "taxpayer_id": None},
                 },
                 "recipients": {
                     "sdi_destination_code": None,
@@ -233,7 +235,7 @@ async def test_unknown_persona_and_country_are_rejected(api):
     assert response.status_code == 400
     assert "unknown persona" in response.json()["detail"]
     response = await client.put(
-        "/api/settings", json={"personas": {"seller": {"systems": {"DE": {"system_id": "x"}}}}}
+        "/api/settings", json={"personas": {"seller": {"systems": {"FR": {"system_id": "x"}}}}}
     )
     assert response.status_code == 400
     assert "unknown country" in response.json()["detail"]

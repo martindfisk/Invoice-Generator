@@ -67,6 +67,9 @@
       <DatiOrdineAcquisto>
         <IdDocumento>BT-2026-00918</IdDocumento>
       </DatiOrdineAcquisto>
+      <DatiContratto>
+        <IdDocumento>RAHMEN-2026-0031</IdDocumento>
+      </DatiContratto>
       <DatiRicezione>
         <IdDocumento>FOLIO-2026-004182</IdDocumento>
       </DatiRicezione>

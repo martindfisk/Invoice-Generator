@@ -342,3 +342,44 @@ export function operationIsLossy(invoice: Invoice, operation: unknown, prefix: s
   const body = prefix === "/data" ? (operation as { data?: unknown } | null)?.data : operation;
   return JSON.stringify(body) !== JSON.stringify(derived.value);
 }
+
+// The Compose JSON is re-derived from the model whenever the user has not typed, so an insertion
+// has to go back through the same text the editor holds: write the value, re-stringify, and let
+// the existing editJson path parse it. Anything written anywhere else would be dropped on the
+// next render. A `{i}` segment resolves to the first existing member; the pointer is left alone
+// when that member does not exist, so an insert never grows an array.
+export function insertAtPointer(text: string, pointer: string, value: unknown): string {
+  let root: unknown;
+  try {
+    root = JSON.parse(text);
+  } catch {
+    return text;
+  }
+  const segments = pointer.split("/").slice(1);
+  let node = root;
+  for (let index = 0; index < segments.length; index += 1) {
+    const raw = segments[index];
+    const last = index === segments.length - 1;
+    const key = raw === "{i}" ? "0" : raw;
+    if (Array.isArray(node)) {
+      const position = Number(key);
+      if (!Number.isInteger(position) || node[position] === undefined) return text;
+      if (last) {
+        node[position] = value;
+        return stringifyOperation(root);
+      }
+      node = node[position];
+      continue;
+    }
+    if (raw === "{i}") return text;
+    if (node === null || typeof node !== "object") return text;
+    const holder = node as Record<string, unknown>;
+    if (last) {
+      holder[key] = value;
+      return stringifyOperation(root);
+    }
+    if (holder[key] === undefined) holder[key] = {};
+    node = holder[key];
+  }
+  return stringifyOperation(root);
+}

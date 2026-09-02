@@ -2,7 +2,9 @@
 import argparse
 import hashlib
 import io
+import json
 import os
+import subprocess
 import sys
 import urllib.error
 import zipfile
@@ -13,50 +15,10 @@ from fetch_spec import fetch
 
 ROOT = Path(__file__).resolve().parents[1]
 VENDOR = Path(os.environ.get("VENDOR_DIR", ROOT / "vendor"))
+MANIFEST = Path(__file__).with_name("rulesets.json")
 NETWORK_ERRORS = (urllib.error.URLError, TimeoutError, OSError)
 
-OASIS_BASE = "https://docs.oasis-open.org/ubl/os-UBL-2.1/xsdrt/"
-UBL_LICENCE = "OASIS UBL 2.1 OS (2013-11-04), (c) OASIS Open 2013"
-UBL_LOCAL_ROOTS = (
-    Path(
-        "/Users/martin.dutzler/Documents/GitHub/E-Invoicing-Formats-and-Profiles/Germany/"
-        "xrechnung-3.0.2-bundle-2026-01-31/xrechnung-3.0.2-validator-configuration-2026-01-31/"
-        "resources/ubl/2.1/xsd"
-    ),
-    Path(
-        "/Users/martin.dutzler/Documents/GitHub/bodex/countries/"
-        "e-invoicing (all countries)/de/standards_formats/"
-        "xrechnung-3.0.2-bundle-2026-01-31/xrechnung-3.0.2-validator-configuration-2026-01-31/"
-        "resources/ubl/2.1/xsd"
-    ),
-)
-UBL_FILES = {
-    "maindoc/UBL-Invoice-2.1.xsd": "3a5aacd823f0e5b8f25ae7b5191c2002d5333ba351d87de9371ed62dca2b2b0c",
-    "maindoc/UBL-CreditNote-2.1.xsd": "1e117b6c1ab713604b29b0d685442a81a0c78a82575445ee8c43e6050cda7454",
-    "common/CCTS_CCT_SchemaModule-2.1.xsd": "dd546e4809df86b6445589f69f0d6c9df162840ae386574ddfc1da7638103e15",
-    "common/UBL-CommonAggregateComponents-2.1.xsd": "580b5af6f68f7f556bd15945ba0e819cbf561442c81694f9b9468036ebedec4d",
-    "common/UBL-CommonBasicComponents-2.1.xsd": "a3b349bf92e5cff26e303d2f05b7e00c884dcafcfd9e12755fb80289abf5e22e",
-    "common/UBL-CommonExtensionComponents-2.1.xsd": "ad7a4e490978adfbcfc5ec0bb20941cf11ac960ccf0c4de8791a7c731a8dbe87",
-    "common/UBL-CommonSignatureComponents-2.1.xsd": "4fa9e2370100040fe14c43e135ef77e2eb66b21cb8dbfc2ffb8d82ae991fe92e",
-    "common/UBL-CoreComponentParameters-2.1.xsd": "8be3379dbdcbcc7802fafdd16bac72c48fff1c0bb364213a31a17911dd06100b",
-    "common/UBL-ExtensionContentDataType-2.1.xsd": "fcee77a11870208e6377ea6311b9f2a050bca24bdad8606ea02d71e9f9e72f8d",
-    "common/UBL-QualifiedDataTypes-2.1.xsd": "7dcb156e610239c97ae70940cf4653b88e48c3595bf5f56a2204a32e2893e6cf",
-    "common/UBL-SignatureAggregateComponents-2.1.xsd": "9234c2ca48dbfa9a22a786112bb075c5922a305170920eaab1e3c04fa0b7344b",
-    "common/UBL-SignatureBasicComponents-2.1.xsd": "0fbe2d7afff0c1e11164b8ec83e13f18801021c3c87e390a9d76f9cf862f6a64",
-    "common/UBL-UnqualifiedDataTypes-2.1.xsd": "09052d406b4293e2a5f9c2bfee6df10ad4d8d5f0b36e24a6349d7f7936d89eb6",
-    "common/UBL-XAdESv132-2.1.xsd": "a4f726bcf8cc3f7d9ffa4dab99e005535a8e8b60dced1e5d94578d2e05afa96e",
-    "common/UBL-XAdESv141-2.1.xsd": "1fa4625e9cefcb7a9abb5ac1b64315547450031eece8a55bd584e4ba4b79dbc1",
-    "common/UBL-xmldsig-core-schema-2.1.xsd": "101909c9f06456d61ddcc4fb982f1d40dc357b439f393b1a2eb46e42acd60809",
-}
-
-FPA_PAGE = "https://www.fatturapa.gov.it/it/norme-e-regole/documentazione-fattura-elettronica/formato-fatturapa/"
-FPA_HINT = f" (FatturaPA schemas: {FPA_PAGE})"
-FPA_XSD_NAME = "Schema_VFPR12_v1.2.3.xsd"
-FPA_XSD_URL = (
-    f"https://www.fatturapa.gov.it/export/documenti/fatturapa/v1.4/{FPA_XSD_NAME}"
-)
-FPA_XSD_SHA = "152944f6eef9f5d69ef6e955ee173b32142b00a8c1c5222fc97dfab5910e8a8c"
-FPA_LICENCE = "fatturapa.gov.it copyright notice (all rights reserved; local personal-use storage only)"
+FPA_HINT_LABEL = "FatturaPA schemas: "
 FPA_TERMS = (
     "Ogni diritto sui contenuti (a titolo esemplificativo testi, immagini e architettura "
     "del sito) e' riservato ai sensi della normativa vigente. I contenuti delle pagine del sito "
@@ -65,115 +27,6 @@ FPA_TERMS = (
     "di Interscambio, fatta salva la possibilita' di immagazzinarli nel proprio computer o di "
     "stampare estratti delle pagine di questo sito unicamente per utilizzo personale."
 )
-XMLDSIG_NAME = "xmldsig-core-schema.xsd"
-XMLDSIG_URL = (
-    "https://www.w3.org/TR/2002/REC-xmldsig-core-20020212/xmldsig-core-schema.xsd"
-)
-XMLDSIG_SHA = "35cf8197da812c85e40d57891b35c94187569ed474a2dac813ce5090dafcd35c"
-XMLDSIG_LICENCE = "W3C Software and Document Notice and License"
-GOBL_BASE = "https://raw.githubusercontent.com/invopop/gobl.fatturapa/main/schemas/"
-GOBL_XSD_NAME = "FatturaPA_v1.2.2.xsd"
-GOBL_XSD_SHA = "4c427d40ea3eadea4bd46e9f3379e401825cc610f3489c17c9e045b4310b971b"
-GOBL_XMLDSIG_NAME = "xmldsig-core.xsd"
-GOBL_LICENCE = "Apache-2.0 (invopop/gobl.fatturapa)"
-
-CEN_VERSION = "1.3.15"
-CEN_TAG = f"validation-{CEN_VERSION}"
-CEN_RELEASES = "https://github.com/ConnectingEurope/eInvoicing-EN16931/releases"
-CEN_UBL_ZIP_URL = f"{CEN_RELEASES}/download/{CEN_TAG}/en16931-ubl-{CEN_VERSION}.zip"
-CEN_CII_ZIP_URL = f"{CEN_RELEASES}/download/{CEN_TAG}/en16931-cii-{CEN_VERSION}.zip"
-CEN_XSLT_NAME = "EN16931-UBL-validation.xslt"
-CEN_XSLT_SHA = "c1caf4926947a3b6da52c8247dcf9e67ba4cf5fbd562bdf0528b2b8c51af2d0d"
-CEN_CII_XSLT_NAME = "EN16931-CII-validation.xslt"
-CEN_CII_XSLT_SHA = "e55f1b01ffcbcc037dd1b9d01c52423a3f91f45a2e966e6bc8a56ea6c69188b6"
-CEN_LICENCE = f"EUPL-1.2 (CEN/TC 434 validation artefacts {CEN_VERSION})"
-CEN_CLONE = Path(
-    "/Users/martin.dutzler/Documents/GitHub/bodex/countries/"
-    "e-invoicing (all countries)/EN16931 standard"
-)
-
-XRECHNUNG_VERSION = "2.5.0"
-XRECHNUNG_CIUS = "3.0.2"
-XRECHNUNG_REPO = "https://github.com/itplr-kosit/xrechnung-schematron"
-XRECHNUNG_TAG = f"v{XRECHNUNG_VERSION}"
-XRECHNUNG_ZIP_URL = (
-    f"{XRECHNUNG_REPO}/releases/download/{XRECHNUNG_TAG}/"
-    f"xrechnung-{XRECHNUNG_CIUS}-schematron-{XRECHNUNG_VERSION}.zip"
-)
-XRECHNUNG_LICENCE = (
-    f"Apache-2.0 (KoSIT / Koordinierungsstelle fuer IT-Standards, "
-    f"xrechnung-schematron {XRECHNUNG_VERSION})"
-)
-XRECHNUNG_LOCAL_ROOTS = (
-    Path(
-        "/Users/martin.dutzler/Documents/GitHub/E-Invoicing-Formats-and-Profiles/Germany/"
-        f"xrechnung-{XRECHNUNG_CIUS}-bundle-2026-01-31/"
-        f"xrechnung-{XRECHNUNG_CIUS}-schematron-{XRECHNUNG_VERSION}"
-    ),
-)
-XRECHNUNG_FILES = {
-    "XRechnung-UBL-validation.xsl": (
-        "schematron/ubl/XRechnung-UBL-validation.xsl",
-        "0cadcbde2eb320c2e7e83a8057b93bc48076e223dda36308e31704684ee9ecf3",
-    ),
-    "XRechnung-CII-validation.xsl": (
-        "schematron/cii/XRechnung-CII-validation.xsl",
-        "ce8f257114eccb49d369a2c77c6cccd7d3cd9f1286e9ff158b543a1311182b2a",
-    ),
-    "XRechnung-LICENSE.txt": (
-        "LICENSE",
-        "57e93bb611b8aeb93ff0f23b271a23291217b0016f6e66297dfd5e9467538a5f",
-    ),
-}
-
-# The npm package "saxon-js" ships the Node build only (SaxonJS2N.js, requires fs/axios).
-# The browser runtime is distributed by Saxonica outside npm; the licence (vendor/saxon-js/
-# LICENSE.txt) permits redistribution in binary form as part of an application that uses it,
-# provided the copyright notice is reproduced - only re-hosting it for third-party download
-# (condition 4) is excluded. Keep the version in lockstep with devDependency "saxon-js":
-# the SEF format is tied to the SaxonJS major version.
-SAXON_VERSION = "2.7"
-SAXON_ZIP_URL = f"https://downloads.saxonica.com/SaxonJS/2/SaxonJS-{SAXON_VERSION}.zip"
-SAXON_LICENCE = (
-    "Saxonica Ltd proprietary licence v1.0 (June 2020); binary redistribution "
-    "permitted as part of an application, copyright notice must be reproduced"
-)
-SAXON_FILES = {
-    "SaxonJS2.rt.js": (
-        "saxon-js/SaxonJS2.rt.js",
-        "7704990d3bfd64e6621ddf3939943be13a8cc20c17687e0f2dd1ca3d03434e88",
-    ),
-    "LICENSE.txt": (
-        "saxon-js/LICENSE.txt",
-        "73f09f080333cbf539c255dc55ea706a36f31e58ccd2c8f67929a995a768204f",
-    ),
-}
-
-PEPPOL_TAG = "v3.0.20"
-PEPPOL_RELEASE = "Peppol BIS Billing 3.0.20 (2025 November release)"
-PEPPOL_REPO = "https://github.com/OpenPEPPOL/peppol-bis-invoice-3"
-PEPPOL_BASE = (
-    f"https://raw.githubusercontent.com/OpenPEPPOL/peppol-bis-invoice-3/"
-    f"{PEPPOL_TAG}/rules/sch/"
-)
-PEPPOL_LICENCE = f"OpenPeppol AISBL, attribution required ({PEPPOL_TAG})"
-PEPPOL_FILES = {
-    "PEPPOL-EN16931-UBL.sch": "5ddf3a2f6633147b20b7805df9902d825af1a984f10014fcee186d4170364b1d",
-    "CEN-EN16931-UBL.sch": "bdcbb7b702cce55c7f8c789bef0cb9bebf6d376140c1776e683bd6d9bc0ad331",
-}
-
-SKELETON_COMMIT = "72f7f7c9c46236f073bc59b60869b79528890fd0"
-SKELETON_BASE = (
-    f"https://raw.githubusercontent.com/Schematron/schematron/"
-    f"{SKELETON_COMMIT}/trunk/schematron/code/"
-)
-SKELETON_LICENCE = "MIT (Schematron/schematron, Rick Jelliffe / Academia Sinica)"
-SKELETON_FILES = {
-    "iso_dsdl_include.xsl": "43ff20a1afd89d8a744d1c0b8df94ac5559ffa6a820d1ffbf508d6431ee4fdd9",
-    "iso_abstract_expand.xsl": "c5267f124abf23eeb6669884e40a98607c055bfaa1f39e73b7d578feceeb6e46",
-    "iso_svrl_for_xslt2.xsl": "0588d617924a0686255f6d182633d434c7986d561be8fcc3b363907d3f671b26",
-    "iso_schematron_skeleton_for_saxon.xsl": "95f3195d9f437ea8ff5f75d1a27f4e68ae20b236fe0d4a217bb4209f498a10a3",
-}
 
 SYNTHETIC_EXAMPLE_NAME = "examples/synthetic-td01.xml"
 SYNTHETIC_TD01 = """<?xml version="1.0" encoding="UTF-8"?>
@@ -263,6 +116,104 @@ SYNTHETIC_TD01 = """<?xml version="1.0" encoding="UTF-8"?>
 """
 
 
+# --- manifest (tools/rulesets.json) -------------------------------------------------------
+
+
+def load_manifest(path=MANIFEST):
+    return json.loads(Path(path).read_text())
+
+
+def save_manifest(data, path=MANIFEST):
+    Path(path).write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+
+
+def source_by_id(data, source_id):
+    for src in data["sources"]:
+        if src["id"] == source_id:
+            return src
+    known = ", ".join(s["id"] for s in data["sources"])
+    raise RuntimeError(
+        f"unknown source {source_id!r} in tools/rulesets.json (known: {known})"
+    )
+
+
+def template_vars(src):
+    return {"version": src.get("version", ""), **src.get("vars", {})}
+
+
+def render(template, src, **extra):
+    try:
+        return template.format(**template_vars(src), **extra)
+    except KeyError as exc:
+        raise RuntimeError(
+            f"template {template!r} of source {src['id']}: no value for {exc}"
+        ) from None
+
+
+def source_url(src, file):
+    return render(src["urlTemplate"], src, file=file)
+
+
+def source_licence(src):
+    return render(src["licence"], src)
+
+
+def source_files(src):
+    """Rendered (name, sha256, zip_name, member) per file; zip_name/member are None for raw."""
+    out = []
+    for name, value in src["files"].items():
+        rendered = render(name, src)
+        if isinstance(value, str):
+            out.append((rendered, value, None, None))
+        else:
+            out.append(
+                (rendered, value["sha256"], render(value["zip"], src), value["member"])
+            )
+    return out
+
+
+def source_hint(src):
+    if src["id"] == "fatturapa":
+        return f" ({FPA_HINT_LABEL}{src['homepage']})"
+    return f" ({src['homepage']})"
+
+
+# --- local standards bundles (STANDARDS_DIRS) ---------------------------------------------
+
+
+def dotenv_value(key):
+    env_file = ROOT / ".env"
+    if not env_file.exists():
+        return None
+    for line in env_file.read_text().splitlines():
+        stripped = line.strip()
+        if stripped.startswith(f"{key}="):
+            return stripped.split("=", 1)[1].strip().strip("'\"")
+    return None
+
+
+def standards_dirs():
+    raw = os.environ.get("STANDARDS_DIRS")
+    if raw is None:
+        raw = dotenv_value("STANDARDS_DIRS")
+    if not raw:
+        return []
+    return [Path(part).expanduser() for part in raw.split(os.pathsep) if part.strip()]
+
+
+def local_roots(src, no_local):
+    if no_local:
+        return []
+    return [
+        base / render(subdir, src)
+        for base in standards_dirs()
+        for subdir in src.get("localSubdirs", [])
+    ]
+
+
+# --- pinned download/verify/store core (unchanged) ----------------------------------------
+
+
 def sha256(data):
     return hashlib.sha256(data).hexdigest()
 
@@ -276,24 +227,26 @@ def store(path, data, sha, origin, hint=""):
     if digest != sha:
         raise RuntimeError(
             f"{origin}: sha256 {digest} != pinned {sha}; upstream changed - "
-            f"verify the source{hint} and update the pin in tools/fetch_assets.py"
+            f"verify the source{hint} and update the pin in tools/rulesets.json"
         )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(data)
 
 
-def vendor_ubl(no_local):
-    local_root = None
-    if not no_local:
-        local_root = next((root for root in UBL_LOCAL_ROOTS if root.is_dir()), None)
+def vendor_ubl(manifest, no_local):
+    src = source_by_id(manifest, "ubl")
+    base = source_url(src, "")
+    local_root = next(
+        (root for root in local_roots(src, no_local) if root.is_dir()), None
+    )
     if local_root:
         print(f"ubl-2.1: local bundle {local_root}")
     else:
-        print(f"ubl-2.1: no local bundle, downloading from {OASIS_BASE}")
+        print(f"ubl-2.1: no local bundle, downloading from {base}")
     rows = []
-    for rel, sha in UBL_FILES.items():
+    for rel, sha, _zip, _member in source_files(src):
         dest = VENDOR / "ubl-2.1" / "xsd" / rel
-        url = OASIS_BASE + rel
+        url = source_url(src, rel)
         if cached(dest, sha):
             source, note = url, "cached"
         elif local_root and cached(local_root / rel, sha):
@@ -308,72 +261,80 @@ def vendor_ubl(no_local):
             store(dest, fetch(url, timeout=60), sha, url)
             source, note = url, "downloaded"
         print(f"  {dest.relative_to(VENDOR)} [{note}]")
-        rows.append((f"ubl-2.1/xsd/{rel}", source, UBL_LICENCE, sha))
+        rows.append((f"ubl-2.1/xsd/{rel}", source, source_licence(src), sha))
     return rows
 
 
-def fatturapa_official(fdir):
+def fatturapa_official(manifest, fdir):
+    fpa = source_by_id(manifest, "fatturapa")
+    dsig = source_by_id(manifest, "xmldsig")
+    gobl = source_by_id(manifest, "gobl")
+    hint = source_hint(fpa)
     rows = []
-    dest = fdir / FPA_XSD_NAME
-    if cached(dest, FPA_XSD_SHA):
-        print(f"  fatturapa/{FPA_XSD_NAME} [cached]")
+    ((fpa_name, fpa_sha, _z, _m),) = source_files(fpa)
+    dest = fdir / fpa_name
+    if cached(dest, fpa_sha):
+        print(f"  fatturapa/{fpa_name} [cached]")
     else:
-        store(dest, fetch(FPA_XSD_URL, timeout=60), FPA_XSD_SHA, FPA_XSD_URL, FPA_HINT)
-        print(f"  fatturapa/{FPA_XSD_NAME} [downloaded]")
-    rows.append((f"fatturapa/{FPA_XSD_NAME}", FPA_XSD_URL, FPA_LICENCE, FPA_XSD_SHA))
-    xmldsig = fdir / XMLDSIG_NAME
-    if cached(xmldsig, XMLDSIG_SHA):
-        print(f"  fatturapa/{XMLDSIG_NAME} [cached]")
-        rows.append(
-            (f"fatturapa/{XMLDSIG_NAME}", XMLDSIG_URL, XMLDSIG_LICENCE, XMLDSIG_SHA)
-        )
+        url = source_url(fpa, fpa_name)
+        store(dest, fetch(url, timeout=60), fpa_sha, url, hint)
+        print(f"  fatturapa/{fpa_name} [downloaded]")
+    rows.append(
+        (f"fatturapa/{fpa_name}", source_url(fpa, fpa_name), fpa["licence"], fpa_sha)
+    )
+    ((dsig_name, dsig_sha, _z, _m),) = source_files(dsig)
+    xmldsig = fdir / dsig_name
+    dsig_url = source_url(dsig, dsig_name)
+    if cached(xmldsig, dsig_sha):
+        print(f"  fatturapa/{dsig_name} [cached]")
+        rows.append((f"fatturapa/{dsig_name}", dsig_url, source_licence(dsig), dsig_sha))
         return rows
     try:
-        store(
-            xmldsig, fetch(XMLDSIG_URL, timeout=60), XMLDSIG_SHA, XMLDSIG_URL, FPA_HINT
-        )
-        source = XMLDSIG_URL
+        store(xmldsig, fetch(dsig_url, timeout=60), dsig_sha, dsig_url, hint)
+        source = dsig_url
     except NETWORK_ERRORS as exc:
         print(
             f"  w3.org unreachable ({exc}); fetching identical copy from gobl.fatturapa",
             file=sys.stderr,
         )
-        source = GOBL_BASE + GOBL_XMLDSIG_NAME
-        store(xmldsig, fetch(source, timeout=60), XMLDSIG_SHA, source, FPA_HINT)
-    print(f"  fatturapa/{XMLDSIG_NAME} [downloaded]")
-    rows.append((f"fatturapa/{XMLDSIG_NAME}", source, XMLDSIG_LICENCE, XMLDSIG_SHA))
+        source = source_url(gobl, "xmldsig-core.xsd")
+        store(xmldsig, fetch(source, timeout=60), dsig_sha, source, hint)
+    print(f"  fatturapa/{dsig_name} [downloaded]")
+    rows.append((f"fatturapa/{dsig_name}", source, source_licence(dsig), dsig_sha))
     return rows
 
 
-def fatturapa_gobl(fdir):
+def fatturapa_gobl(manifest, fdir):
+    gobl = source_by_id(manifest, "gobl")
+    hint = source_hint(source_by_id(manifest, "fatturapa"))
     rows = []
-    for name, sha, licence in (
-        (GOBL_XSD_NAME, GOBL_XSD_SHA, GOBL_LICENCE),
-        (GOBL_XMLDSIG_NAME, XMLDSIG_SHA, GOBL_LICENCE),
-    ):
-        dest, url = fdir / name, GOBL_BASE + name
+    for name, sha, _zip, _member in source_files(gobl):
+        dest, url = fdir / name, source_url(gobl, name)
         if cached(dest, sha):
             print(f"  fatturapa/{name} [cached]")
         else:
-            store(dest, fetch(url, timeout=60), sha, url, FPA_HINT)
+            store(dest, fetch(url, timeout=60), sha, url, hint)
             print(f"  fatturapa/{name} [downloaded]")
-        rows.append((f"fatturapa/{name}", url, licence, sha))
+        rows.append((f"fatturapa/{name}", url, source_licence(gobl), sha))
     return rows
 
 
-def vendor_fatturapa():
+def vendor_fatturapa(manifest):
     fdir = VENDOR / "fatturapa"
+    gobl = source_by_id(manifest, "gobl")
     try:
-        rows = fatturapa_official(fdir)
-        keep = {FPA_XSD_NAME, XMLDSIG_NAME}
+        rows = fatturapa_official(manifest, fdir)
+        keep = {name for name, *_ in source_files(source_by_id(manifest, "fatturapa"))}
+        keep |= {name for name, *_ in source_files(source_by_id(manifest, "xmldsig"))}
     except NETWORK_ERRORS as exc:
         print(
             f"WARNING: fatturapa.gov.it unreachable ({exc}); falling back to "
-            "invopop/gobl.fatturapa (schema version 1.2.2, NOT the current 1.2.3)",
+            f"invopop/gobl.fatturapa (schema version {gobl['version']}, NOT the current "
+            f"{source_by_id(manifest, 'fatturapa')['version']})",
             file=sys.stderr,
         )
-        rows = fatturapa_gobl(fdir)
-        keep = {GOBL_XSD_NAME, GOBL_XMLDSIG_NAME}
+        rows = fatturapa_gobl(manifest, fdir)
+        keep = {name for name, *_ in source_files(gobl)}
     for stale in fdir.glob("*.xsd"):
         if stale.name not in keep:
             stale.unlink()
@@ -437,18 +398,38 @@ def vendor_from_zip(vdir, prefix, files, url, licence, hint, local_roots, no_loc
     return rows
 
 
-def vendor_saxon(no_local):
-    print(f"saxon-js: SaxonJS {SAXON_VERSION} browser runtime ({SAXON_ZIP_URL})")
-    return vendor_from_zip(
-        VENDOR / "saxon-js",
-        "saxon-js/",
-        SAXON_FILES,
-        SAXON_ZIP_URL,
-        SAXON_LICENCE,
-        " (https://www.saxonica.com/download/javascript.xml)",
-        (),
-        no_local,
+def zip_groups(src):
+    """{rendered zip name: {file name: (member, sha)}} preserving manifest order."""
+    groups = {}
+    for name, sha, zip_name, member in source_files(src):
+        groups.setdefault(zip_name, {})[name] = (member, sha)
+    return groups
+
+
+def vendor_zip_source(src, vdir, prefix, no_local):
+    rows = []
+    roots = local_roots(src, no_local)
+    for zip_name, files in zip_groups(src).items():
+        rows += vendor_from_zip(
+            vdir,
+            prefix,
+            files,
+            source_url(src, zip_name),
+            source_licence(src),
+            source_hint(src),
+            roots,
+            no_local,
+        )
+    return rows
+
+
+def vendor_saxon(manifest, no_local):
+    src = source_by_id(manifest, "saxon")
+    zip_name = next(iter(zip_groups(src)))
+    print(
+        f"saxon-js: SaxonJS {src['version']} browser runtime ({source_url(src, zip_name)})"
     )
+    return vendor_zip_source(src, VENDOR / "saxon-js", "saxon-js/", no_local)
 
 
 def vendor_pinned(sdir, files, base, licence, hint):
@@ -464,69 +445,62 @@ def vendor_pinned(sdir, files, base, licence, hint):
     return rows
 
 
-def vendor_schematron(no_local):
+def vendor_schematron(manifest, no_local):
     sdir = VENDOR / "schematron"
+    cen = source_by_id(manifest, "cen")
+    peppol = source_by_id(manifest, "peppol")
+    xrechnung = source_by_id(manifest, "xrechnung")
+    skeleton = source_by_id(manifest, "skeleton")
     print(
-        f"schematron: CEN EN 16931 UBL+CII {CEN_VERSION}, {PEPPOL_RELEASE}, "
-        f"XRechnung {XRECHNUNG_CIUS} Schematron {XRECHNUNG_VERSION}, "
-        f"ISO skeleton @{SKELETON_COMMIT[:7]}"
+        f"schematron: CEN EN 16931 UBL+CII {cen['version']}, "
+        f"{render(peppol['title'], peppol)}, "
+        f"XRechnung {xrechnung['vars']['cius']} Schematron {xrechnung['version']}, "
+        f"ISO skeleton @{skeleton['version'][:7]}"
     )
     return (
-        vendor_from_zip(
+        vendor_zip_source(cen, sdir, "schematron/", no_local)
+        + vendor_zip_source(xrechnung, sdir, "schematron/", no_local)
+        + vendor_pinned(
             sdir,
-            "schematron/",
-            {CEN_XSLT_NAME: (f"xslt/{CEN_XSLT_NAME}", CEN_XSLT_SHA)},
-            CEN_UBL_ZIP_URL,
-            CEN_LICENCE,
-            f" ({CEN_RELEASES})",
-            (CEN_CLONE / "ubl",),
-            no_local,
-        )
-        + vendor_from_zip(
-            sdir,
-            "schematron/",
-            {CEN_CII_XSLT_NAME: (f"xslt/{CEN_CII_XSLT_NAME}", CEN_CII_XSLT_SHA)},
-            CEN_CII_ZIP_URL,
-            CEN_LICENCE,
-            f" ({CEN_RELEASES})",
-            (CEN_CLONE / "cii",),
-            no_local,
-        )
-        + vendor_from_zip(
-            sdir,
-            "schematron/",
-            XRECHNUNG_FILES,
-            XRECHNUNG_ZIP_URL,
-            XRECHNUNG_LICENCE,
-            f" ({XRECHNUNG_REPO}/releases)",
-            XRECHNUNG_LOCAL_ROOTS,
-            no_local,
+            {name: sha for name, sha, _z, _m in source_files(peppol)},
+            source_url(peppol, ""),
+            source_licence(peppol),
+            f" ({peppol['homepage']}/releases)",
         )
         + vendor_pinned(
             sdir,
-            PEPPOL_FILES,
-            PEPPOL_BASE,
-            PEPPOL_LICENCE,
-            f" ({PEPPOL_REPO}/releases)",
-        )
-        + vendor_pinned(
-            sdir,
-            SKELETON_FILES,
-            SKELETON_BASE,
-            SKELETON_LICENCE,
-            " (https://github.com/Schematron/schematron)",
+            {name: sha for name, sha, _z, _m in source_files(skeleton)},
+            source_url(skeleton, ""),
+            source_licence(skeleton),
+            source_hint(skeleton),
         )
     )
 
 
-def write_sources(rows):
+def write_sources(manifest, rows):
+    fpa = source_by_id(manifest, "fatturapa")
+    gobl = source_by_id(manifest, "gobl")
+    cen = source_by_id(manifest, "cen")
+    peppol = source_by_id(manifest, "peppol")
+    xrechnung = source_by_id(manifest, "xrechnung")
+    skeleton = source_by_id(manifest, "skeleton")
+    saxon = source_by_id(manifest, "saxon")
+    ubl_base = source_url(source_by_id(manifest, "ubl"), "")
+    fpa_name = source_files(fpa)[0][0]
+    cen_tag = render(cen["tag"], cen)
+    cen_releases = cen["homepage"]
+    peppol_tag = render(peppol["tag"], peppol)
+    xrechnung_tag = render(xrechnung["tag"], xrechnung)
+    cius = xrechnung["vars"]["cius"]
+    saxon_zip = source_url(saxon, render(next(iter(zip_groups(saxon))), saxon))
     ts = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     fetched = ts[:10]
     lines = [
         "# vendor/ provenance",
         "",
         f"Generated {ts} by `tools/fetch_assets.py` (`make schemas`). Do not hand-edit.",
-        "Every file is verified against the pinned sha256 on each run.",
+        "Every file is verified against the sha256 pinned in `tools/rulesets.json` on each run;",
+        "bump versions with `python3 tools/fetch_assets.py --update <source>=<version>`.",
         "",
         "| file | source | licence | sha256 | fetched |",
         "|---|---|---|---|---|",
@@ -538,9 +512,9 @@ def write_sources(rows):
         "",
         "- UBL 2.1 XSDs are the OASIS `xsdrt` (runtime) variant of UBL 2.1 OS; local copies from",
         "  the KoSIT XRechnung 3.0.2 validator-configuration bundle (2026-01-31) are byte-identical",
-        f"  to {OASIS_BASE} (same sha256 pins).",
-        f"- FatturaPA schema page: {FPA_PAGE} - section 'Documentazione valida dal 1 aprile 2025'",
-        f"  lists `Schema_VFPA12_V1.2.3.xsd` and `{FPA_XSD_NAME}` (byte-identical, version 1.2.3,",
+        f"  to {ubl_base} (same sha256 pins).",
+        f"- FatturaPA schema page: {fpa['homepage']} - section 'Documentazione valida dal 1 aprile 2025'",
+        f"  lists `Schema_VFPA12_V{fpa['version']}.xsd` and `{fpa_name}` (byte-identical, version {fpa['version']},",
         "  technical specifications 1.9); `Schema_VFSM10v_1.0.2.xsd` (semplificata) is not vendored.",
         "- fatturapa.gov.it terms (https://www.fatturapa.gov.it/it/copyright/index.html):",
         f'  "{FPA_TERMS}"',
@@ -550,42 +524,43 @@ def write_sources(rows):
         "  are NOT vendored; a synthetic TD01 example is generated instead. vendor/ itself is",
         "  git-ignored and never redistributed.",
         "- Fallback source when fatturapa.gov.it is unreachable: invopop/gobl.fatturapa (Apache-2.0),",
-        "  which ships schema version 1.2.2 (missing 1.2.3 additions such as TD29 and RF20).",
+        f"  which ships schema version {gobl['version']} (missing {fpa['version']} additions such as TD29 and RF20).",
         "",
         "### Schematron rule sets (compiled to SEF by `frontend/scripts/build-sef.mjs`)",
         "",
-        f"- CEN/TC 434 EN 16931 UBL validation artefacts **{CEN_VERSION}** (release `{CEN_TAG}`,",
-        f"  {CEN_RELEASES}/tag/{CEN_TAG}). `{CEN_XSLT_NAME}` is the ready-compiled XSLT 2.0 shipped",
-        f"  in `en16931-ubl-{CEN_VERSION}.zip`; the local clone copy is byte-identical (same pin).",
-        f"  Upstream {CEN_VERSION} is not the newest release - 1.3.16 exists; bump deliberately.",
-        f"- **{PEPPOL_RELEASE}**, tag `{PEPPOL_TAG}` ({PEPPOL_REPO}/releases/tag/{PEPPOL_TAG}).",
+        f"- CEN/TC 434 EN 16931 UBL validation artefacts **{cen['version']}** (release `{cen_tag}`,",
+        f"  {cen_releases}/tag/{cen_tag}). `EN16931-UBL-validation.xslt` is the ready-compiled XSLT 2.0 shipped",
+        f"  in `en16931-ubl-{cen['version']}.zip`; the local clone copy is byte-identical (same pin).",
+        "  Newer CEN releases may exist; bump deliberately via",
+        "  `python3 tools/fetch_assets.py --update cen=<version>`.",
+        f"- **{render(peppol['title'], peppol)}**, tag `{peppol_tag}` ({peppol['homepage']}/releases/tag/{peppol_tag}).",
         "  That repository ships Schematron sources only (`rules/sch/`); there is no `rules/xslt/`",
         "  path in any tag, so the `.sch` is compiled to XSLT at SEF build time with the ISO",
         "  skeleton below. `CEN-EN16931-UBL.sch` inside the BIS release carries the same CEN",
-        f"  version header ({CEN_VERSION}) as the standalone artefact above (`rules/sch/README.md`",
+        f"  version header ({cen['version']}) as the standalone artefact above (`rules/sch/README.md`",
         "  claims 1.3.14.1 and is stale), but is not identical: the OpenPeppol copy ships a newer",
         "  ISO 6523 ICD / CEF EAS code list (adds 0245). Both are vendored so the two can be",
         "  compared and a Peppol access point's exact pair can be reproduced.",
-        f"- CEN/TC 434 EN 16931 CII validation artefacts **{CEN_VERSION}**, same release, from",
-        f"  `en16931-cii-{CEN_VERSION}.zip`. `{CEN_CII_XSLT_NAME}` is the ready-compiled XSLT 2.0;",
+        f"- CEN/TC 434 EN 16931 CII validation artefacts **{cen['version']}**, same release, from",
+        f"  `en16931-cii-{cen['version']}.zip`. `EN16931-CII-validation.xslt` is the ready-compiled XSLT 2.0;",
         "  the local clone copy is byte-identical (same pin).",
-        f"- **XRechnung {XRECHNUNG_CIUS} Schematron {XRECHNUNG_VERSION}** (KoSIT / xeinkauf.de),",
-        f"  release `{XRECHNUNG_TAG}` ({XRECHNUNG_REPO}/releases/tag/{XRECHNUNG_TAG}), Apache-2.0.",
+        f"- **XRechnung {cius} Schematron {xrechnung['version']}** (KoSIT / xeinkauf.de),",
+        f"  release `{xrechnung_tag}` ({xrechnung['homepage']}/tag/{xrechnung_tag}), Apache-2.0.",
         "  The release ships both `.sch` sources and ready-compiled `.xsl`; the `.xsl` is vendored",
         "  because it is the artefact KoSIT itself ships in the validator-configuration bundle.",
-        f"  From {XRECHNUNG_VERSION} on the rules are compiled with **SchXslt**, not the ISO",
+        f"  From {xrechnung['version']} on the rules are compiled with **SchXslt**, not the ISO",
         "  skeleton, so the SVRL `@location` uses the `/Q{uri}Name[n]` form rather than",
         "  `/*:Name[namespace-uri()='uri'][n]` - `frontend/src/svrl.ts` normalises both.",
-        f"- ISO Schematron 'skeleton' XSLT2 implementation, commit `{SKELETON_COMMIT}`",
-        "  (https://github.com/Schematron/schematron, MIT). `iso_svrl_for_xslt2.xsl` imports",
+        f"- ISO Schematron 'skeleton' XSLT2 implementation, commit `{skeleton['version']}`",
+        f"  ({skeleton['homepage']}, MIT). `iso_svrl_for_xslt2.xsl` imports",
         "  `iso_schematron_skeleton_for_saxon.xsl`, so both must sit in the same directory.",
         "",
         "### SaxonJS browser runtime",
         "",
-        f"- **SaxonJS {SAXON_VERSION}** (`SaxonJS2.rt.js`, 499 kB) from {SAXON_ZIP_URL}.",
+        f"- **SaxonJS {saxon['version']}** (`SaxonJS2.rt.js`, 499 kB) from {saxon_zip}.",
         "  The npm package `saxon-js` ships the Node build only (`SaxonJS2N.js`, requires `fs`),",
         "  so the browser runtime has to come from Saxonica directly. Keep it in lockstep with the",
-        f"  `saxon-js` devDependency ({SAXON_VERSION}.x): SEF is tied to the SaxonJS major version.",
+        f"  `saxon-js` devDependency ({saxon['version']}.x): SEF is tied to the SaxonJS major version.",
         "- Licence (`vendor/saxon-js/LICENSE.txt`, reproduced verbatim into `frontend/public/saxon/`",
         "  by `make sef`): Saxonica Ltd, version 1.0 (June 2020). It permits *redistribution in",
         "  binary form, without modification, as part of an application that makes use of the",
@@ -598,29 +573,128 @@ def write_sources(rows):
     (VENDOR / "SOURCES.md").write_text("\n".join(lines) + "\n")
 
 
+# --- --update <source>=<version> ----------------------------------------------------------
+
+
+def git_dirty(path):
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(ROOT), "status", "--porcelain", "--", str(path)],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return False  # not under git / git unavailable: nothing to compare against
+    return bool(result.stdout.strip())
+
+
+def update_source(spec, manifest_path=MANIFEST, fetcher=fetch):
+    """Bump one source: download unpinned, print hash transitions, write pins back."""
+    source_id, sep, new_version = spec.partition("=")
+    if not sep or not new_version:
+        raise RuntimeError(f"--update expects <source>=<version>, got {spec!r}")
+    if git_dirty(manifest_path):
+        raise RuntimeError(
+            f"{manifest_path} has uncommitted changes; commit or stash them before --update"
+        )
+    data = load_manifest(manifest_path)
+    src = source_by_id(data, source_id)
+    if "version" not in src:
+        raise RuntimeError(f"source {source_id!r} has no version field to update")
+    old_version = src["version"]
+    src["version"] = new_version
+    zips = {}
+    changed = 0
+    for key, value in src["files"].items():
+        name = render(key, src)
+        old_sha = value if isinstance(value, str) else value["sha256"]
+        if isinstance(value, str):
+            payload = fetcher(source_url(src, name), timeout=180)
+        else:
+            url = source_url(src, render(value["zip"], src))
+            if url not in zips:
+                zips[url] = fetcher(url, timeout=300)
+            with zipfile.ZipFile(io.BytesIO(zips[url])) as zf:
+                try:
+                    payload = zf.read(value["member"])
+                except KeyError:
+                    raise RuntimeError(
+                        f"{url}: member {value['member']} missing; release layout changed"
+                    ) from None
+        new_sha = sha256(payload)
+        print(f"  {name}  {old_sha} -> {new_sha}")
+        if new_sha == old_sha:
+            print(
+                f"  WARNING: {name} is byte-identical to the {old_version} pin",
+                file=sys.stderr,
+            )
+        else:
+            changed += 1
+        if isinstance(value, str):
+            src["files"][key] = new_sha
+        else:
+            value["sha256"] = new_sha
+    if new_version != old_version and changed == 0:
+        raise RuntimeError(
+            f"{source_id}: version moved {old_version} -> {new_version} but no file hash "
+            "changed - the URL template likely served the old asset; refusing to write "
+            f"{manifest_path}"
+        )
+    src["fetchedAt"] = datetime.now(UTC).strftime("%Y-%m-%d")
+    save_manifest(data, manifest_path)
+    print(f"{source_id}: {old_version} -> {new_version} pinned in {manifest_path}")
+    return data
+
+
+# --- entry point ---------------------------------------------------------------------------
+
+
+def vendor_all(manifest, no_local):
+    rows = (
+        vendor_ubl(manifest, no_local)
+        + vendor_fatturapa(manifest)
+        + vendor_schematron(manifest, no_local)
+        + vendor_saxon(manifest, no_local)
+    )
+    write_sources(manifest, rows)
+    print(f"vendor/: {len(rows)} assets, SOURCES.md written ({VENDOR})")
+
+
 def main():
     ap = argparse.ArgumentParser(
         description="Vendor UBL 2.1 / FatturaPA XSDs, the EN 16931 / Peppol / XRechnung "
-        "Schematron rule sets and the SaxonJS browser runtime into vendor/ (make schemas)"
+        "Schematron rule sets and the SaxonJS browser runtime into vendor/ (make schemas). "
+        "Versions and sha256 pins live in tools/rulesets.json; local standards bundles are "
+        "found via STANDARDS_DIRS (os.pathsep-separated, unset = download)."
     )
     ap.add_argument(
         "--no-local",
         action="store_true",
-        help="ignore local standards bundles and download everything",
+        help="ignore STANDARDS_DIRS bundles and download everything",
+    )
+    ap.add_argument(
+        "--update",
+        metavar="SOURCE=VERSION",
+        help="bump one source in tools/rulesets.json (downloads unpinned, rewrites the "
+        "pins, then re-runs the pinned path so the new pins are enforced immediately)",
+    )
+    ap.add_argument(
+        "--manifest",
+        type=Path,
+        default=MANIFEST,
+        help="alternative rulesets.json (default: tools/rulesets.json)",
     )
     args = ap.parse_args()
     try:
-        rows = (
-            vendor_ubl(args.no_local)
-            + vendor_fatturapa()
-            + vendor_schematron(args.no_local)
-            + vendor_saxon(args.no_local)
-        )
-    except (*NETWORK_ERRORS, RuntimeError, ValueError) as exc:
+        if args.update:
+            manifest = update_source(args.update, manifest_path=args.manifest)
+        else:
+            manifest = load_manifest(args.manifest)
+        vendor_all(manifest, args.no_local)
+    except (*NETWORK_ERRORS, RuntimeError, ValueError, KeyError) as exc:
         print(f"ERROR: asset vendoring failed: {exc}", file=sys.stderr)
         return 1
-    write_sources(rows)
-    print(f"vendor/: {len(rows)} assets, SOURCES.md written ({VENDOR})")
     return 0
 
 

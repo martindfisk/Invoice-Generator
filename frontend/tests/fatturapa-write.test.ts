@@ -307,15 +307,24 @@ describe("writeFatturapa", () => {
     const lunch = writeFatturapa(preset("it-restaurant-b2b-fattura"));
     expect(block(lunch, "DatiRicezione")).toContain("<IdDocumento>TAV12-CONTO-00451</IdDocumento>");
 
-    const lyon = writeFatturapa(preset("fr-store-b2b-facturx"));
-    expectOrder(names(block(lyon, "DatiDDT"), 8), ["NumeroDDT", "DataDDT"]);
-    expect(block(lyon, "DatiDDT")).toContain("<NumeroDDT>BL-2026-0873</NumeroDDT>");
-    expect(block(lyon, "DatiDDT")).toContain("<DataDDT>2026-08-25</DataDDT>");
+    // No preset carries a despatch advice, so DatiDDT (2.1.8) is pinned on an augmented
+    // invoice instead.
+    const source = preset("it-restaurant-b2b-fattura");
+    const withDdt = writeFatturapa({
+      ...source,
+      references: {
+        ...source.references,
+        despatchAdvice: { number: "DDT-2026-0087", issueDate: "2026-08-23" },
+      },
+    });
+    expectOrder(names(block(withDdt, "DatiDDT"), 8), ["NumeroDDT", "DataDDT"]);
+    expect(block(withDdt, "DatiDDT")).toContain("<NumeroDDT>DDT-2026-0087</NumeroDDT>");
+    expect(block(withDdt, "DatiDDT")).toContain("<DataDDT>2026-08-23</DataDDT>");
   });
 
   it("omits DatiDDT unless the despatch advice carries the mandatory DataDDT", () => {
-    const source = preset("fr-store-b2b-facturx");
-    const references = { ...source.references, despatchAdvice: { number: "BL-2026-0873" } };
+    const source = preset("it-restaurant-b2b-fattura");
+    const references = { ...source.references, despatchAdvice: { number: "DDT-2026-0087" } };
     expect(writeFatturapa({ ...source, references })).not.toContain("<DatiDDT>");
   });
 
@@ -327,6 +336,9 @@ describe("writeFatturapa", () => {
       expect(parsed.contract, id).toBe(references.contract);
       expect(parsed.tenderOrLot, id).toBe(references.tenderOrLot);
       expect(parsed.invoicedObject, id).toBe(references.invoicedObject);
+      // DataDDT is mandatory in DatiDDT (FatturaPA 1.2.3), so a preset carrying BT-16 must give
+      // it an issue date or it has nowhere to render. UBL's BT-16 is an ID only, so only the
+      // FatturaPA presets carry one.
       expect(parsed.despatchAdvice, id).toEqual(references.despatchAdvice);
       expect(parsed.precedingInvoice, id).toEqual(references.precedingInvoice);
     }

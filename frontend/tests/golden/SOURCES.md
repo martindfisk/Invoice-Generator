@@ -10,18 +10,16 @@ no secrets.
 | `<preset>.ubl.xml` (one per preset)       | `src/ubl-write.ts` from `preset(id)`       | `tests/ubl-write.test.ts`       |
 | `<preset>.uapi.json` (one per preset)     | `src/uapi-map.ts` `toInvoiceTransaction()` | `tests/uapi-map.test.ts`        |
 | `de-hotel-b2b-zugferd.cii.xml`            | `src/cii-write.ts`                         | `tests/cii-write.test.ts`       |
-| `fr-store-b2b-facturx.cii.xml`            | `src/cii-write.ts`                         | `tests/cii-write.test.ts`       |
 | `de-hotel-b2g-xrechnung.xrechnung.xml`    | `src/xrechnung-write.ts`                   | `tests/xrechnung-write.test.ts` |
 
 `*.ubl.xml`, `*.fatturapa.xml` and `*.uapi.json` are written for **every** preset, including the
 cross-format renderings that would never be sent in real life (a Munich hotel invoice serialised as
 FatturaPA, for example). They exist so a change to one writer shows up as a diff for every shape of
 invoice in the model. `*.cii.xml` and `*.xrechnung.xml` are written only for the presets whose own
-format they are — with one exception: the deliberately broken `de-hotel-b2g-broken` (XRechnung) and
-`fr-store-b2g-broken` (CII) have **no** native golden, because `tests/schematron-goldens.test.ts`
-requires every native rendering to come back Schematron-clean and theirs cannot. The rules they fire
-are pinned instead at the model level in `tests/presets.test.ts` and listed under "Deliberate
-defects" below.
+format they are — with one exception: the deliberately broken `de-hotel-b2g-broken` (XRechnung) has
+**no** native golden, because `tests/schematron-goldens.test.ts` requires every native rendering to
+come back Schematron-clean and its cannot. The rules it fires are pinned instead at the model level
+in `tests/presets.test.ts` and listed under "Deliberate defects" below.
 
 Regenerate with `npx vitest run -u` after an intentional writer or mapping change, then read the
 diff before committing.
@@ -78,17 +76,15 @@ diff before committing.
   `IdFiscaleIVA` (both are `minOccurs="0"` in `DatiAnagraficiCessionarioType`) and `Anagrafica`
   takes the `Nome` + `Cognome` branch of the `xs:choice` in `AnagraficaType` instead of
   `Denominazione`.
-- The other `*.fatturapa.xml` files are **negative fixtures**: a Belgian, German or French party
-  cannot satisfy the Italian schema (`CAP` is five digits, `Provincia` is two upper-case letters,
+- The other `*.fatturapa.xml` files are **negative fixtures**: a Belgian or German party cannot
+  satisfy the Italian schema (`CAP` is five digits, `Provincia` is two upper-case letters,
   `Telefono` is at most twelve characters). They are kept because they show what a domestic Italian
-  schema rejects. `fr-store-b2g-broken.fatturapa.xml` fails for a second, deliberate reason as well:
-  with no BT-31 anywhere there is nothing to put in `IdTrasmittente/IdCodice` or in the cedente's
-  mandatory `IdFiscaleIVA`. `backend/tests/test_golden_xsd.py` pins the marker for each.
+  schema rejects. `backend/tests/test_golden_xsd.py` pins the marker for each.
 - `*.cii.xml` is **not** covered by `backend/tests/test_golden_xsd.py`: no CII D16B schema is
   vendored, because `tools/fetch_assets.py` has no redistributable pinned source for it and
   `backend/app/validate.py` has no `cii-*` schema key. `formats.ts` therefore sets
-  `xsdSchemaKey: null` for the `cii` plugin rather than pointing it at a wrong schema. Both CII
-  goldens were checked by hand against the Factur-X 1.08 EN16931 XSD and validate.
+  `xsdSchemaKey: null` for the `cii` plugin rather than pointing it at a wrong schema. The CII
+  golden was checked by hand against the Factur-X 1.08 EN16931 XSD and validates.
 
 ## Document references (BT-10 … BT-26) in the fixtures
 
@@ -118,7 +114,7 @@ bindings and is therefore mapped in FatturaPA only.
 
 ## Identifiers in the fixtures are placeholders
 
-Company names, VAT identifiers, codici fiscali, REA numbers, KBO numbers, SIREN/SIRET numbers,
+Company names, VAT identifiers, codici fiscali, REA numbers, KBO numbers,
 Leitweg-IDs, CIG/CUP codes, IBANs, BICs, SDI destination codes and Peppol participant identifiers in
 `src/presets.ts`, together with the purchase order, sales order, contract, convenzione, delivery
 note, folio and travel-authorisation references, are **obviously fictitious placeholders**; every e-mail address uses the reserved
@@ -132,10 +128,10 @@ values configured in `.env`; nothing in this directory is used to address a real
 would apply (`*.ubl.xml` → `cen-ubl` + `peppol-ubl`, `*.xrechnung.xml` → `cen-ubl` +
 `xrechnung-ubl`, `*.cii.xml` → `en16931-cii`) and pins the exact set of failing rule ids. A
 **native rendering** — a preset serialised in the syntax it declares — must be clean:
-`be-peppol.ubl.xml`, `fr-store-b2g-chorus.ubl.xml`, `de-hotel-b2g-xrechnung.xrechnung.xml`,
-`de-hotel-b2b-zugferd.cii.xml`, `fr-store-b2b-facturx.cii.xml`. `be-peppol-broken.ubl.xml` is the
-one native rendering that cannot be clean — the preset exists to fail a Peppol rule and Belgium's
-own syntax is UBL — so that test needs a deliberately-broken exemption alongside its expectations.
+`be-peppol.ubl.xml`, `de-hotel-b2g-xrechnung.xrechnung.xml`, `de-hotel-b2b-zugferd.cii.xml`.
+`be-peppol-broken.ubl.xml` is the one native rendering that cannot be clean — the preset exists to
+fail a Peppol rule and Belgium's own syntax is UBL — so that test needs a deliberately-broken
+exemption alongside its expectations.
 
 Cross-format renderings keep the findings that follow from the scenario, not from a defect:
 
@@ -160,7 +156,7 @@ accept it. Do not swap the IBAN for one whose rounded value happens to land on 1
 
 ## Deliberate defects
 
-Four presets — one per country — exist to fail, and each fails on something characteristic of that
+Three presets — one per country — exist to fail, and each fails on something characteristic of that
 country's format, so the Validate step teaches a different lesson in each row of the matrix.
 
 ### `broken` (IT, FatturaPA) — the model stage
@@ -190,12 +186,3 @@ over every ICD 0208 identifier — the last two digits must equal `97 - (the fir
 which is `95` — so the endpoint (BT-49) and the legal registration identifier (BT-47) each raise it,
 twice in total. Nothing else in the invoice changes, and the model stage stays clean because the
 Peppol participant id is still syntactically well formed.
-
-### `fr-store-b2g-broken` (FR, Factur-X 1.08 CII for Chorus Pro) — SIRET instead of TVA
-
-The seller files its SIRET in BT-30 (ISO 6523 scheme `0002`) and no numéro de TVA
-intracommunautaire in BT-31, while every line charges the 20% standard rate: `BR-S-02` (fatal, once
-per line). `BR-CO-26` is still satisfied by BT-30, which is exactly why the model stage cannot see
-this and the CEN rule set can. BT-10 has also lost the _code service_ Chorus Pro routes on — a
-platform rejection that no EN 16931 rule in this app can detect, which is the second half of the
-lesson.

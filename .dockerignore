@@ -13,3 +13,4 @@ backend/.venv
 .ruff_cache
 docs
 .claude
+spec/drop

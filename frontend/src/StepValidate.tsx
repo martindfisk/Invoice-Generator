@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { documentTierFateNote } from "./field-fate";
 import { FindingsPanel, type FindingRow } from "./FindingsPanel";
 import { Split } from "./Split";
 import { useIsWide } from "./use-media";
 import { getFormat } from "./formats";
 import { InvoiceWorkbench } from "./InvoiceWorkbench";
-import type { FieldId, Invoice } from "./model";
+import type { FieldId, FormatId, Invoice } from "./model";
 import type { PresetId } from "./presets";
+import { VALIDATION_RULES_SECTION_ID } from "./SettingsDialog";
 import { store, useStore } from "./store";
 import {
   CONTRACT_MISSING_NOTE,
@@ -134,6 +136,28 @@ function StageRows({ stages }: { stages: StageResult[] }) {
               </div>
             )}
             {stage.note && <p className="mt-1 text-[11px] text-muted">{stage.note}</p>}
+            {stage.ruleSets && stage.ruleSets.length > 0 && (
+              <p className="mt-1 text-[11px] text-muted">
+                Rule sets:{" "}
+                {stage.ruleSets.map((set, index) => (
+                  <span key={set.id}>
+                    {index > 0 && ", "}
+                    <span className="font-mono text-ink">
+                      {set.id}
+                      {set.version ? ` ${set.version}` : ""}
+                    </span>
+                  </span>
+                ))}
+                {" · "}
+                <button
+                  type="button"
+                  onClick={() => store.openSettings(VALIDATION_RULES_SECTION_ID)}
+                  className="underline decoration-dotted underline-offset-2 hover:text-ink"
+                >
+                  versions in Settings → Validation rules
+                </button>
+              </p>
+            )}
           </li>
         );
       })}
@@ -141,9 +165,10 @@ function StageRows({ stages }: { stages: StageResult[] }) {
   );
 }
 
-export function StageList({ stages }: { stages: StageResult[] }) {
+export function StageList({ stages, formatId }: { stages: StageResult[]; formatId?: FormatId }) {
   const contract = stages.filter((stage) => isContractStage(stage.id));
   const documentTier = stages.filter((stage) => !isContractStage(stage.id));
+  const fateNote = documentTierFateNote(formatId);
   return (
     <section
       aria-label="Validation stages"
@@ -175,6 +200,14 @@ export function StageList({ stages }: { stages: StageResult[] }) {
           <p className="border-b border-line px-3 py-1 text-[10px] leading-snug text-muted">
             {DOCUMENT_TIER_NOTE}
           </p>
+          {fateNote && (
+            <p
+              data-fate-note="document-tier"
+              className="border-b border-line bg-warning-soft px-3 py-1 text-[10px] leading-snug text-warning-ink"
+            >
+              {fateNote}
+            </p>
+          )}
           <StageRows stages={documentTier} />
         </div>
       </div>
@@ -425,7 +458,7 @@ function Validating({ invoice, presetId }: { invoice: Invoice; presetId: PresetI
             label="Resize the pipeline and the findings"
             defaultFirst={50}
             className="flex-1 pt-1.5"
-            first={<StageList stages={stages} />}
+            first={<StageList stages={stages} formatId={formatId} />}
             second={
               <FindingsPanel
                 stages={stages}

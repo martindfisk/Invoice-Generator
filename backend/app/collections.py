@@ -2,6 +2,8 @@ import json
 import re
 from pathlib import Path
 
+from app.spec import manifest
+
 COLLECTION_GLOB = "fiskaly_e-invoice_*_postman_collection.json"
 PROXY_SKIP = "handled by the proxy"
 ACCOUNT_SKIP = "creates or mutates account resources"
@@ -166,16 +168,30 @@ WAITS = {
 
 
 def load_collections(spec_dir, timeout_s):
+    recorded = manifest(spec_dir)
     collections = {}
     for file in sorted(Path(spec_dir).glob(COLLECTION_GLOB)):
-        collection = parse_collection(file, timeout_s)
+        collection = parse_collection(file, timeout_s, _identify(file, recorded))
         collections[collection["id"]] = collection
     return collections
 
 
-def parse_collection(file, timeout_s):
+def _identify(file, recorded):
+    """Country and version from spec.json, so the filename is not load-bearing."""
+    for entry in (recorded or {}).get("collections", []):
+        if entry["file"] == file.name and entry.get("kind") == "collection":
+            return entry["country"], entry["version"]
     parts = file.stem.split("_")
-    collection_id, version = parts[2], parts[3]
+    if len(parts) < 4:
+        raise ValueError(
+            f"{file.name} is not listed in spec.json and its name does not match "
+            "fiskaly_e-invoice_<cc>_<version>_postman_collection.json; run: make spec"
+        )
+    return parts[2], parts[3]
+
+
+def parse_collection(file, timeout_s, identity):
+    collection_id, version = identity
     document = json.loads(file.read_text())
     steps = []
     for folder, item in _requests(document["item"]):

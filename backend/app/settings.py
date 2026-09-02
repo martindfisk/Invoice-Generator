@@ -8,7 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PERSONAS = ("seller", "buyer")
-COUNTRIES = ("IT", "BE")
+COUNTRIES = ("IT", "BE", "DE")
 
 
 def default_api_version():
@@ -47,6 +47,8 @@ class Settings(BaseSettings):
     seller_taxpayer_id_it: str | None = None
     seller_system_id_be: str | None = None
     seller_taxpayer_id_be: str | None = None
+    seller_system_id_de: str | None = None
+    seller_taxpayer_id_de: str | None = None
 
     buyer_api_key: str | None = None
     buyer_api_secret: str | None = None
@@ -54,6 +56,8 @@ class Settings(BaseSettings):
     buyer_taxpayer_id_it: str | None = None
     buyer_system_id_be: str | None = None
     buyer_taxpayer_id_be: str | None = None
+    buyer_system_id_de: str | None = None
+    buyer_taxpayer_id_de: str | None = None
     buyer_sdi_destination_code: str | None = None
     buyer_peppol_id: str | None = None
 

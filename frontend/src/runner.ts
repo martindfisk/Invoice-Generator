@@ -353,7 +353,7 @@ export async function runSteps(options: RunOptions): Promise<RunOutcome> {
 
 export type SeededVariable = { name: string; value: string; source: string };
 
-const COLLECTION_COUNTRY: Record<string, SettingsCountry> = { it: "IT", be: "BE", de: "BE" };
+const COLLECTION_COUNTRY: Record<string, SettingsCountry> = { it: "IT", be: "BE", de: "DE" };
 
 const MOCK_PLACEHOLDERS: Record<string, string> = {
   eInvoiceSystemId: "demo-e-invoice-system",
@@ -465,11 +465,29 @@ export type RunnerUiState = {
   notesDismissed: boolean;
 };
 
-export function initialRunnerUi(): RunnerUiState {
+const COLLECTION_KEY = "runner:collection";
+
+export function savedCollectionId(): string | null {
+  try {
+    return localStorage.getItem(COLLECTION_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function saveCollectionId(id: string): void {
+  try {
+    localStorage.setItem(COLLECTION_KEY, id);
+  } catch {
+    // Site data disabled: the selection simply is not remembered.
+  }
+}
+
+export function initialRunnerUi(collectionId: string | null = null): RunnerUiState {
   return {
     collections: null,
     collectionsError: null,
-    collectionId: null,
+    collectionId,
     collection: null,
     collectionError: null,
     loading: false,

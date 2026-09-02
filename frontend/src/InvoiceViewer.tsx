@@ -1,9 +1,11 @@
 import { useCallback, useId, useMemo, useState, type KeyboardEvent } from "react";
+import { FATE_LEGEND, FATE_TONE, fateEntry, fateLabel, formatFateNotices } from "./field-fate";
 import type { FormatPlugin } from "./formats";
 import { HumanView, type EditContext } from "./HumanView";
 import { useIsWide } from "./use-media";
 import { useGridSplit } from "./use-split";
-import { JsonView } from "./JsonView";
+import { CoveragePanel } from "./CoveragePanel";
+import { JsonView, type JsonAnnotation } from "./JsonView";
 import type { FieldId, FormatId, Invoice } from "./model";
 import { checkModel } from "./model-rules";
 import { store, useStore } from "./store";
@@ -11,6 +13,7 @@ import { UAPI_DERIVED_PATHS } from "./uapi-map";
 import {
   fieldForPointer,
   indexJson,
+  insertAtPointer,
   lossyGroups,
   OPERATION_PRIMARY_NOTE,
   partialGroups,
@@ -75,6 +78,8 @@ function OperationCaveat({ invoice }: { invoice: Invoice }) {
     </details>
   );
 }
+
+const NO_MARKS: JsonAnnotation[] = [];
 
 const RANK: Record<Severity, number> = { fatal: 0, error: 1, warning: 2, info: 3 };
 
@@ -174,8 +179,43 @@ export function InvoiceViewer({
   const [editing, setEditing] = useState<FieldId | null>(null);
   const panelId = useId();
 
+  const [showFates, setShowFates] = useState(true);
+
   const xmlIndex = useMemo(() => indexXml(xmlText), [xmlText]);
   const jsonIndex = useMemo(() => indexJson(jsonText), [jsonText]);
+  const parsedOperation = useMemo<unknown>(() => {
+    try {
+      return JSON.parse(jsonText);
+    } catch {
+      return undefined;
+    }
+  }, [jsonText]);
+  const insertFields = useCallback(
+    (inserts: { pointer: string; value: unknown }[]) => {
+      let next = jsonText;
+      for (const insert of inserts) {
+        next = insertAtPointer(next, insert.pointer, insert.value);
+      }
+      if (next !== jsonText) onEditJson(next);
+    },
+    [jsonText, onEditJson],
+  );
+  const fateMarks = useMemo<JsonAnnotation[]>(() => {
+    const marks: JsonAnnotation[] = [];
+    for (const entry of jsonIndex.ranges) {
+      if (jsonPrefix !== "" && !entry.pointer.startsWith(`${jsonPrefix}/`)) continue;
+      const fate = fateEntry(format.id, entry.pointer.slice(jsonPrefix.length));
+      if (!fate) continue;
+      marks.push({
+        from: entry.from,
+        to: entry.to,
+        kind: fate.fate,
+        title: `${fateLabel(fate.fate)}${fate.element ? ` · ${fate.element}` : ""} — ${fate.note}`,
+      });
+    }
+    return marks;
+  }, [jsonIndex, jsonPrefix, format.id]);
+  const fateNotices = formatFateNotices(format.id);
   const fields = useMemo(() => buildFieldIndex(invoice, format.map), [invoice, format]);
   const findings = useMemo(() => findingsByField(invoice, provided), [invoice, provided]);
   const path =
@@ -431,6 +471,7 @@ export function InvoiceViewer({
             id={`${panelId}-json`}
             role="tabpanel"
             aria-label="fiskaly JSON view"
+            data-fate-marks={showFates ? fateMarks.length : 0}
             className="flex min-h-0 min-w-0 flex-col bg-canvas"
           >
             <div className="shrink-0 border-b border-line px-3 py-1.5">
@@ -439,7 +480,47 @@ export function InvoiceViewer({
                 {OPERATION_PRIMARY_NOTE}
               </p>
               <OperationCaveat invoice={invoice} />
+              {parsedOperation !== undefined && (
+                <CoveragePanel
+                  operation={parsedOperation}
+                  country={country ?? invoice.seller.address.country}
+                  formatId={format.id}
+                  jsonPrefix={jsonPrefix}
+                  onInsert={insertFields}
+                />
+              )}
               {jsonNote && <p className="mt-0.5 text-[11px] text-warning-ink">{jsonNote}</p>}
+              {fateNotices.length > 0 && (
+                <div className="mt-1 rounded-m bg-warning-soft px-2 py-1.5 text-[11px] text-warning-ink">
+                  {fateNotices.map((notice) => (
+                    <p key={notice.id} data-fate-notice={notice.id} className="mt-1 first:mt-0">
+                      {notice.text}
+                    </p>
+                  ))}
+                </div>
+              )}
+              {fateMarks.length > 0 && (
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted">
+                  <span className="font-semibold">Field fates:</span>
+                  {FATE_LEGEND.map((entry) => (
+                    <span
+                      key={entry.fate}
+                      title={entry.title}
+                      className={`underline decoration-dotted underline-offset-2 ${FATE_TONE[entry.fate]}`}
+                    >
+                      {entry.label}
+                    </span>
+                  ))}
+                  <button
+                    type="button"
+                    aria-pressed={showFates}
+                    onClick={() => setShowFates((current) => !current)}
+                    className="rounded-m border border-line px-1.5 py-0.5 font-medium text-muted hover:border-brand hover:text-ink"
+                  >
+                    {showFates ? "Hide fate marks" : "Show fate marks"}
+                  </button>
+                </div>
+              )}
             </div>
             {jsonError && (
               <p
@@ -454,6 +535,7 @@ export function InvoiceViewer({
                 text={jsonText}
                 label={`${jsonLabel} operation, editable`}
                 range={jsonRange}
+                annotations={showFates ? fateMarks : NO_MARKS}
                 scrollTo={selection?.source !== "json" && edit.source !== "json"}
                 editable
                 onPickOffset={selectPointer}

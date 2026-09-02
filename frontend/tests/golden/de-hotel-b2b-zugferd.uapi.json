@@ -3,9 +3,13 @@
   "document": {
     "number": "DE-MUC-2026-004182",
     "issued_at": "2026-08-26T00:00:00+00:00",
+    "text": "Geschaeftsreise Frau Mustermann, Anreise 24.08.2026, Abreise 27.08.2026",
     "payment_terms": "Zahlbar innerhalb von 14 Tagen ohne Abzug",
     "references": {
       "buyer": "KST-4711-MUSTERMANN",
+      "buyer_routing": "KST-4711",
+      "project": "PRJ-DE-2026-7",
+      "contract": "RAHMEN-2026-0031",
       "purchase_order": "BT-2026-00918"
     }
   },
@@ -90,7 +94,23 @@
         "country": "DE",
         "region": "Bayern"
       },
+      "buyer_id": "0088:4012345000009",
       "company_id": "HRB 98765",
+      "origin": "NATIONAL",
+      "shipping": {
+        "address": {
+          "line": {
+            "type": "STREET_NUMBER",
+            "street": "Zweibrueckenstrasse",
+            "number": "8"
+          },
+          "code": "80331",
+          "city": "Muenchen",
+          "country": "DE",
+          "region": "BY"
+        },
+        "name": "Hotel Isartor Muenchen"
+      },
       "identification": {
         "type": "VAT",
         "number": "812345678"

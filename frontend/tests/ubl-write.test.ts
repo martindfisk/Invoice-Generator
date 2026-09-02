@@ -84,15 +84,28 @@ describe("writeUbl", () => {
   });
 
   it("puts every document reference at its EN 16931 UBL path", () => {
-    const lyon = writeUbl(preset("fr-store-b2b-facturx"));
-    expect(lyon).toContain("<cbc:BuyerReference>CHANTIER-2026-118</cbc:BuyerReference>");
-    expect(lyon).toContain(
-      "<cac:OrderReference>\n    <cbc:ID>BC-2026-0451</cbc:ID>\n" +
-        "    <cbc:SalesOrderID>CDE-RM-2026-1187</cbc:SalesOrderID>\n  </cac:OrderReference>",
+    const base = preset("be-peppol");
+    // No preset carries a sales order, a despatch advice or a project, so the UBL paths for
+    // BT-14, BT-16 and BT-11 are pinned on an augmented invoice instead.
+    const augmented = writeUbl({
+      ...base,
+      references: {
+        ...base.references,
+        salesOrder: "SO-2026-0042",
+        despatchAdvice: { number: "DA-2026-0087", issueDate: "2026-08-25" },
+        project: "PRJ-2026-01",
+      },
+    });
+    expect(augmented).toContain(
+      "<cac:OrderReference>\n    <cbc:ID>PO-BE-2026-014</cbc:ID>\n" +
+        "    <cbc:SalesOrderID>SO-2026-0042</cbc:SalesOrderID>\n  </cac:OrderReference>",
     );
-    expect(lyon).toContain(
-      "<cac:DespatchDocumentReference>\n    <cbc:ID>BL-2026-0873</cbc:ID>\n" +
+    expect(augmented).toContain(
+      "<cac:DespatchDocumentReference>\n    <cbc:ID>DA-2026-0087</cbc:ID>\n" +
         "  </cac:DespatchDocumentReference>",
+    );
+    expect(augmented).toContain(
+      "<cac:ProjectReference>\n    <cbc:ID>PRJ-2026-01</cbc:ID>\n  </cac:ProjectReference>",
     );
 
     const rome = writeUbl(preset("it-restaurant-b2g-fpa12"));
@@ -112,11 +125,6 @@ describe("writeUbl", () => {
         "  </cac:AdditionalDocumentReference>",
     );
     expect(UBL_INVOICED_OBJECT_TYPE_CODE).toBe("130");
-
-    const commune = writeUbl(preset("fr-store-b2g-chorus"));
-    expect(commune).toContain(
-      "<cac:ProjectReference>\n    <cbc:ID>GYMNASE-2026</cbc:ID>\n  </cac:ProjectReference>",
-    );
   });
 
   it("never writes a sales order without the purchase order cac:OrderReference requires", () => {

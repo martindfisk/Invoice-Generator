@@ -12,10 +12,16 @@
   <cac:OrderReference>
     <cbc:ID>BT-2026-00918</cbc:ID>
   </cac:OrderReference>
+  <cac:ContractDocumentReference>
+    <cbc:ID>RAHMEN-2026-0031</cbc:ID>
+  </cac:ContractDocumentReference>
   <cac:AdditionalDocumentReference>
     <cbc:ID>FOLIO-2026-004182</cbc:ID>
     <cbc:DocumentTypeCode>130</cbc:DocumentTypeCode>
   </cac:AdditionalDocumentReference>
+  <cac:ProjectReference>
+    <cbc:ID>PRJ-DE-2026-7</cbc:ID>
+  </cac:ProjectReference>
   <cac:AccountingSupplierParty>
     <cac:Party>
       <cbc:EndpointID schemeID="EM">rechnung@hotel-isartor.example</cbc:EndpointID>

@@ -2,10 +2,17 @@
   "type": "INVOICE",
   "document": {
     "number": "IT-INV-0001",
+    "series": "FT",
     "issued_at": "2026-08-26T00:00:00+00:00",
+    "text": "Fattura di esempio generata dal browser",
     "payment_terms": "Pagamento a 30 giorni data fattura",
     "references": {
-      "purchase_order": "PO-2026-0042"
+      "buyer": "ORG-2026-456",
+      "buyer_routing": "COSTCENTER1",
+      "project": "PRJ-2026-011",
+      "contract": "CTR-2026-114",
+      "purchase_order": "PO-2026-0042",
+      "despatch_advice": "DDT-2026-0077"
     }
   },
   "entries": [
@@ -24,7 +31,9 @@
           }
         },
         "value": {
-          "base": "1500.00"
+          "base": "1500.00",
+          "discount": "0.00",
+          "surcharge": "0.00"
         },
         "vat": {
           "type": "VAT_RATE",
@@ -33,6 +42,14 @@
           "amount": "330.00",
           "exclusive": "1500.00",
           "inclusive": "1830.00"
+        },
+        "product": {
+          "type": "OTHER",
+          "number": "MAN-2026-04",
+          "code": "65112200",
+          "details": {
+            "name": "Servizio di consulenza"
+          }
         }
       },
       "details": {
@@ -114,6 +131,22 @@
         "city": "Roma",
         "country": "IT",
         "region": "RM"
+      },
+      "buyer_id": "0211:09876543210",
+      "origin": "NATIONAL",
+      "shipping": {
+        "address": {
+          "line": {
+            "type": "STREET_NUMBER",
+            "street": "Via Industriale",
+            "number": "99"
+          },
+          "code": "00148",
+          "city": "Roma",
+          "country": "IT",
+          "region": "RM"
+        },
+        "name": "Magazzino Roma"
       },
       "identification": {
         "type": "VAT",

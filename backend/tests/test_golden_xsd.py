@@ -19,22 +19,16 @@ CROSS_FORMAT_INVALID = {
     "de-hotel-b2b-zugferd.fatturapa.xml": "Provincia",
     "de-hotel-b2g-xrechnung.fatturapa.xml": "Provincia",
     "de-hotel-b2g-broken.fatturapa.xml": "Provincia",
-    "fr-store-b2b-facturx.fatturapa.xml": "Provincia",
-    "fr-store-b2g-chorus.fatturapa.xml": "Provincia",
 }
 
 # One preset per country exists to fail. The marker names the element the deliberate defect breaks,
 # so a defect that stops reaching the schema shows up here rather than passing silently.
-#   broken             — buyer postal address with no country code, so Sede has no Nazione.
-#   fr-store-b2g-broken — no BT-31 anywhere, so IdTrasmittente/IdCodice and the cedente's
-#                         mandatory IdFiscaleIVA are both missing. (Its French address would fail
-#                         Provincia too, the way its sibling fr-store-b2g-chorus does.)
+#   broken — buyer postal address with no country code, so Sede has no Nazione.
 # be-peppol-broken and de-hotel-b2g-broken carry business-rule defects only — a wrong mod-97 check
 # digit and two missing XRechnung fields — so their FatturaPA renderings fail on nothing but the
 # cross-format reasons above, and they stay in CROSS_FORMAT_INVALID.
 DELIBERATELY_BROKEN = {
     "broken.fatturapa.xml": "Nazione",
-    "fr-store-b2g-broken.fatturapa.xml": "IdCodice",
 }
 
 EXPECTED_INVALID = {**CROSS_FORMAT_INVALID, **DELIBERATELY_BROKEN}

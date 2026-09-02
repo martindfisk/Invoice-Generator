@@ -65,7 +65,7 @@ info:
     The up-to-date information below is organized in a change log format.
     
     
-    ### <a name="2026-08-25"></a>[2026-08-25](#2026-08-25) SIGN ES Preview
+    ### <a name="2026-08-25"></a>[2026-08-25](#2026-08-25) SIGN ES — Preview
     
     **SIGN ES** 🇪🇸
     
@@ -104,7 +104,7 @@ info:
     
     | Version | SIGN | E-INVOICE |
     | --- | --- | --- |
-    | `2026-06-01` | IT , FR , PT , AT , SE | BE , DE , IT |
+    | `2026-06-01` | IT , FR , PT , SE , AT , ES | BE , DE , IT |
     | `2026-05-04` | IT , FR , PT | BE , DE |
     | `2026-02-03` | IT , FR | BE , DE |
     | `2025-08-12` | IT , FR | — |

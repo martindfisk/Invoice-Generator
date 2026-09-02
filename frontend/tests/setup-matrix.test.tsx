@@ -9,7 +9,6 @@ const COUNTRIES: [string, string][] = [
   ["DE", "Germany"],
   ["IT", "Italy"],
   ["BE", "Belgium"],
-  ["FR", "France"],
 ];
 
 const AUDIENCES = ["B2C", "B2B", "B2G"];

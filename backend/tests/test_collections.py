@@ -2,9 +2,11 @@ import pytest
 
 from app.collections import CAPTURES, load_collections
 from app.settings import Settings
+from app.spec import manifest
 from tests.conftest import api_for, make_settings
 
 SPEC_DIR = Settings.model_fields["spec_dir"].default
+API_VERSION = (manifest(SPEC_DIR) or {}).get("apiVersion")
 TIMEOUT_S = 60.0
 
 DE_RUNNABLE = [
@@ -33,7 +35,7 @@ def collections():
 def test_all_three_collections_parse(collections):
     assert sorted(collections) == ["be", "de", "it"]
     for collection in collections.values():
-        assert collection["version"] == "2026-06-01"
+        assert collection["version"] == API_VERSION
         assert collection["steps"]
         assert collection["name"].startswith("fiskaly E-INVOICE")
 
@@ -185,7 +187,7 @@ async def test_collections_endpoints(api):
     summaries = {entry["id"]: entry for entry in listing.json()}
     assert set(summaries) == {"be", "de", "it"}
     assert summaries["de"]["steps"] == 28
-    assert summaries["de"]["version"] == "2026-06-01"
+    assert summaries["de"]["version"] == API_VERSION
     assert summaries["de"]["notes"] == 6
     assert summaries["be"]["notes"] == 2
     assert summaries["it"]["notes"] == 1
@@ -252,22 +254,29 @@ async def test_passthrough_without_headers_keeps_fields_null(api):
     assert record["run_id"] is None
 
 
-async def test_taxpayer_and_system_list_fixtures_answer_in_mock(api):
+async def test_taxpayer_and_system_lists_start_empty_and_fill_after_provisioning(api):
     _, client = api
-    taxpayers = await client.get("/api/uapi/taxpayers")
-    assert taxpayers.status_code == 200
-    body = taxpayers.json()
+    for path in ("/api/uapi/taxpayers", "/api/uapi/systems"):
+        response = await client.get(path)
+        assert response.status_code == 200
+        assert response.json() == {"results": []}
+
+    provisioned = await client.post(
+        "/api/onboarding/provision", json={"persona": "seller", "country": "BE", "confirm": True}
+    )
+    assert provisioned.status_code == 200
+    taxpayer_id = provisioned.json()["created"]["taxpayer_id"]
+
+    body = (await client.get("/api/uapi/taxpayers")).json()
     assert "_fixture" not in body
     assert body["results"][0]["content"]["type"] == "COMPANY"
-    taxpayer_id = body["results"][0]["content"]["id"]
+    assert body["results"][0]["content"]["id"] == taxpayer_id
 
     single = await client.get(f"/api/uapi/taxpayers/{taxpayer_id}")
     assert single.status_code == 200
     assert single.json()["content"]["id"] == taxpayer_id
 
-    systems = await client.get(f"/api/uapi/systems?taxpayer_id={taxpayer_id}")
-    assert systems.status_code == 200
-    body = systems.json()
+    body = (await client.get(f"/api/uapi/systems?taxpayer_id={taxpayer_id}")).json()
     assert "_fixture" not in body
     assert body["results"][0]["content"]["type"] == "E_INVOICE_SERVICE"
-    assert body["results"][0]["content"]["annotations"]["peppol_id"] == "0208:0123456789"
+    assert body["results"][0]["content"]["annotations"]["peppol_id"] == "0208:1234567890"

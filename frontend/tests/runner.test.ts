@@ -386,6 +386,7 @@ describe("seeding and analysis", () => {
         systems: {
           IT: { system_id: "sys-it", taxpayer_id: "tax-it" },
           BE: { system_id: "sys-be", taxpayer_id: "tax-be" },
+          DE: { system_id: "sys-de", taxpayer_id: "tax-de" },
         },
       },
       buyer: { credentials: { configured: false, source: "none" } },
@@ -397,10 +398,11 @@ describe("seeding and analysis", () => {
     expect(seedValues(seeds)).toEqual({
       apiBaseUrl: "https://test.api.fiskaly.com",
       apiVersion: "2026-06-01",
-      eInvoiceSystemId: "sys-be",
-      taxpayerId: "tax-be",
+      eInvoiceSystemId: "sys-de",
+      taxpayerId: "tax-de",
     });
-    expect(seeds.find((seed) => seed.name === "eInvoiceSystemId")?.source).toContain("BE");
+    // The German collection seeds from the German slot — it used to borrow Belgium's.
+    expect(seeds.find((seed) => seed.name === "eInvoiceSystemId")?.source).toContain("DE");
   });
 
   it("falls back to MOCK placeholders for unconfigured identifiers in mock mode", () => {

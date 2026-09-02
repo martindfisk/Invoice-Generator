@@ -1,0 +1,148 @@
+{
+  "content": {
+    "type": "TRANSACTION",
+    "record": {
+      "id": "<intention_id>"
+    },
+    "operation": {
+      "type": "INVOICE",
+      "document": {
+        "number": "INV-2026-000001",
+        "payment_terms": "Net 30 days",
+        "references": {
+          "buyer": "ORG-2025-456",
+          "project": "PROJECT001",
+          "contract": "CONTRACT001",
+          "purchase_order": "PO2025001",
+          "tender": "TENDER001",
+          "buyer_routing": "COSTCENTER1",
+          "preceding_document": {
+            "number": "DA2025001",
+            "issued_at": "2025-06-01"
+          }
+        }
+      },
+      "seller": {
+        "name": "Accounts Receivable",
+        "phone": "+39123456789",
+        "email": "ar@example.it"
+      },
+      "tax_representative": {
+        "name": "Rappresentante Fiscale S.r.l.",
+        "vat_number": "01234567897",
+        "country": "IT"
+      },
+      "entries": [
+        {
+          "type": "SALE",
+          "data": {
+            "type": "ITEM",
+            "text": "Servizio di consulenza",
+            "unit": {
+              "quantity": "1",
+              "measure": "unit",
+              "factor": "1",
+              "price": {
+                "exclusive": "100.00",
+                "inclusive": "122.00"
+              }
+            },
+            "value": {
+              "base": "100.00",
+              "discount": "0.00",
+              "surcharge": "0.00"
+            },
+            "vat": {
+              "type": "VAT_RATE",
+              "code": "STANDARD",
+              "percentage": "22.00",
+              "amount": "22.00",
+              "exclusive": "100.00",
+              "inclusive": "122.00"
+            }
+          },
+          "details": {
+            "concept": "SERVICE"
+          }
+        }
+      ],
+      "recipients": [
+        {
+          "type": "BUSINESS",
+          "name": "Buyer S.r.l.",
+          "address": {
+            "line": {
+              "type": "STREET_NUMBER",
+              "street": "Via Nazionale",
+              "number": "1"
+            },
+            "code": "00184",
+            "city": "Rome",
+            "country": "IT",
+            "region": "RM"
+          },
+          "identification": {
+            "type": "VAT",
+            "number": "82584750762"
+          },
+          "buyer_id": "0088:5412345000014",
+          "company_id": "MI12345678901234567",
+          "shipping": {
+            "name": "Warehouse Rome",
+            "address": {
+              "line": {
+                "type": "STREET_NUMBER",
+                "street": "Via Industriale",
+                "number": "99"
+              },
+              "code": "00148",
+              "city": "Rome",
+              "country": "IT",
+              "region": "RM"
+            },
+            "date": "2025-06-30"
+          },
+          "invoicing": {
+            "type": "SDI",
+            "destination_code": "ABC1234"
+          }
+        }
+      ],
+      "payments": [
+        {
+          "type": "OUTSTANDING",
+          "details": {
+            "amount": "122.00",
+            "currency": "EUR",
+            "date": "2026-09-24",
+            "discount": "0.00"
+          },
+          "concept": "SERVICE",
+          "instruction": {
+            "type": "CREDIT_TRANSFER",
+            "account": "IT60X0542811101000000123456",
+            "name": "Accounts Receivable",
+            "payment_service_provider": "UNCRITMM"
+          }
+        }
+      ],
+      "breakdown": [
+        {
+          "type": "VAT_RATE",
+          "code": "STANDARD",
+          "percentage": "22.00",
+          "amount": "22.00",
+          "exclusive": "100.00",
+          "inclusive": "122.00"
+        }
+      ],
+      "totals": {
+        "vat": {
+          "amount": "22.00",
+          "exclusive": "100.00",
+          "inclusive": "122.00"
+        }
+      }
+    }
+  }
+}

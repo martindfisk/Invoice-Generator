@@ -140,3 +140,61 @@ async def test_live_mode_still_demands_a_configured_system_id():
         response = await client.get("/api/inbox?persona=buyer&country=IT")
         assert response.status_code == 409
         assert "BUYER_SYSTEM_ID_IT" in response.json()["detail"]
+
+
+async def test_spec_fields_describes_the_payload_surface(api):
+    _, client = api
+    params = {"country": "IT", "operation": "INVOICE"}
+    response = await client.get("/api/spec/fields", params=params)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["profile"] == "IT_EI"
+    assert body["api_version"] == "2026-06-01"
+    assert body["source_sha256"]
+    assert body["warnings"] == []
+    leaves = [field for field in body["fields"] if field["kind"] == "leaf"]
+    assert len(leaves) == 242
+    assert len(body["unions"]) == 14
+    wanted = "/document/references/purchase_order"
+    order = next(field for field in body["fields"] if field["pointer"] == wanted)
+    assert order["example"] == "PO-2025-001234"
+    assert order["required"] is False
+    assert order["schema"] == "AlphaNumerical32"
+
+
+async def test_spec_fields_answers_304_for_an_unchanged_spec(api):
+    _, client = api
+    first = await client.get("/api/spec/fields", params={"country": "IT"})
+    etag = first.headers["etag"]
+    assert etag.startswith('W/"')
+    again = await client.get(
+        "/api/spec/fields", params={"country": "IT"}, headers={"If-None-Match": etag}
+    )
+    assert again.status_code == 304
+    other = await client.get(
+        "/api/spec/fields",
+        params={"country": "IT", "operation": "CORRECTION"},
+        headers={"If-None-Match": etag},
+    )
+    assert other.status_code == 200
+
+
+async def test_spec_fields_rejects_an_unknown_country_or_operation(api):
+    _, client = api
+    unknown = await client.get("/api/spec/fields", params={"country": "FR"})
+    assert unknown.status_code == 422
+    bad = await client.get("/api/spec/fields", params={"operation": "RECEIPT"})
+    assert bad.status_code == 422
+
+
+async def test_only_the_passthrough_claims_the_uapi_prefix():
+    # /api/uapi/{path:path} forwards upstream to test.api.fiskaly.com. Any other route nested
+    # under it would be swallowed and sent to fiskaly as a real call, and logged as one.
+    from app.routes import router
+
+    under = {
+        route.path
+        for route in router.routes
+        if route.path.startswith("/api/uapi") and route.path != "/api/validate/uapi"
+    }
+    assert under == {"/api/uapi/{path:path}"}

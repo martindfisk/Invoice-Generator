@@ -26,6 +26,7 @@
         <NumeroCivico>16</NumeroCivico>
         <CAP>1000</CAP>
         <Comune>Bruxelles</Comune>
+        <Provincia>BE-BRU</Provincia>
         <Nazione>BE</Nazione>
       </Sede>
       <Contatti>
@@ -47,6 +48,7 @@
         <NumeroCivico>86C</NumeroCivico>
         <CAP>1000</CAP>
         <Comune>Brussel</Comune>
+        <Provincia>BE-BRU</Provincia>
         <Nazione>BE</Nazione>
       </Sede>
     </CessionarioCommittente>

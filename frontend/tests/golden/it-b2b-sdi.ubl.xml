@@ -8,9 +8,19 @@
   <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>
   <cbc:Note>Fattura di esempio generata dal browser</cbc:Note>
   <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
+  <cbc:BuyerReference>ORG-2026-456</cbc:BuyerReference>
   <cac:OrderReference>
     <cbc:ID>PO-2026-0042</cbc:ID>
   </cac:OrderReference>
+  <cac:DespatchDocumentReference>
+    <cbc:ID>DDT-2026-0077</cbc:ID>
+  </cac:DespatchDocumentReference>
+  <cac:ContractDocumentReference>
+    <cbc:ID>CTR-2026-114</cbc:ID>
+  </cac:ContractDocumentReference>
+  <cac:ProjectReference>
+    <cbc:ID>PRJ-2026-011</cbc:ID>
+  </cac:ProjectReference>
   <cac:AccountingSupplierParty>
     <cac:Party>
       <cbc:EndpointID schemeID="0211">01234567890</cbc:EndpointID>

@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted
+Accepted. Amended 2026-09-02 by [ADR-0006](0006-drop-in-spec-and-field-metadata.md),
+which adds `spec/drop/` and makes a hand-dropped spec take precedence over the fetched ones.
 
 ## Context
 
@@ -10,7 +11,7 @@ The tool depends on the fiskaly Unified API's OpenAPI spec for generated TypeScr
 
 ## Decision
 
-Fetch the latest public spec at build time from `workspace.fiskaly.com`: `tools/fetch_spec.py` discovers spec URLs via `products.json`, picks the latest CalVer per product for `e-invoice-it` and `e-invoice-be`, and downloads specs and Postman collections into a **committed cache** in `spec/`. If the network is unavailable, the fetch falls back to the committed cache with a loud warning; without a cache it errors instead of continuing silently. The header value the tool sends is read from `spec/version.txt`, and as of today that value is strictly `2026-06-01`.
+Fetch the latest public spec at build time from `workspace.fiskaly.com`: `tools/fetch_spec.py` discovers spec URLs via `products.json`, picks the latest CalVer per product for `e-invoice-it`, `e-invoice-be` and `e-invoice-de`, and downloads specs and Postman collections into a **committed cache** in `spec/`. If the network is unavailable, the fetch falls back to the committed cache with a loud warning; without a cache it errors instead of continuing silently. The header value the tool sends is read from `spec/version.txt`, and as of today that value is strictly `2026-06-01`.
 
 ## Alternatives considered
 
@@ -19,7 +20,7 @@ Fetch the latest public spec at build time from `workspace.fiskaly.com`: `tools/
 
 ## Consequences
 
-- Types are generated fresh from the fetched IT spec (`openapi-typescript spec/…it.yaml → frontend/src/gen/uapi.d.ts`); generated types are git-ignored, not committed — only the raw spec files in `spec/` are.
-- The IT spec is a superset of the BE spec; a drift test compares the `e-invoice-it` and `e-invoice-be` schemas so a divergence in the shared `InvoiceTransaction` shape is caught rather than silently ignored.
+- Types are generated from whichever spec `spec/spec.json` records as active — the dropped all-products spec when present, otherwise the fetched IT spec; generated types are git-ignored, not committed — only the raw spec files in `spec/` are.
+- The three per-country specs were expected to differ, with IT a superset of BE. Measured on 2026-09-02 they do not: all three carry the same 634 `components.schemas` by name, and the 226-schema `InvoiceTransaction` closure is structurally identical across IT, BE and DE — `InvoiceTransaction` itself is byte-identical. The drift test this ADR originally promised was never written; the property it would have asserted holds, and `backend/tests/test_fields.py` now pins the closure's shape instead.
 - `make spec` must run (and is called by `make setup`) before the first build; offline contributors rely on whatever is already committed in `spec/`, which can lag the live API.
 - The backend's default `X-Api-Version` tracks `spec/version.txt` rather than being hardcoded, so an unsupported-version error from fiskaly surfaces loudly instead of failing silently.

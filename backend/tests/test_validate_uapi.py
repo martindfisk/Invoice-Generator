@@ -4,11 +4,14 @@ from pathlib import Path
 
 import pytest
 
+from app.settings import COUNTRIES
+from app.spec import active_spec, load_schemas
 from app.validate import UapiSchemaValidator
 from tests.conftest import api_for, make_settings
 
 SPEC = make_settings().spec_dir
 GOLDEN = Path(__file__).resolve().parents[2] / "frontend" / "tests" / "golden"
+REFERENCE = Path(__file__).resolve().parents[2] / "docs" / "reference" / "fatturapa"
 
 pytestmark = pytest.mark.skipif(not SPEC.exists(), reason="spec/ missing — run make spec")
 
@@ -30,10 +33,22 @@ def test_a_preset_operation_satisfies_the_contract(validator):
     assert validator.validate(golden("be-peppol"), "BE") == {"valid": True, "findings": []}
 
 
-def test_every_golden_operation_resolves_against_both_country_specs(validator):
+def test_the_operation_fiskaly_accepted_validates_clean_for_italy(validator):
+    # docs/reference/fatturapa/tested-payload.json is a real request the fiskaly gateway
+    # accepted and rendered into FatturaPA XML (captured 2026-08-25) — the strongest evidence
+    # that this contract stage matches reality. It also carries fields we never emit
+    # (buyer_routing, shipping, tax_representative, value.discount/surcharge) which the schema
+    # must keep accepting. If this validator ever rejects a payload fiskaly demonstrably
+    # accepted, the bug is ours.
+    body = json.loads((REFERENCE / "tested-payload.json").read_text())
+    operation = body["content"]["operation"]
+    assert validator.validate(operation, "IT") == {"valid": True, "findings": []}
+
+
+def test_every_golden_operation_resolves_for_every_supported_country(validator):
     for path in sorted(GOLDEN.glob("*.uapi.json")):
         operation = json.loads(path.read_text())
-        for country in ("IT", "BE"):
+        for country in COUNTRIES:
             result = validator.validate(operation, country)
             assert isinstance(result["valid"], bool), path.name
             for finding in result["findings"]:
@@ -141,12 +156,36 @@ def test_a_correction_wrapper_validates_its_own_fields_and_the_nested_invoice(va
     ]
 
 
-def test_the_compiled_schema_is_cached_per_country(validator):
+def test_the_compiled_schema_is_cached_by_spec_content(validator):
+    # Keyed on the spec's bytes, not on the country. Every country an all-products spec covers
+    # shares one compiled graph; under the per-country fallback each spec compiles separately.
     first = validator.schema("IT")
     assert validator.schema("IT") is first
-    assert validator.schema("BE") is not first
     assert "InvoiceTransaction" in first["$defs"]
     assert "CorrectionTransaction" in first["$defs"]
+    _, it_digest, _ = load_schemas(SPEC, "IT")
+    _, be_digest, _ = load_schemas(SPEC, "BE")
+    if it_digest == be_digest:
+        assert validator.schema("BE") is first
+    else:
+        assert validator.schema("BE") is not first
+
+
+def test_every_supported_country_resolves_a_spec():
+    # SPEC_COUNTRIES used to omit DE, so German payloads were silently checked against the
+    # Italian spec. Every country in settings.COUNTRIES must resolve to a real file.
+    for country in COUNTRIES:
+        assert active_spec(SPEC, country).exists()
+
+
+def test_compiling_does_not_mutate_the_cached_raw_schemas(validator):
+    schemas, _, _ = load_schemas(SPEC, "IT")
+    before = copy.deepcopy(schemas["InvoiceTransaction"])
+    validator.compile("IT")
+    assert load_schemas(SPEC, "IT")[0]["InvoiceTransaction"] == before
+    # `example` is stripped for validation but must survive in the raw schemas, which is where
+    # the field-metadata extractor reads it from.
+    assert "example" in schemas["SdiDestinationCode"]
 
 
 def test_the_conversion_strips_openapi_only_keywords(validator):

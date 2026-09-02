@@ -31,6 +31,32 @@ const SYNTAXES: { syntax: FormatId; suffix: string }[] = [
 
 const RULE_SETS = [...new Set(Object.values(SCHEMATRON_RULE_SETS).flat())];
 
+const MANIFEST = join(SEF_DIR, "manifest.json");
+
+// The rule-set versions every EXPECTED entry below was reviewed against. A bump must fail
+// here first — with instructions — instead of surfacing as a dozen confusing rule-id diffs.
+const REVIEWED_RULE_SET_VERSIONS: Record<string, string> = {
+  "cen-ubl": "1.3.15",
+  "peppol-ubl": "3.0.20",
+  "xrechnung-ubl": "2.5.0",
+  "en16931-cii": "1.3.15",
+};
+
+const VERSIONS_CHANGED =
+  "rule set versions changed — run npm run schematron:expected, review the diff, then update " +
+  "EXPECTED and REVIEWED_RULE_SET_VERSIONS together";
+
+type ManifestLike = { ruleSets: { id: string; version: string }[] };
+
+function assertReviewedVersions(manifest: ManifestLike): void {
+  const current = Object.fromEntries(
+    manifest.ruleSets
+      .filter((entry) => RULE_SETS.includes(entry.id))
+      .map((entry) => [entry.id, entry.version]),
+  );
+  expect(current, VERSIONS_CHANGED).toEqual(REVIEWED_RULE_SET_VERSIONS);
+}
+
 // public/sef/ is git-ignored and built by `make sef`. Without it there is nothing to run, so the
 // suite skips rather than failing a clean checkout.
 const sefReady = RULE_SETS.every((name) => existsSync(join(SEF_DIR, `${name}.sef.json`)));
@@ -100,21 +126,12 @@ const EXPECTED: Record<string, string[]> = {
     "DE-R-019:warning",
     "PEPPOL-EN16931-CL008:fatal",
   ],
-
-  // Deliberately broken fixture, cross-format: the French seller files its SIRET in BT-30 and no
-  // numero de TVA in BT-31, so the 20% standard rate has no VAT identifier behind it.
-  "fr-store-b2g-broken.ubl.xml": ["BR-S-02:fatal"],
 };
 
 // A preset that exists to fail has no clean native rendering. Its findings are pinned in EXPECTED
 // like every other golden's; only the blanket "a native rendering must be clean" assertion is
 // lifted, and only for these four.
-const DELIBERATELY_BROKEN = new Set([
-  "broken",
-  "be-peppol-broken",
-  "de-hotel-b2g-broken",
-  "fr-store-b2g-broken",
-]);
+const DELIBERATELY_BROKEN = new Set(["broken", "be-peppol-broken", "de-hotel-b2g-broken"]);
 
 // The syntax each preset declares as its own. A golden whose suffix matches it is a native
 // rendering and has to come back clean; nothing here is hand-maintained, so a preset that
@@ -199,8 +216,6 @@ describe.skipIf(!sefReady)("Schematron over every golden", () => {
       "be-peppol.ubl.xml",
       "de-hotel-b2b-zugferd.cii.xml",
       "de-hotel-b2g-xrechnung.xrechnung.xml",
-      "fr-store-b2b-facturx.cii.xml",
-      "fr-store-b2g-chorus.ubl.xml",
     ]);
   });
 
@@ -210,5 +225,35 @@ describe.skipIf(!sefReady)("Schematron over every golden", () => {
       xrechnung: ["cen-ubl", "xrechnung-ubl"],
       cii: ["en16931-cii"],
     });
+  });
+});
+
+// These two do not need the SEFs, so they run on a clean checkout too.
+describe("the EXPECTED table stays honest", () => {
+  it("pins only goldens that exist", () => {
+    const files = new Set(readdirSync(GOLDEN));
+    for (const key of Object.keys(EXPECTED)) {
+      expect(
+        files.has(key),
+        `EXPECTED pins "${key}" but tests/golden/${key} does not exist — remove the stale entry`,
+      ).toBe(true);
+    }
+  });
+
+  it.skipIf(!existsSync(MANIFEST))("was reviewed against the built rule-set versions", () => {
+    const manifest = JSON.parse(readFileSync(MANIFEST, "utf8")) as ManifestLike;
+    assertReviewedVersions(manifest);
+  });
+
+  it("names the expected-diff tool when a version moves", () => {
+    const bumped: ManifestLike = {
+      ruleSets: Object.entries(REVIEWED_RULE_SET_VERSIONS).map(([id, version]) => ({
+        id,
+        version: id === "cen-ubl" ? "9.9.99" : version,
+      })),
+    };
+    expect(() => assertReviewedVersions(bumped)).toThrowError(
+      /rule set versions changed — run npm run schematron:expected/,
+    );
   });
 });

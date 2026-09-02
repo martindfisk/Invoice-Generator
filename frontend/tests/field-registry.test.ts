@@ -144,6 +144,15 @@ const FULL_INVOICE: Complete<Invoice> = {
           riferimentoData: "2026-01-15",
         },
       },
+      uapi: {
+        allowance: "10.00",
+        surcharge: "0.00",
+        itemNumber: "MAN-IMP-04",
+        itemCode: "65112200",
+        purpose: "STANDARD",
+        regulatory: "DPR 633/1972 art. 3",
+        label: "Manutenzione programmata",
+      },
     },
     {
       id: "2",
@@ -167,6 +176,15 @@ const FULL_INVOICE: Complete<Invoice> = {
           riferimentoNumero: "7",
           riferimentoData: "2026-01-08",
         },
+      },
+      uapi: {
+        allowance: "0.00",
+        surcharge: "2.50",
+        itemNumber: "GRN-B-10",
+        itemCode: "40169300",
+        purpose: "GIFT",
+        regulatory: "Reverse charge art. 17 c. 6",
+        label: "Guarnizioni serie B",
       },
     },
   ],
@@ -214,6 +232,24 @@ const FULL_INVOICE: Complete<Invoice> = {
     rounding: "0.00",
     payable: "474.80",
   },
+  uapi: {
+    series: "FT",
+    activityCode: "43.22.01",
+    operationDate: "2026-03-01",
+    buyerAccountingRef: "COSTCENTER1",
+    buyer: { buyerId: "0211:09876543210", origin: "NATIONAL" },
+    delivery: {
+      name: "Magazzino Milano",
+      address: {
+        street: "Via Industriale",
+        number: "99",
+        city: "Milano",
+        postCode: "20157",
+        region: "MI",
+        country: "IT",
+      },
+    },
+  },
 };
 
 // Model leaves that are deliberately absent from the registry, with the reason each one is not a
@@ -236,6 +272,46 @@ const EXCLUDED: Record<string, string> = {
   "buyer.it.rea.capital": "Same as buyer.it.rea.office - IscrizioneREA is seller-only.",
   "buyer.it.rea.soleShareholder": "Same as buyer.it.rea.office - IscrizioneREA is seller-only.",
   "buyer.it.rea.liquidation": "Same as buyer.it.rea.office - IscrizioneREA is seller-only.",
+  "uapi.series":
+    "Carried on the fiskaly operation but rendered by no writer here, so it is deliberately absent from the Compose form and discoverable through the spec coverage panel instead: UAPI document.series has no EN 16931 business term at all.",
+  "uapi.activityCode":
+    "Carried on the fiskaly operation but rendered by no writer here, so it is deliberately absent from the Compose form and discoverable through the spec coverage panel instead: UAPI document.activity_code is a platform code list, not a BT.",
+  "uapi.operationDate":
+    "Carried on the fiskaly operation but rendered by no writer here, so it is deliberately absent from the Compose form and discoverable through the spec coverage panel instead: UAPI document.operation_date is the VAT point date fiskaly derives.",
+  "uapi.buyerAccountingRef":
+    "Carried on the fiskaly operation but rendered by no writer here, so it is deliberately absent from the Compose form and discoverable through the spec coverage panel instead: BT-19 maps to document.references.buyer_routing.",
+  "uapi.buyer.buyerId":
+    "Carried on the fiskaly operation but rendered by no writer here, so it is deliberately absent from the Compose form and discoverable through the spec coverage panel instead: BT-46 maps to recipients[].buyer_id.",
+  "uapi.buyer.origin":
+    "Carried on the fiskaly operation but rendered by no writer here, so it is deliberately absent from the Compose form and discoverable through the spec coverage panel instead: UAPI recipients[].origin is a platform flag defaulting to NATIONAL.",
+  "uapi.delivery.name":
+    "Carried on the fiskaly operation but rendered by no writer here, so it is deliberately absent from the Compose form and discoverable through the spec coverage panel instead: BT-70 maps to recipients[].shipping.name.",
+  "uapi.delivery.address.street":
+    "Carried on the fiskaly operation but rendered by no writer here, so it is deliberately absent from the Compose form and discoverable through the spec coverage panel instead: BG-15 maps to recipients[].shipping.address.",
+  "uapi.delivery.address.number":
+    "Same as uapi.delivery.address.street - part of BG-15 on the operation only.",
+  "uapi.delivery.address.city":
+    "Same as uapi.delivery.address.street - part of BG-15 on the operation only.",
+  "uapi.delivery.address.postCode":
+    "Same as uapi.delivery.address.street - part of BG-15 on the operation only.",
+  "uapi.delivery.address.region":
+    "Same as uapi.delivery.address.street - part of BG-15 on the operation only.",
+  "uapi.delivery.address.country":
+    "Same as uapi.delivery.address.street - part of BG-15 on the operation only.",
+  "lines.{i}.uapi.allowance":
+    "Carried on the fiskaly operation but rendered by no writer here, so it is deliberately absent from the Compose form and discoverable through the spec coverage panel instead: BT-136 maps to entries[].data.value.discount.",
+  "lines.{i}.uapi.surcharge":
+    "Carried on the fiskaly operation but rendered by no writer here, so it is deliberately absent from the Compose form and discoverable through the spec coverage panel instead: BT-141 maps to entries[].data.value.surcharge.",
+  "lines.{i}.uapi.itemNumber":
+    "Carried on the fiskaly operation but rendered by no writer here, so it is deliberately absent from the Compose form and discoverable through the spec coverage panel instead: BT-155/BT-157 map to entries[].data.product.number.",
+  "lines.{i}.uapi.itemCode":
+    "Carried on the fiskaly operation but rendered by no writer here, so it is deliberately absent from the Compose form and discoverable through the spec coverage panel instead: BT-158 maps to entries[].data.product.code.",
+  "lines.{i}.uapi.purpose":
+    "Carried on the fiskaly operation but rendered by no writer here, so it is deliberately absent from the Compose form and discoverable through the spec coverage panel instead: UAPI entries[].details.purpose is a platform flag (STANDARD or GIFT).",
+  "lines.{i}.uapi.regulatory":
+    "Carried on the fiskaly operation but rendered by no writer here, so it is deliberately absent from the Compose form and discoverable through the spec coverage panel instead: UAPI entries[].details.regulatory is free platform text.",
+  "lines.{i}.uapi.label":
+    "Carried on the fiskaly operation but rendered by no writer here, so it is deliberately absent from the Compose form and discoverable through the spec coverage panel instead: UAPI entries[].details.label is free platform text.",
 };
 
 // BTs whose catalog group is a child group of the group they are declared in. EN 16931 nests
@@ -336,7 +412,7 @@ describe("model coverage", () => {
     for (const reason of Object.values(EXCLUDED)) expect(reason.length).toBeGreaterThan(40);
   });
 
-  it("covers every leaf the ten presets populate", () => {
+  it("covers every leaf the presets populate", () => {
     const fromPresets = new Set(PRESET_IDS.flatMap((id) => modelLeaves(preset(id))));
     const missing = [...fromPresets]
       .filter((leaf) => !REGISTRY_SET.has(leaf) && !(leaf in EXCLUDED))

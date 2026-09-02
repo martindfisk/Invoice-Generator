@@ -4,10 +4,10 @@ export type BackendMode = "live" | "mock";
 
 export type Environment = "test" | "live";
 
-export type SettingsCountry = "IT" | "BE";
+export type SettingsCountry = "IT" | "BE" | "DE";
 
 export type CountryConfig = { system_id: string; taxpayer_id: string; peppol_id?: string };
-export type PersonaConfig = { IT?: CountryConfig; BE?: CountryConfig };
+export type PersonaConfig = Partial<Record<SettingsCountry, CountryConfig>>;
 
 export type Config = {
   mode: BackendMode;
@@ -64,6 +64,86 @@ export type SettingsPatch = {
   confirm_live?: boolean;
   personas?: Partial<Record<Persona, PersonaPatch>>;
 };
+
+export type OnboardingCountry = "IT" | "BE" | "DE";
+
+export type OnboardingEntity = {
+  id: string;
+  type?: string | null;
+  state?: string | null;
+  name?: string | null;
+};
+
+export type OnboardingTaxpayer = {
+  id: string;
+  state?: string | null;
+  country?: string | null;
+  name?: string | null;
+  vat_id?: string | null;
+  fiscalization_type?: string | null;
+};
+
+export type OnboardingSystem = {
+  id: string;
+  type?: string | null;
+  state?: string | null;
+  mode?: string | null;
+  taxpayer_id?: string | null;
+  location_id?: string | null;
+  compliance_state?: string | null;
+  peppol_id?: string | null;
+  registrations?: { type: string }[] | null;
+  blocked_by?: string | null;
+};
+
+// `organizations` and `subjects` land with the newer backend; the tree renders the counts
+// alone when an older backend omits them.
+export type OnboardingStatus = {
+  persona: string;
+  environment: Environment;
+  credentials: CredentialState;
+  counts: { organizations: number; subjects: number; taxpayers: number; systems: number };
+  organizations?: OnboardingEntity[] | null;
+  subjects?: OnboardingEntity[] | null;
+  taxpayers: OnboardingTaxpayer[];
+  systems: OnboardingSystem[];
+  ready: Partial<Record<OnboardingCountry, boolean>>;
+  missing: string[];
+};
+
+export type ProvisionStep = {
+  name: string;
+  method: string;
+  path: string;
+  status: "passed" | "failed" | "skipped";
+  id?: string | null;
+  error?: unknown;
+};
+
+export type ProvisionResult = {
+  steps: ProvisionStep[];
+  created: { taxpayer_id?: string | null; location_id?: string | null; system_id?: string | null };
+  ready: boolean;
+};
+
+export type ProvisionRequest = {
+  persona: Persona;
+  country: OnboardingCountry;
+  confirm: true;
+  reuse?: boolean;
+  taxpayer?: Record<string, unknown>;
+};
+
+export function getOnboardingStatus(persona: Persona): Promise<OnboardingStatus> {
+  const query = new URLSearchParams({ persona });
+  return request("GET", `/api/onboarding/status?${query}`);
+}
+
+// The IT body carries FISCONLINE credentials; they travel in this one request and are never
+// kept in the store, the log or localStorage.
+export function provisionCountry(body: ProvisionRequest): Promise<ProvisionResult> {
+  return request("POST", "/api/onboarding/provision", body);
+}
 
 export type RecordLog = { severity?: string; message?: string; code?: string };
 

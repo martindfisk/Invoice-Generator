@@ -12,7 +12,8 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "gen-types": "node scripts/gen-types.mjs"
+    "gen-types": "node scripts/gen-types.mjs",
+    "schematron:expected": "node scripts/schematron-expected.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.0",

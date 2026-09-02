@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { normaliseMode, type ApiCall, type Persona } from "./api-log";
 import { getConfig, getSettings, type Config, type Settings } from "./uapi-client";
-import { initialRunnerUi, type RunnerUiState } from "./runner";
+import { initialRunnerUi, savedCollectionId, type RunnerUiState } from "./runner";
 import {
   initialWorkflow,
   persistWorkflow,
@@ -16,6 +16,8 @@ export type Theme = "light" | "dark";
 
 export type LogFocus = { recordId: string; nonce: number } | null;
 
+export type SettingsRequest = { section: string; nonce: number } | null;
+
 export type State = {
   workflow: WorkflowState;
   section: Section;
@@ -27,6 +29,7 @@ export type State = {
   config: Config | null;
   settings: Settings | null;
   settingsError: string | null;
+  settingsRequest: SettingsRequest;
   layoutNonce: number;
 };
 
@@ -82,7 +85,7 @@ export function createStore(initial: Partial<State> = {}) {
   let state: State = {
     workflow: initialWorkflow(),
     section: readSection(),
-    runner: initialRunnerUi(),
+    runner: initialRunnerUi(savedCollectionId()),
     mode: "unknown",
     calls: [],
     theme: localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light",
@@ -90,6 +93,7 @@ export function createStore(initial: Partial<State> = {}) {
     config: null,
     settings: null,
     settingsError: null,
+    settingsRequest: null,
     layoutNonce: 0,
     ...initial,
   };
@@ -138,6 +142,11 @@ export function createStore(initial: Partial<State> = {}) {
     },
     focusRecord(recordId: string) {
       update({ focus: { recordId, nonce: (state.focus?.nonce ?? 0) + 1 } });
+    },
+    // Anything in the app can send the user to a specific Settings section (e.g. the Validate
+    // step's rule-set versions link); the SettingsMenu opens the dialog and scrolls there.
+    openSettings(section: string) {
+      update({ settingsRequest: { section, nonce: (state.settingsRequest?.nonce ?? 0) + 1 } });
     },
     setTheme(theme: Theme) {
       localStorage.setItem(THEME_KEY, theme);

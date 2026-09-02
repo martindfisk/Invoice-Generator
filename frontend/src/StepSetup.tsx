@@ -3,13 +3,12 @@ import { listPresets, preset, type PresetMeta } from "./presets";
 import { store, useStore } from "./store";
 import { useIsWide } from "./use-media";
 
-const COUNTRY_ORDER = ["DE", "IT", "BE", "FR"];
+const COUNTRY_ORDER = ["DE", "IT", "BE"];
 
 const COUNTRY_NAMES: Record<string, string> = {
   DE: "Germany",
   IT: "Italy",
   BE: "Belgium",
-  FR: "France",
 };
 
 const AUDIENCE_ORDER = ["B2C", "B2B", "B2G"];

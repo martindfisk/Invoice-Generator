@@ -1,3 +1,3 @@
 # Memory index
 
-- [Runner frontend gotchas](project-runner-gotchas.md) — file-casing collision on macOS, step_name in CallRecord, MOCK placeholder ids, null-equals asserts
+- [Runner frontend gotchas](project-runner-gotchas.md) — file-casing, step_name, MOCK placeholders, shared-recorder e2e races, onboarding state vocabularies

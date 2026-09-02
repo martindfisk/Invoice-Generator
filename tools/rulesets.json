@@ -1,0 +1,242 @@
+{
+  "$comment": "Pinned versions + sha256 for everything tools/fetch_assets.py vendors and frontend/scripts/build-sef.mjs compiles. Bump via: python3 tools/fetch_assets.py --update <source>=<version>. Templates may use {version}, {file} and any key from vars.",
+  "sources": [
+    {
+      "id": "ubl",
+      "version": "2.1",
+      "licence": "OASIS UBL 2.1 OS (2013-11-04), (c) OASIS Open 2013",
+      "distribution": "raw",
+      "urlTemplate": "https://docs.oasis-open.org/ubl/os-UBL-2.1/xsdrt/{file}",
+      "homepage": "https://docs.oasis-open.org/ubl/os-UBL-2.1/",
+      "localSubdirs": [
+        "Germany/xrechnung-3.0.2-bundle-2026-01-31/xrechnung-3.0.2-validator-configuration-2026-01-31/resources/ubl/2.1/xsd",
+        "countries/e-invoicing (all countries)/de/standards_formats/xrechnung-3.0.2-bundle-2026-01-31/xrechnung-3.0.2-validator-configuration-2026-01-31/resources/ubl/2.1/xsd"
+      ],
+      "files": {
+        "maindoc/UBL-Invoice-2.1.xsd": "3a5aacd823f0e5b8f25ae7b5191c2002d5333ba351d87de9371ed62dca2b2b0c",
+        "maindoc/UBL-CreditNote-2.1.xsd": "1e117b6c1ab713604b29b0d685442a81a0c78a82575445ee8c43e6050cda7454",
+        "common/CCTS_CCT_SchemaModule-2.1.xsd": "dd546e4809df86b6445589f69f0d6c9df162840ae386574ddfc1da7638103e15",
+        "common/UBL-CommonAggregateComponents-2.1.xsd": "580b5af6f68f7f556bd15945ba0e819cbf561442c81694f9b9468036ebedec4d",
+        "common/UBL-CommonBasicComponents-2.1.xsd": "a3b349bf92e5cff26e303d2f05b7e00c884dcafcfd9e12755fb80289abf5e22e",
+        "common/UBL-CommonExtensionComponents-2.1.xsd": "ad7a4e490978adfbcfc5ec0bb20941cf11ac960ccf0c4de8791a7c731a8dbe87",
+        "common/UBL-CommonSignatureComponents-2.1.xsd": "4fa9e2370100040fe14c43e135ef77e2eb66b21cb8dbfc2ffb8d82ae991fe92e",
+        "common/UBL-CoreComponentParameters-2.1.xsd": "8be3379dbdcbcc7802fafdd16bac72c48fff1c0bb364213a31a17911dd06100b",
+        "common/UBL-ExtensionContentDataType-2.1.xsd": "fcee77a11870208e6377ea6311b9f2a050bca24bdad8606ea02d71e9f9e72f8d",
+        "common/UBL-QualifiedDataTypes-2.1.xsd": "7dcb156e610239c97ae70940cf4653b88e48c3595bf5f56a2204a32e2893e6cf",
+        "common/UBL-SignatureAggregateComponents-2.1.xsd": "9234c2ca48dbfa9a22a786112bb075c5922a305170920eaab1e3c04fa0b7344b",
+        "common/UBL-SignatureBasicComponents-2.1.xsd": "0fbe2d7afff0c1e11164b8ec83e13f18801021c3c87e390a9d76f9cf862f6a64",
+        "common/UBL-UnqualifiedDataTypes-2.1.xsd": "09052d406b4293e2a5f9c2bfee6df10ad4d8d5f0b36e24a6349d7f7936d89eb6",
+        "common/UBL-XAdESv132-2.1.xsd": "a4f726bcf8cc3f7d9ffa4dab99e005535a8e8b60dced1e5d94578d2e05afa96e",
+        "common/UBL-XAdESv141-2.1.xsd": "1fa4625e9cefcb7a9abb5ac1b64315547450031eece8a55bd584e4ba4b79dbc1",
+        "common/UBL-xmldsig-core-schema-2.1.xsd": "101909c9f06456d61ddcc4fb982f1d40dc357b439f393b1a2eb46e42acd60809"
+      },
+      "fetchedAt": "2026-08-26"
+    },
+    {
+      "id": "fatturapa",
+      "version": "1.2.3",
+      "licence": "fatturapa.gov.it copyright notice (all rights reserved; local personal-use storage only)",
+      "distribution": "raw",
+      "urlTemplate": "https://www.fatturapa.gov.it/export/documenti/fatturapa/v1.4/{file}",
+      "homepage": "https://www.fatturapa.gov.it/it/norme-e-regole/documentazione-fattura-elettronica/formato-fatturapa/",
+      "files": {
+        "Schema_VFPR12_v{version}.xsd": "152944f6eef9f5d69ef6e955ee173b32142b00a8c1c5222fc97dfab5910e8a8c"
+      },
+      "fetchedAt": "2026-08-26"
+    },
+    {
+      "id": "xmldsig",
+      "licence": "W3C Software and Document Notice and License",
+      "distribution": "raw",
+      "urlTemplate": "https://www.w3.org/TR/2002/REC-xmldsig-core-20020212/{file}",
+      "homepage": "https://www.w3.org/TR/xmldsig-core/",
+      "files": {
+        "xmldsig-core-schema.xsd": "35cf8197da812c85e40d57891b35c94187569ed474a2dac813ce5090dafcd35c"
+      },
+      "fetchedAt": "2026-08-26"
+    },
+    {
+      "id": "gobl",
+      "version": "1.2.2",
+      "licence": "Apache-2.0 (invopop/gobl.fatturapa)",
+      "distribution": "raw",
+      "urlTemplate": "https://raw.githubusercontent.com/invopop/gobl.fatturapa/main/schemas/{file}",
+      "homepage": "https://github.com/invopop/gobl.fatturapa",
+      "files": {
+        "FatturaPA_v{version}.xsd": "4c427d40ea3eadea4bd46e9f3379e401825cc610f3489c17c9e045b4310b971b",
+        "xmldsig-core.xsd": "35cf8197da812c85e40d57891b35c94187569ed474a2dac813ce5090dafcd35c"
+      },
+      "fetchedAt": "2026-08-26"
+    },
+    {
+      "id": "cen",
+      "version": "1.3.15",
+      "tag": "validation-{version}",
+      "licence": "EUPL-1.2 (CEN/TC 434 validation artefacts {version})",
+      "distribution": "zip",
+      "urlTemplate": "https://github.com/ConnectingEurope/eInvoicing-EN16931/releases/download/validation-{version}/{file}",
+      "homepage": "https://github.com/ConnectingEurope/eInvoicing-EN16931/releases",
+      "localSubdirs": [
+        "countries/e-invoicing (all countries)/EN16931 standard/ubl",
+        "countries/e-invoicing (all countries)/EN16931 standard/cii"
+      ],
+      "files": {
+        "EN16931-UBL-validation.xslt": {
+          "zip": "en16931-ubl-{version}.zip",
+          "member": "xslt/EN16931-UBL-validation.xslt",
+          "sha256": "c1caf4926947a3b6da52c8247dcf9e67ba4cf5fbd562bdf0528b2b8c51af2d0d"
+        },
+        "EN16931-CII-validation.xslt": {
+          "zip": "en16931-cii-{version}.zip",
+          "member": "xslt/EN16931-CII-validation.xslt",
+          "sha256": "e55f1b01ffcbcc037dd1b9d01c52423a3f91f45a2e966e6bc8a56ea6c69188b6"
+        }
+      },
+      "fetchedAt": "2026-08-26"
+    },
+    {
+      "id": "xrechnung",
+      "version": "2.5.0",
+      "vars": { "cius": "3.0.2" },
+      "tag": "v{version}",
+      "licence": "Apache-2.0 (KoSIT / Koordinierungsstelle fuer IT-Standards, xrechnung-schematron {version})",
+      "distribution": "zip",
+      "urlTemplate": "https://github.com/itplr-kosit/xrechnung-schematron/releases/download/v{version}/{file}",
+      "homepage": "https://github.com/itplr-kosit/xrechnung-schematron/releases",
+      "localSubdirs": [
+        "Germany/xrechnung-{cius}-bundle-2026-01-31/xrechnung-{cius}-schematron-{version}"
+      ],
+      "files": {
+        "XRechnung-UBL-validation.xsl": {
+          "zip": "xrechnung-{cius}-schematron-{version}.zip",
+          "member": "schematron/ubl/XRechnung-UBL-validation.xsl",
+          "sha256": "0cadcbde2eb320c2e7e83a8057b93bc48076e223dda36308e31704684ee9ecf3"
+        },
+        "XRechnung-CII-validation.xsl": {
+          "zip": "xrechnung-{cius}-schematron-{version}.zip",
+          "member": "schematron/cii/XRechnung-CII-validation.xsl",
+          "sha256": "ce8f257114eccb49d369a2c77c6cccd7d3cd9f1286e9ff158b543a1311182b2a"
+        },
+        "XRechnung-LICENSE.txt": {
+          "zip": "xrechnung-{cius}-schematron-{version}.zip",
+          "member": "LICENSE",
+          "sha256": "57e93bb611b8aeb93ff0f23b271a23291217b0016f6e66297dfd5e9467538a5f"
+        }
+      },
+      "fetchedAt": "2026-08-26"
+    },
+    {
+      "id": "peppol",
+      "version": "3.0.20",
+      "title": "Peppol BIS Billing {version} (2025 November release)",
+      "tag": "v{version}",
+      "licence": "OpenPeppol AISBL, attribution required (v{version})",
+      "distribution": "raw",
+      "urlTemplate": "https://raw.githubusercontent.com/OpenPEPPOL/peppol-bis-invoice-3/v{version}/rules/sch/{file}",
+      "homepage": "https://github.com/OpenPEPPOL/peppol-bis-invoice-3",
+      "files": {
+        "PEPPOL-EN16931-UBL.sch": "5ddf3a2f6633147b20b7805df9902d825af1a984f10014fcee186d4170364b1d",
+        "CEN-EN16931-UBL.sch": "bdcbb7b702cce55c7f8c789bef0cb9bebf6d376140c1776e683bd6d9bc0ad331"
+      },
+      "fetchedAt": "2026-08-26"
+    },
+    {
+      "id": "skeleton",
+      "version": "72f7f7c9c46236f073bc59b60869b79528890fd0",
+      "licence": "MIT (Schematron/schematron, Rick Jelliffe / Academia Sinica)",
+      "distribution": "raw",
+      "urlTemplate": "https://raw.githubusercontent.com/Schematron/schematron/{version}/trunk/schematron/code/{file}",
+      "homepage": "https://github.com/Schematron/schematron",
+      "files": {
+        "iso_dsdl_include.xsl": "43ff20a1afd89d8a744d1c0b8df94ac5559ffa6a820d1ffbf508d6431ee4fdd9",
+        "iso_abstract_expand.xsl": "c5267f124abf23eeb6669884e40a98607c055bfaa1f39e73b7d578feceeb6e46",
+        "iso_svrl_for_xslt2.xsl": "0588d617924a0686255f6d182633d434c7986d561be8fcc3b363907d3f671b26",
+        "iso_schematron_skeleton_for_saxon.xsl": "95f3195d9f437ea8ff5f75d1a27f4e68ae20b236fe0d4a217bb4209f498a10a3"
+      },
+      "fetchedAt": "2026-08-26"
+    },
+    {
+      "id": "saxon",
+      "version": "2.7",
+      "licence": "Saxonica Ltd proprietary licence v1.0 (June 2020); binary redistribution permitted as part of an application, copyright notice must be reproduced",
+      "distribution": "zip",
+      "urlTemplate": "https://downloads.saxonica.com/SaxonJS/2/{file}",
+      "homepage": "https://www.saxonica.com/download/javascript.xml",
+      "files": {
+        "SaxonJS2.rt.js": {
+          "zip": "SaxonJS-{version}.zip",
+          "member": "saxon-js/SaxonJS2.rt.js",
+          "sha256": "7704990d3bfd64e6621ddf3939943be13a8cc20c17687e0f2dd1ca3d03434e88"
+        },
+        "LICENSE.txt": {
+          "zip": "SaxonJS-{version}.zip",
+          "member": "saxon-js/LICENSE.txt",
+          "sha256": "73f09f080333cbf539c255dc55ea706a36f31e58ccd2c8f67929a995a768204f"
+        }
+      },
+      "fetchedAt": "2026-08-26"
+    }
+  ],
+  "ruleSets": [
+    {
+      "id": "en16931-ubl",
+      "source": "cen",
+      "file": "EN16931-UBL-validation.xslt",
+      "compile": "none",
+      "formats": [],
+      "order": 0,
+      "title": "CEN/TC 434 EN 16931 UBL",
+      "licence": "EUPL-1.2 (CEN/TC 434 validation artefacts)"
+    },
+    {
+      "id": "en16931-cii",
+      "source": "cen",
+      "file": "EN16931-CII-validation.xslt",
+      "compile": "none",
+      "formats": ["cii"],
+      "order": 0,
+      "title": "CEN/TC 434 EN 16931 CII",
+      "licence": "EUPL-1.2 (CEN/TC 434 validation artefacts)"
+    },
+    {
+      "id": "peppol-ubl",
+      "source": "peppol",
+      "file": "PEPPOL-EN16931-UBL.sch",
+      "compile": "sch",
+      "formats": ["ubl"],
+      "order": 1,
+      "title": "Peppol BIS Billing",
+      "licence": "OpenPeppol AISBL (redistribution with attribution)"
+    },
+    {
+      "id": "cen-ubl",
+      "source": "peppol",
+      "file": "CEN-EN16931-UBL.sch",
+      "compile": "sch",
+      "formats": ["ubl", "xrechnung"],
+      "order": 0,
+      "title": "CEN/TC 434 EN 16931 UBL",
+      "licence": "EUPL-1.2 (CEN/TC 434), redistributed by OpenPeppol"
+    },
+    {
+      "id": "xrechnung-ubl",
+      "source": "xrechnung",
+      "file": "XRechnung-UBL-validation.xsl",
+      "compile": "none",
+      "formats": ["xrechnung"],
+      "order": 1,
+      "title": "KoSIT XRechnung {cius} UBL Schematron",
+      "licence": "Apache-2.0 (KoSIT xrechnung-schematron)"
+    },
+    {
+      "id": "xrechnung-cii",
+      "source": "xrechnung",
+      "file": "XRechnung-CII-validation.xsl",
+      "compile": "none",
+      "formats": [],
+      "order": 1,
+      "title": "KoSIT XRechnung {cius} CII Schematron",
+      "licence": "Apache-2.0 (KoSIT xrechnung-schematron)"
+    }
+  ]
+}

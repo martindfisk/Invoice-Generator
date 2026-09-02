@@ -3,7 +3,7 @@ import { FORMAT_IDS, getFormat } from "../src/formats";
 import { preset } from "../src/presets";
 import { runSchematron } from "../src/schematron.worker";
 import { toInvoiceTransaction } from "../src/uapi-map";
-import { specCountry, UAPI_SCHEMA_ENDPOINT } from "../src/uapi-schema-client";
+import { UAPI_SCHEMA_ENDPOINT } from "../src/uapi-schema-client";
 import {
   checkWellFormed,
   countBySeverity,
@@ -289,21 +289,19 @@ describe("the uapi-schema stage", () => {
     expect(found.findings[0].pointer).toBe("/entries/0/data/unit/factor");
   });
 
-  it("falls back to a fetched spec for a country fiskaly does not publish", async () => {
-    expect(specCountry("IT")).toBe("IT");
-    expect(specCountry("be")).toBe("BE");
-    expect(specCountry("DE")).toBeUndefined();
-    expect(specCountry(undefined)).toBeUndefined();
-
-    schemaResponse([], "IT");
+  it("checks a German invoice against the DE spec instead of substituting IT", async () => {
+    // SPEC_COUNTRIES omitted DE, so the country was dropped from the request body and the
+    // backend silently fell back to Italy. Every supported country must now be sent as itself.
+    schemaResponse([], "DE");
     const invoice = preset("de-hotel-b2b-zugferd");
     const found = stage(
       await runValidation({ invoice, formatId: "cii", xml: getFormat("cii").write(invoice) }),
       "uapi-schema",
     );
     expect(found.status).toBe("passed");
-    expect(bodyOf(UAPI_SCHEMA_ENDPOINT).country).toBeUndefined();
-    expect(found.note).toContain("fiskaly publishes no DE spec");
+    expect(bodyOf(UAPI_SCHEMA_ENDPOINT).country).toBe("DE");
+    expect(found.note).toContain("DE");
+    expect(found.note).not.toContain("checked against the");
   });
 
   it("names the spec it checked against and never claims fiskaly answered", async () => {
@@ -431,9 +429,18 @@ describe("the schematron stage", () => {
     ]);
     const results = await runValidation(ublInput());
     const found = stage(results, "schematron");
-    expect(schematron).toHaveBeenCalledWith(expect.any(String), ["cen-ubl", "peppol-ubl"]);
+    // No usable manifest is served here, so the resolver falls back to the built-in list,
+    // keyed by URL — the pre-manifest behaviour.
+    expect(schematron).toHaveBeenCalledWith(expect.any(String), [
+      { id: "cen-ubl", url: "/sef/cen-ubl.sef.json", key: "/sef/cen-ubl.sef.json" },
+      { id: "peppol-ubl", url: "/sef/peppol-ubl.sef.json", key: "/sef/peppol-ubl.sef.json" },
+    ]);
     expect(found.status).toBe("failed");
     expect(found.note).toContain("cen-ubl (150 ms)");
+    expect(found.ruleSets).toEqual([
+      { id: "cen-ubl", version: undefined },
+      { id: "peppol-ubl", version: undefined },
+    ]);
     expect(found.findings[0]).toMatchObject({
       source: "schematron",
       ruleId: "BR-CO-15",
@@ -443,6 +450,68 @@ describe("the schematron stage", () => {
       bt: "BT-112",
       test: "a = b",
     });
+  });
+
+  it("resolves keys and versions through the manifest and names both in the note", async () => {
+    const manifest = {
+      generatedAt: "2026-09-01T00:00:00Z",
+      saxonJs: "2.7.0",
+      ruleSets: [
+        {
+          id: "cen-ubl",
+          title: "CEN/TC 434 EN 16931 UBL 1.3.15",
+          version: "1.3.15",
+          licence: "EUPL-1.2",
+          formats: ["ubl", "xrechnung"],
+          order: 0,
+          sef: { sha256: "sha-cen" },
+        },
+        {
+          id: "peppol-ubl",
+          title: "Peppol BIS Billing 3.0",
+          version: "3.0.20",
+          licence: "OpenPeppol AISBL",
+          formats: ["ubl"],
+          order: 1,
+          sef: { sha256: "sha-peppol" },
+        },
+      ],
+    };
+    fetchMock.mockImplementation((url: string) =>
+      Promise.resolve(
+        url === UAPI_SCHEMA_ENDPOINT
+          ? jsonResponse({ valid: true, country: "BE", findings: [] })
+          : url === "/sef/manifest.json"
+            ? jsonResponse(manifest)
+            : jsonResponse({ valid: true, findings: [] }),
+      ),
+    );
+    schematron.mockResolvedValue([
+      { ruleSet: "cen-ubl", svrl: svrl(""), loadMs: 1, runMs: 2 },
+      { ruleSet: "peppol-ubl", svrl: svrl(""), loadMs: 1, runMs: 1 },
+    ]);
+    const found = stage(await runValidation(ublInput()), "schematron");
+    expect(schematron).toHaveBeenCalledWith(expect.any(String), [
+      {
+        id: "cen-ubl",
+        url: "/sef/cen-ubl.sef.json?v=sha-cen",
+        key: "sha-cen",
+        version: "1.3.15",
+      },
+      {
+        id: "peppol-ubl",
+        url: "/sef/peppol-ubl.sef.json?v=sha-peppol",
+        key: "sha-peppol",
+        version: "3.0.20",
+      },
+    ]);
+    expect(found.note).toContain("cen-ubl 1.3.15 (3 ms)");
+    expect(found.note).toContain("peppol-ubl 3.0.20 (2 ms)");
+    expect(found.note).toContain(PREDICTED_DOCUMENT_NOTE);
+    expect(found.ruleSets).toEqual([
+      { id: "cen-ubl", version: "1.3.15" },
+      { id: "peppol-ubl", version: "3.0.20" },
+    ]);
   });
 
   it("reports the same rule at the same place once across rule sets", async () => {

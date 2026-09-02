@@ -1,19 +1,20 @@
 # frontend/public/sef provenance
 
-Generated 2026-08-26T14:17:54Z by `frontend/scripts/build-sef.mjs` (`make sef`). Do not hand-edit.
-Inputs come from `vendor/schematron/` (`make schemas`); see `vendor/SOURCES.md` for their pins.
+Generated 2026-09-02T06:47:02Z by `frontend/scripts/build-sef.mjs` (`make sef`). Do not hand-edit.
+Inputs come from `vendor/schematron/` (`make schemas`); versions and sha256 pins live in
+`tools/rulesets.json`. `manifest.json` next to this file is the machine-readable catalogue.
 
 SEF is tied to the SaxonJS major version - rebuild after upgrading `saxon-js`.
 Built with saxon-js 2.7.0 (declared ^2.7.0), xslt3 2.7.0 (declared ^2.7.0).
 
 | sef | build pipeline | rule set | licence | raw | gzip | sha256 | built |
 |---|---|---|---|---|---|---|---|
-| en16931-ubl.sef.json | EN16931-UBL-validation.xslt | CEN/TC 434 EN 16931 UBL 1.3.15 (last update 2025-10-16) | EUPL-1.2 (CEN/TC 434 validation artefacts) | 6.83 MB | 157 kB | 36b2f5aba2c51a61e406f714c8e08c256b5ae2e499d61e9db305d0f52f0f8281 | 2026-08-26 |
-| en16931-cii.sef.json | EN16931-CII-validation.xslt | CEN/TC 434 EN 16931 CII 1.3.15 (last update 2025-10-16) | EUPL-1.2 (CEN/TC 434 validation artefacts) | 4.89 MB | 135 kB | f7f2b93667627619d70ccec27884c0615d629733479867b554690011cd84ddf8 | 2026-08-26 |
-| peppol-ubl.sef.json | PEPPOL-EN16931-UBL.sch -> iso_svrl_for_xslt2.xsl | Peppol BIS Billing 3.0 - 2025 November release 3.0.20 | OpenPeppol AISBL (redistribution with attribution) | 1.86 MB | 64 kB | 45d9e9192e5cb60432194fcc87096c28bde033c4f3d6e477dd69d3b2e08b8ae3 | 2026-08-26 |
-| cen-ubl.sef.json | CEN-EN16931-UBL.sch -> iso_svrl_for_xslt2.xsl | CEN/TC 434 EN 16931 UBL 1.3.15 (last update 2025-10-16) | EUPL-1.2 (CEN/TC 434), redistributed by OpenPeppol | 8.23 MB | 174 kB | b2170b512bcba0ab7cd6061a4832e451e86cf92f4c4b8362de84deea1b91b57e | 2026-08-26 |
-| xrechnung-ubl.sef.json | XRechnung-UBL-validation.xsl | KoSIT XRechnung 3.0.2 UBL Schematron 2.5.0, compiled by SchXslt 1.10.1 / Saxon 12.8</skos:prefLabel> | Apache-2.0 (KoSIT xrechnung-schematron) | 1.83 MB | 61 kB | cc82c18b7928beec561de65606a11d8c574b377e775036f149adbb1b4d1dabf8 | 2026-08-26 |
-| xrechnung-cii.sef.json | XRechnung-CII-validation.xsl | KoSIT XRechnung 3.0.2 CII"> Schematron 2.5.0, compiled by SchXslt 1.10.1 / Saxon 12.8</skos:prefLabel> | Apache-2.0 (KoSIT xrechnung-schematron) | 1.69 MB | 53 kB | 25d7690359f8ade3d3caf7bba197494bc72455dd89c7c079f75a8f6cdb2272e4 | 2026-08-26 |
+| en16931-ubl.sef.json | EN16931-UBL-validation.xslt | CEN/TC 434 EN 16931 UBL 1.3.15 (last update 2025-10-16) | EUPL-1.2 (CEN/TC 434 validation artefacts) | 6.83 MB | 157 kB | 8ab5023bf82bb994cc10f0d31eaa957f2d19555fa4178b08482cca61748574fb | 2026-09-02 |
+| en16931-cii.sef.json | EN16931-CII-validation.xslt | CEN/TC 434 EN 16931 CII 1.3.15 (last update 2025-10-16) | EUPL-1.2 (CEN/TC 434 validation artefacts) | 4.89 MB | 135 kB | 0d5364c7ed64a6040e682595b774c3953300709374a79597bb9916d546eac642 | 2026-09-02 |
+| peppol-ubl.sef.json | PEPPOL-EN16931-UBL.sch -> iso_svrl_for_xslt2.xsl | Peppol BIS Billing 3.0 - 2025 November release 3.0.20 | OpenPeppol AISBL (redistribution with attribution) | 1.86 MB | 64 kB | de7765321eb7e8e6202c7eea23641a265fcd6fce1a6f0d908bca3fbc1e5c2bcc | 2026-09-02 |
+| cen-ubl.sef.json | CEN-EN16931-UBL.sch -> iso_svrl_for_xslt2.xsl | CEN/TC 434 EN 16931 UBL 1.3.15 (last update 2025-10-16) | EUPL-1.2 (CEN/TC 434), redistributed by OpenPeppol | 8.23 MB | 174 kB | 445673e01b8f750350bb1f0a1e4d43b9741d4a5d340b9b6349e147addf518526 | 2026-09-02 |
+| xrechnung-ubl.sef.json | XRechnung-UBL-validation.xsl | KoSIT XRechnung 3.0.2 UBL Schematron 2.5.0, compiled by SchXslt 1.10.1 / Saxon HE 12.8 | Apache-2.0 (KoSIT xrechnung-schematron) | 1.83 MB | 61 kB | a1f5304f43b38ce96def6f349f35fd821e61e5ac8d3ca380b7189163cb264862 | 2026-09-02 |
+| xrechnung-cii.sef.json | XRechnung-CII-validation.xsl | KoSIT XRechnung 3.0.2 CII Schematron 2.5.0, compiled by SchXslt 1.10.1 / Saxon HE 12.8 | Apache-2.0 (KoSIT xrechnung-schematron) | 1.69 MB | 53 kB | 63188e1ba57a3186222b2705de26d9900b7d79b9b605b4ffe42c44ef40768767 | 2026-09-02 |
 
 ## Sources
 

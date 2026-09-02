@@ -114,6 +114,41 @@ export type ItalianDocument = {
   cig?: string;
 };
 
+// Fields the fiskaly UAPI accepts that none of the XML writers here render. They ride on the
+// operation so the Compose JSON shows the payload surface the API really has, and they are kept
+// out of the mapping tables on purpose: emitting them into the predicted XML would claim a
+// rendering no writer performs, and for FatturaPA the captured response in
+// docs/reference/fatturapa/ shows the gateway produces no element for several of them. Same
+// escape-hatch shape as the `it` members above.
+export type UapiLineExtras = {
+  allowance?: string; // BT-136 → entries[].data.value.discount
+  surcharge?: string; // BT-141 → entries[].data.value.surcharge
+  itemNumber?: string; // BT-155/BT-157 → entries[].data.product.number
+  itemCode?: string; // BT-158 → entries[].data.product.code
+  purpose?: "STANDARD" | "GIFT";
+  regulatory?: string;
+  label?: string;
+};
+
+export type UapiBuyerExtras = {
+  buyerId?: string; // BT-46 → recipients[].buyer_id
+  origin?: "NATIONAL" | "INTERNATIONAL";
+};
+
+export type UapiDeliveryExtras = {
+  name?: string; // BT-70 → recipients[].shipping.name
+  address?: Address; // BG-15 → recipients[].shipping.address
+};
+
+export type UapiExtras = {
+  series?: string;
+  activityCode?: string;
+  operationDate?: string;
+  buyerAccountingRef?: string; // BT-19 → document.references.buyer_routing
+  buyer?: UapiBuyerExtras;
+  delivery?: UapiDeliveryExtras;
+};
+
 export type Line = {
   id: string;
   name: string;
@@ -124,6 +159,7 @@ export type Line = {
   netAmount: string;
   vat: Vat;
   it?: ItalianLine;
+  uapi?: UapiLineExtras;
 };
 
 export type VatBreakdownRow = {
@@ -195,6 +231,7 @@ export type Invoice = {
   vatBreakdown: VatBreakdownRow[];
   payment: Payment;
   totals: Totals;
+  uapi?: UapiExtras;
 };
 
 export function getField(invoice: Invoice, id: FieldId): unknown {

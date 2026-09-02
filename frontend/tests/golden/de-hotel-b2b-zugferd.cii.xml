@@ -130,10 +130,17 @@
       <ram:BuyerOrderReferencedDocument>
         <ram:IssuerAssignedID>BT-2026-00918</ram:IssuerAssignedID>
       </ram:BuyerOrderReferencedDocument>
+      <ram:ContractReferencedDocument>
+        <ram:IssuerAssignedID>RAHMEN-2026-0031</ram:IssuerAssignedID>
+      </ram:ContractReferencedDocument>
       <ram:AdditionalReferencedDocument>
         <ram:IssuerAssignedID>FOLIO-2026-004182</ram:IssuerAssignedID>
         <ram:TypeCode>130</ram:TypeCode>
       </ram:AdditionalReferencedDocument>
+      <ram:SpecifiedProcuringProject>
+        <ram:ID>PRJ-DE-2026-7</ram:ID>
+        <ram:Name>PRJ-DE-2026-7</ram:Name>
+      </ram:SpecifiedProcuringProject>
     </ram:ApplicableHeaderTradeAgreement>
     <ram:ApplicableHeaderTradeDelivery/>
     <ram:ApplicableHeaderTradeSettlement>

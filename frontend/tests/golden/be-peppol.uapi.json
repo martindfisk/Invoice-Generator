@@ -6,6 +6,9 @@
     "payment_terms": "Payable within 30 days of the invoice date",
     "references": {
       "buyer": "BR-2026-77",
+      "buyer_routing": "COST-CENTER-001",
+      "project": "PRJ-BE-2026-3",
+      "contract": "CTR-BE-2026-9",
       "purchase_order": "PO-BE-2026-014"
     }
   },
@@ -86,9 +89,26 @@
         },
         "code": "1000",
         "city": "Brussel",
-        "country": "BE"
+        "country": "BE",
+        "region": "BE-BRU"
       },
+      "buyer_id": "0208:0888888895",
       "company_id": "0888888895",
+      "origin": "NATIONAL",
+      "shipping": {
+        "address": {
+          "line": {
+            "type": "STREET_NUMBER",
+            "street": "Havenlaan",
+            "number": "86C"
+          },
+          "code": "1000",
+          "city": "Brussel",
+          "country": "BE",
+          "region": "BE-BRU"
+        },
+        "name": "Meuse Logistics warehouse"
+      },
       "identification": {
         "type": "VAT",
         "number": "0888888895"

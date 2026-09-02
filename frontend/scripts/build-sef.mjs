@@ -1,7 +1,15 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -13,6 +21,8 @@ const VENDOR = join(ROOT, "vendor", "schematron");
 const SAXON_VENDOR = join(ROOT, "vendor", "saxon-js");
 const OUT = join(FRONTEND, "public", "sef");
 const SAXON_OUT = join(FRONTEND, "public", "saxon");
+const RULESETS = join(ROOT, "tools", "rulesets.json");
+const MANIFEST = join(OUT, "manifest.json");
 
 // iso_dsdl_include.xsl is a deeply recursive identity transform that overflows the SaxonJS
 // stack on schemas of a few hundred kB, so each preprocessing step runs only when the schema
@@ -29,72 +39,6 @@ const PREPROCESS = [
 ];
 const COMPILE = "iso_svrl_for_xslt2.xsl";
 
-const CEN_VERSION_RE = /Schematron version (\S+) - Last update: (\d{4}-\d{2}-\d{2})/;
-const PEPPOL_VERSION_RE = /Last update:\s*(.+?)\s*\.\s*$/m;
-const XRECHNUNG_VERSION_RE = /Schematron Version ([\w.]+) - XRechnung ([\w.]+) compatible - (\w+)/;
-const SCHXSLT_RE = /SchXslt\/([\w.]+) SAXON\/(\w+ [\d.]+)/;
-
-function cenVersion(syntax) {
-  return (text, file) => {
-    const m = CEN_VERSION_RE.exec(text);
-    if (!m) throw new Error(`${file}: no "Schematron version N - Last update: D" header`);
-    return `CEN/TC 434 EN 16931 ${syntax} ${m[1]} (last update ${m[2]})`;
-  };
-}
-
-function peppolVersion(text, file) {
-  const m = PEPPOL_VERSION_RE.exec(text);
-  if (!m) throw new Error(`${file}: no "Last update: <release>." header`);
-  return `Peppol BIS Billing 3.0 - ${m[1]}`;
-}
-
-function xrechnungVersion(text, file) {
-  const m = XRECHNUNG_VERSION_RE.exec(text);
-  if (!m) throw new Error(`${file}: no "Schematron Version N - XRechnung V compatible" title`);
-  const built = SCHXSLT_RE.exec(text);
-  const by = built ? `, compiled by SchXslt ${built[1]} / Saxon ${built[2]}` : "";
-  return `KoSIT XRechnung ${m[2]} ${m[3]} Schematron ${m[1]}${by}`;
-}
-
-const RULE_SETS = [
-  {
-    sef: "en16931-ubl.sef.json",
-    source: "EN16931-UBL-validation.xslt",
-    version: cenVersion("UBL"),
-    licence: "EUPL-1.2 (CEN/TC 434 validation artefacts)",
-  },
-  {
-    sef: "en16931-cii.sef.json",
-    source: "EN16931-CII-validation.xslt",
-    version: cenVersion("CII"),
-    licence: "EUPL-1.2 (CEN/TC 434 validation artefacts)",
-  },
-  {
-    sef: "peppol-ubl.sef.json",
-    source: "PEPPOL-EN16931-UBL.sch",
-    version: peppolVersion,
-    licence: "OpenPeppol AISBL (redistribution with attribution)",
-  },
-  {
-    sef: "cen-ubl.sef.json",
-    source: "CEN-EN16931-UBL.sch",
-    version: cenVersion("UBL"),
-    licence: "EUPL-1.2 (CEN/TC 434), redistributed by OpenPeppol",
-  },
-  {
-    sef: "xrechnung-ubl.sef.json",
-    source: "XRechnung-UBL-validation.xsl",
-    version: xrechnungVersion,
-    licence: "Apache-2.0 (KoSIT xrechnung-schematron)",
-  },
-  {
-    sef: "xrechnung-cii.sef.json",
-    source: "XRechnung-CII-validation.xsl",
-    version: xrechnungVersion,
-    licence: "Apache-2.0 (KoSIT xrechnung-schematron)",
-  },
-];
-
 // The Schematron worker importScripts() the SaxonJS browser runtime from /saxon/. The npm
 // package ships the Node build only, so the runtime is vendored by `make schemas` and copied
 // here verbatim, together with the Saxonica licence its redistribution terms require.
@@ -103,6 +47,96 @@ const SAXON_FILES = ["SaxonJS2.rt.js", "LICENSE.txt"];
 function sha256(buf) {
   return createHash("sha256").update(buf).digest("hex");
 }
+
+// --- tools/rulesets.json (the pinned rule-set manifest, shared with fetch_assets.py) -------
+
+function tpl(template, vars) {
+  return template.replace(/\{(\w+)\}/g, (_, key) => {
+    if (!(key in vars)) throw new Error(`template ${template}: no value for {${key}}`);
+    return vars[key];
+  });
+}
+
+function loadRulesets() {
+  if (!existsSync(RULESETS)) throw new Error(`${RULESETS} missing`);
+  const data = JSON.parse(readFileSync(RULESETS, "utf8"));
+  const sources = new Map(data.sources.map((s) => [s.id, s]));
+  for (const rs of data.ruleSets) {
+    if (!sources.has(rs.source)) {
+      throw new Error(`${RULESETS}: rule set ${rs.id} references unknown source ${rs.source}`);
+    }
+  }
+  return { data, sources };
+}
+
+function sourceVars(src) {
+  return { version: src.version ?? "", ...(src.vars ?? {}) };
+}
+
+// The upstream URL a rule set's vendored file was pinned from, rendered like fetch_assets.py
+// renders it (raw files download directly; zip members point at their release zip).
+function sourceUrl(src, file) {
+  const vars = sourceVars(src);
+  const entry = Object.entries(src.files).find(([name]) => tpl(name, vars) === file)?.[1];
+  if (entry === undefined) throw new Error(`${RULESETS}: source ${src.id} has no file ${file}`);
+  const target = typeof entry === "string" ? file : tpl(entry.zip, vars);
+  return tpl(src.urlTemplate, { ...vars, file: target });
+}
+
+// --- rule-set metadata: a real XML read, never a regex over raw markup ---------------------
+
+function assertClean(text, file, what) {
+  if (/[<>"]/.test(text)) {
+    throw new Error(`${file}: extracted ${what} contains markup: ${JSON.stringify(text)}`);
+  }
+  return text;
+}
+
+async function extractMeta(SaxonJS, path, file) {
+  const doc = await SaxonJS.getResource({ file: path, type: "xml" });
+  const q = (xpath) =>
+    assertClean(
+      SaxonJS.XPath.evaluate(xpath, doc, {
+        namespaceContext: {
+          svrl: "http://purl.oclc.org/dsdl/svrl",
+          skos: "http://www.w3.org/2004/02/skos/core#",
+        },
+      }),
+      file,
+      "metadata",
+    );
+  const prefLabel = q("string((//skos:prefLabel)[1])");
+  if (prefLabel) {
+    // KoSIT ships SchXslt-compiled XSLT: version in svrl:schematron-output/@title, compiler
+    // in the rdf:Description prefLabel (this is where the old regexes leaked markup).
+    const title = q("string((//svrl:schematron-output/@title)[1])");
+    const m = /Schematron Version ([\w.]+) - XRechnung ([\w.]+) compatible - (\w+)/.exec(title);
+    if (!m) throw new Error(`${file}: no "Schematron Version N - XRechnung V compatible" title`);
+    const built = /SchXslt\/([\w.]+) SAXON\/(\w+)\s+([\d.]+)/.exec(prefLabel);
+    const by = built ? `, compiled by SchXslt ${built[1]} / Saxon ${built[2]} ${built[3]}` : "";
+    return {
+      version: m[1],
+      label: `KoSIT XRechnung ${m[2]} ${m[3]} Schematron ${m[1]}${by}`,
+    };
+  }
+  const cen = q("string((//comment()[contains(., 'Schematron version')])[1])");
+  if (cen) {
+    const m = /Schematron version (\S+) - Last update: (\d{4}-\d{2}-\d{2})/.exec(cen);
+    if (!m) throw new Error(`${file}: no "Schematron version N - Last update: D" comment`);
+    const syntax = /\b(UBL|CII)\b/.exec(file)?.[1] ?? "?";
+    return {
+      version: m[1],
+      label: `CEN/TC 434 EN 16931 ${syntax} ${m[1]} (last update ${m[2]})`,
+    };
+  }
+  const peppol = q("string((//comment()[contains(., 'Last update')])[1])");
+  const m = /Last update:\s*(.+?)\s*\.(\s|$)/.exec(peppol);
+  if (!m) throw new Error(`${file}: no recognisable rule-set version metadata`);
+  const version = /([\d][\d.]*)\s*$/.exec(m[1])?.[1] ?? m[1];
+  return { version, label: `Peppol BIS Billing 3.0 - ${m[1]}` };
+}
+
+// --- compile -------------------------------------------------------------------------------
 
 function xslt3(args) {
   try {
@@ -128,19 +162,6 @@ function compileSchematron(sch, text, work) {
     applied.push(step.xsl);
   }
   return { xslt: current, applied };
-}
-
-function vendorSources() {
-  const file = join(ROOT, "vendor", "SOURCES.md");
-  const map = new Map();
-  if (!existsSync(file)) return map;
-  for (const line of readFileSync(file, "utf8").split("\n")) {
-    const cells = line.split("|").map((c) => c.trim());
-    if (cells.length > 3 && cells[1].startsWith("schematron/")) {
-      map.set(cells[1].slice("schematron/".length), cells[2]);
-    }
-  }
-  return map;
 }
 
 function packageVersions() {
@@ -172,8 +193,8 @@ function copySaxon(installed) {
   if (stamped && stamped !== major) {
     throw new Error(
       `vendor/saxon-js/${SAXON_FILES[0]} is SaxonJS ${stamped} but node_modules/saxon-js is ` +
-        `${installed}: SEF is tied to the runtime version - align SAXON_VERSION in ` +
-        `tools/fetch_assets.py with the saxon-js devDependency`,
+        `${installed}: SEF is tied to the runtime version - align the "saxon" source in ` +
+        `tools/rulesets.json with the saxon-js devDependency`,
     );
   }
   const rt = copied[0];
@@ -184,58 +205,97 @@ function copySaxon(installed) {
   return { version: stamped ?? installed, ...rt };
 }
 
-function main() {
+async function build() {
   if (!existsSync(VENDOR)) {
     throw new Error(`${VENDOR} missing - run: make schemas`);
   }
   if (!existsSync(join(FRONTEND, "node_modules", ".bin", "xslt3"))) {
     throw new Error("xslt3 not installed - run: npm install (in frontend/)");
   }
+  const SaxonJS = (await import("saxon-js")).default;
+  const { data, sources } = loadRulesets();
   const versions = packageVersions();
   const saxon = copySaxon(versions.installed["saxon-js"]);
-  const sources = vendorSources();
   mkdirSync(OUT, { recursive: true });
   const work = mkdtempSync(join(tmpdir(), "build-sef-"));
   const rows = [];
   try {
-    for (const set of RULE_SETS) {
-      const src = join(VENDOR, set.source);
+    for (const set of data.ruleSets) {
+      const source = sources.get(set.source);
+      const src = join(VENDOR, set.file);
       if (!existsSync(src)) throw new Error(`${src} missing - run: make schemas`);
       const text = readFileSync(src, "utf8");
+      const meta = await extractMeta(SaxonJS, src, set.file);
       const started = Date.now();
-      const { xslt, applied } = set.source.endsWith(".sch")
-        ? compileSchematron(src, text, work)
-        : { xslt: src, applied: [] };
-      const dest = join(OUT, set.sef);
+      const { xslt, applied } =
+        set.compile === "sch" ? compileSchematron(src, text, work) : { xslt: src, applied: [] };
+      const dest = join(OUT, `${set.id}.sef.json`);
       xslt3([`-xsl:${xslt}`, `-export:${dest}`, "-nogo", "-relocate:on"]);
       const sef = readFileSync(dest);
+      const sefMeta = JSON.parse(sef);
       const row = {
         ...set,
-        version: set.version(text, set.source),
-        sourceUrl: sources.get(set.source) ?? "(not in vendor/SOURCES.md)",
+        sef: `${set.id}.sef.json`,
+        title: assertClean(
+          `${tpl(set.title, sourceVars(source))} ${meta.version}`,
+          set.file,
+          "title",
+        ),
+        version: meta.version,
+        ruleSet: meta.label,
+        sourceUrl: sourceUrl(source, set.file),
         sourceSha: sha256(readFileSync(src)),
-        pipeline: [set.source, ...applied].join(" -> "),
+        pipeline: [set.file, ...applied].join(" -> "),
         sha: sha256(sef),
         raw: sef.length,
         gzip: gzipSync(sef, { level: 9 }).length,
+        saxonVersion: sefMeta.saxonVersion,
+        buildDateTime: sefMeta.buildDateTime,
         ms: Date.now() - started,
       };
       rows.push(row);
       console.log(
-        `  ${set.sef} [${(row.raw / 1e6).toFixed(2)} MB raw, ` +
+        `  ${row.sef} [${(row.raw / 1e6).toFixed(2)} MB raw, ` +
           `${(row.gzip / 1024).toFixed(0)} kB gzip, ${row.ms} ms] <- ${row.pipeline}`,
       );
     }
   } finally {
     rmSync(work, { recursive: true, force: true });
   }
+  writeManifest(rows, versions.installed["saxon-js"]);
   writeSources(rows, versions, saxon);
   const raw = rows.reduce((n, r) => n + r.raw, 0);
   const gzip = rows.reduce((n, r) => n + r.gzip, 0);
   console.log(
     `public/sef/: ${rows.length} SEF, ${(raw / 1e6).toFixed(2)} MB raw / ` +
-      `${(gzip / 1024).toFixed(0)} kB gzip, SOURCES.md written`,
+      `${(gzip / 1024).toFixed(0)} kB gzip, manifest.json + SOURCES.md written`,
   );
+}
+
+// The catalogue the app reads: which rule sets exist, their versions and the SEF each one
+// maps to. schematron.worker.ts keys its cache on sef.sha256, so this file is the single
+// place a rule-set bump becomes visible to the frontend.
+function writeManifest(rows, saxonJs) {
+  const manifest = {
+    generatedAt: new Date().toISOString().replace(/\.\d+Z$/, "Z"),
+    saxonJs,
+    ruleSets: rows.map((r) => ({
+      id: r.id,
+      title: r.title,
+      version: r.version,
+      licence: r.licence,
+      formats: r.formats,
+      order: r.order,
+      sourceSha: r.sourceSha,
+      sef: {
+        sha256: r.sha,
+        bytes: r.raw,
+        saxonVersion: r.saxonVersion,
+        buildDateTime: r.buildDateTime,
+      },
+    })),
+  };
+  writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2) + "\n");
 }
 
 function writeSources(rows, versions, saxon) {
@@ -244,7 +304,8 @@ function writeSources(rows, versions, saxon) {
     "# frontend/public/sef provenance",
     "",
     `Generated ${ts} by \`frontend/scripts/build-sef.mjs\` (\`make sef\`). Do not hand-edit.`,
-    "Inputs come from `vendor/schematron/` (`make schemas`); see `vendor/SOURCES.md` for their pins.",
+    "Inputs come from `vendor/schematron/` (`make schemas`); versions and sha256 pins live in",
+    "`tools/rulesets.json`. `manifest.json` next to this file is the machine-readable catalogue.",
     "",
     `SEF is tied to the SaxonJS major version - rebuild after upgrading \`saxon-js\`.`,
     `Built with saxon-js ${versions["saxon-js"]}, xslt3 ${versions.xslt3}.`,
@@ -253,13 +314,13 @@ function writeSources(rows, versions, saxon) {
     "|---|---|---|---|---|---|---|---|",
     ...rows.map(
       (r) =>
-        `| ${r.sef} | ${r.pipeline} | ${r.version} | ${r.licence} | ` +
+        `| ${r.sef} | ${r.pipeline} | ${r.ruleSet} | ${r.licence} | ` +
         `${(r.raw / 1e6).toFixed(2)} MB | ${(r.gzip / 1024).toFixed(0)} kB | ${r.sha} | ${ts.slice(0, 10)} |`,
     ),
     "",
     "## Sources",
     "",
-    ...rows.map((r) => `- \`${r.source}\` (sha256 ${r.sourceSha})\n  from ${r.sourceUrl}`),
+    ...rows.map((r) => `- \`${r.file}\` (sha256 ${r.sourceSha})\n  from ${r.sourceUrl}`),
     "",
     "## Notes",
     "",
@@ -297,9 +358,73 @@ function writeSources(rows, versions, saxon) {
   writeFileSync(join(OUT, "SOURCES.md"), lines.join("\n") + "\n");
 }
 
+// --- staleness guard (`make sef-check`, wired into `make doctor` and CI) --------------------
+
+function check() {
+  const { data } = loadRulesets();
+  const errors = [];
+  const rulesetsMtime = statSync(RULESETS).mtimeMs;
+  const installed = JSON.parse(
+    readFileSync(join(FRONTEND, "node_modules", "saxon-js", "package.json"), "utf8"),
+  ).version;
+  const catalogue = existsSync(MANIFEST) ? JSON.parse(readFileSync(MANIFEST, "utf8")) : null;
+  if (!catalogue) errors.push("public/sef/manifest.json missing - run: make sef");
+  for (const set of data.ruleSets) {
+    const sefPath = join(OUT, `${set.id}.sef.json`);
+    if (!existsSync(sefPath)) {
+      errors.push(`${set.id}.sef.json missing - run: make sef`);
+      continue;
+    }
+    const sefBytes = readFileSync(sefPath);
+    const sef = JSON.parse(sefBytes);
+    const built = Date.parse(sef.buildDateTime);
+    const srcPath = join(VENDOR, set.file);
+    if (!existsSync(srcPath)) {
+      errors.push(`vendor/schematron/${set.file} missing - run: make schemas`);
+    } else if (built < statSync(srcPath).mtimeMs) {
+      errors.push(`${set.id}.sef.json predates vendor/schematron/${set.file} - run: make sef`);
+    }
+    if (built < rulesetsMtime) {
+      errors.push(`${set.id}.sef.json predates tools/rulesets.json - run: make sef`);
+    }
+    const major = (v) =>
+      String(v)
+        .replace(/^SaxonJS\s*/i, "")
+        .split(".")[0];
+    if (major(sef.saxonVersion) !== major(installed)) {
+      errors.push(
+        `${set.id}.sef.json was compiled for ${sef.saxonVersion} but saxon-js ${installed} is ` +
+          "installed - SEF is tied to the SaxonJS major version, run: make sef",
+      );
+    }
+    const entry = catalogue?.ruleSets.find((r) => r.id === set.id);
+    if (catalogue && !entry) {
+      errors.push(`${set.id} missing from public/sef/manifest.json - run: make sef`);
+    } else if (entry && entry.sef.sha256 !== sha256(sefBytes)) {
+      errors.push(`manifest.json is stale for ${set.id}.sef.json - run: make sef`);
+    }
+  }
+  if (errors.length) {
+    for (const error of errors) console.error(`  ${error}`);
+    throw new Error(`${errors.length} stale or missing SEF artefact(s)`);
+  }
+  console.log(
+    `sef-check: ${data.ruleSets.length} SEF fresh (rule-set pins ${basename(RULESETS)}, ` +
+      `saxon-js ${installed})`,
+  );
+}
+
 try {
-  main();
+  if (process.argv.includes("--check")) {
+    check();
+  } else {
+    await build();
+  }
 } catch (err) {
-  console.error(`ERROR: SEF build failed: ${err.message}`);
+  console.error(
+    process.argv.includes("--check")
+      ? `ERROR: SEF check failed: ${err.message}`
+      : `ERROR: SEF build failed: ${err.message}`,
+  );
   process.exit(1);
 }

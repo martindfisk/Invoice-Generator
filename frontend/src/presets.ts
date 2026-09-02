@@ -11,10 +11,7 @@ export type PresetId =
   | "it-restaurant-b2c-pec"
   | "it-restaurant-b2b-fattura"
   | "it-restaurant-b2g-fpa12"
-  | "it-restaurant-td04-credit"
-  | "fr-store-b2b-facturx"
-  | "fr-store-b2g-chorus"
-  | "fr-store-b2g-broken";
+  | "it-restaurant-td04-credit";
 
 export const PRESET_IDS: PresetId[] = [
   "it-b2b-sdi",
@@ -28,9 +25,6 @@ export const PRESET_IDS: PresetId[] = [
   "it-restaurant-b2b-fattura",
   "it-restaurant-b2g-fpa12",
   "it-restaurant-td04-credit",
-  "fr-store-b2b-facturx",
-  "fr-store-b2g-chorus",
-  "fr-store-b2g-broken",
 ];
 
 export const PRESET_LABELS: Record<PresetId, string> = {
@@ -45,20 +39,17 @@ export const PRESET_LABELS: Record<PresetId, string> = {
   "it-restaurant-b2b-fattura": "Business lunch (FPR12)",
   "it-restaurant-b2g-fpa12": "Ministry catering (FPA12)",
   "it-restaurant-td04-credit": "Credit note (TD04)",
-  "fr-store-b2b-facturx": "Tradesman (Factur-X)",
-  "fr-store-b2g-chorus": "Commune (Chorus Pro)",
-  "fr-store-b2g-broken": "SIRET but no VAT id",
 };
 
 export type PresetAudience = "B2C" | "B2B" | "B2G";
 
-export type PresetChannel = "PEPPOL" | "SDI" | "EMAIL" | "CHORUS_PRO";
+export type PresetChannel = "PEPPOL" | "SDI" | "EMAIL";
 
 export type PresetMeta = {
   id: PresetId;
   label: string;
   group: string;
-  country: "DE" | "IT" | "FR" | "BE";
+  country: "DE" | "IT" | "BE";
   audience: PresetAudience;
   formatLabel: string;
   channel: PresetChannel;
@@ -205,45 +196,6 @@ export const PRESET_META: Record<PresetId, PresetMeta> = {
     legalBasis:
       "DPR 633/1972 art. 26 (variazioni in diminuzione); TipoDocumento TD04, FatturaPA specs 1.9.1",
   },
-  "fr-store-b2b-facturx": {
-    id: "fr-store-b2b-facturx",
-    label: "Tradesman (Factur-X)",
-    group: "Lyon store (FR)",
-    country: "FR",
-    audience: "B2B",
-    formatLabel: "CII - Factur-X 1.08 profile EN 16931",
-    channel: "EMAIL",
-    summary:
-      "A tradesman with a SIRET buys drywall materials over the counter: French 20% VAT throughout, the buyer's SIRET as legal registration identifier (ISO 6523 scheme 0002), delivered as a Factur-X CII file.",
-    legalBasis:
-      "Ordonnance 2021-1190 art. 26 (facturation electronique B2B); EN 16931-1:2017; Factur-X 1.08 profile EN16931",
-  },
-  "fr-store-b2g-chorus": {
-    id: "fr-store-b2g-chorus",
-    label: "Commune (Chorus Pro)",
-    group: "Lyon store (FR)",
-    country: "FR",
-    audience: "B2G",
-    formatLabel: "EN 16931 (UBL 2.1)",
-    channel: "CHORUS_PRO",
-    summary:
-      "A commune renovating a school gym: EN 16931 UBL for Chorus Pro with the code service in BT-10 (BuyerReference), the numero d'engagement juridique in BT-13 (OrderReference) and the marche number in BT-12.",
-    legalBasis:
-      "Ordonnance 2014-697 art. 3 and decret 2016-1478 (Chorus Pro); Directive 2014/55/EU; EN 16931-1:2017 / UBL 2.1",
-  },
-  "fr-store-b2g-broken": {
-    id: "fr-store-b2g-broken",
-    label: "SIRET but no VAT id",
-    group: "Lyon store (FR)",
-    country: "FR",
-    audience: "B2G",
-    formatLabel: "CII - Factur-X 1.08 profile EN 16931",
-    channel: "CHORUS_PRO",
-    summary:
-      "Broken on purpose: the same commune order as a Factur-X file whose seller files only its SIRET in BT-30 and no numero de TVA in BT-31, so 20% is charged with no VAT identifier behind it (BR-S-02); BT-10 has also lost the code service Chorus Pro routes on, a rejection no EN 16931 rule can see.",
-    legalBasis:
-      "EN 16931-1:2017 rule BR-S-02 (BT-31/BT-32/BT-63 with category S); Factur-X 1.08 profile EN16931; Chorus Pro (ordonnance 2014-697 art. 3, decret 2016-1478) code service in BT-10",
-  },
 };
 
 export function listPresets(): PresetMeta[] {
@@ -312,7 +264,29 @@ function italianB2bSdi(): Invoice {
     typeCode: "380",
     currency: "EUR",
     note: "Fattura di esempio generata dal browser",
-    references: { purchaseOrder: "PO-2026-0042" },
+    references: {
+      purchaseOrder: "PO-2026-0042",
+      buyerReference: "ORG-2026-456",
+      project: "PRJ-2026-011",
+      contract: "CTR-2026-114",
+      despatchAdvice: { number: "DDT-2026-0077", issueDate: "2026-08-23" },
+    },
+    uapi: {
+      series: "FT",
+      buyerAccountingRef: "COSTCENTER1",
+      buyer: { buyerId: "0211:09876543210", origin: "NATIONAL" },
+      delivery: {
+        name: "Magazzino Roma",
+        address: {
+          street: "Via Industriale",
+          number: "99",
+          city: "Roma",
+          postCode: "00148",
+          region: "RM",
+          country: "IT",
+        },
+      },
+    },
     seller: italianSeller(),
     buyer: {
       name: "Cantina del Sole S.p.A.",
@@ -339,6 +313,15 @@ function italianB2bSdi(): Invoice {
         unitPriceNet: "150.00",
         netAmount: "1500.00",
         vat: { category: "S", rate: "22.00" },
+        // "0.00" is the shape the accepted capture in docs/reference/fatturapa/ used. A non-zero
+        // BT-136 would need the writers to emit line AllowanceCharge, or Peppol's line-arithmetic
+        // rule would fire against our own predicted XML.
+        uapi: {
+          allowance: "0.00",
+          surcharge: "0.00",
+          itemNumber: "MAN-2026-04",
+          itemCode: "65112200",
+        },
       },
       {
         id: "2",
@@ -420,7 +403,27 @@ function belgianPeppol(): Invoice {
     dueDate: DUE_DATE,
     typeCode: "380",
     currency: "EUR",
-    references: { buyerReference: "BR-2026-77", purchaseOrder: "PO-BE-2026-014" },
+    references: {
+      buyerReference: "BR-2026-77",
+      purchaseOrder: "PO-BE-2026-014",
+      contract: "CTR-BE-2026-9",
+      project: "PRJ-BE-2026-3",
+    },
+    uapi: {
+      buyerAccountingRef: "COST-CENTER-001",
+      buyer: { buyerId: "0208:0888888895", origin: "NATIONAL" },
+      delivery: {
+        name: "Meuse Logistics warehouse",
+        address: {
+          street: "Havenlaan",
+          number: "86C",
+          city: "Brussel",
+          postCode: "1000",
+          region: "BE-BRU",
+          country: "BE",
+        },
+      },
+    },
     seller: {
       name: "Ardennes Bureau BV",
       vatId: "BE0999999922",
@@ -432,6 +435,7 @@ function belgianPeppol(): Invoice {
         number: "16",
         city: "Bruxelles",
         postCode: "1000",
+        region: "BE-BRU",
         country: "BE",
       },
       contact: { name: "Billing", email: "billing@example.be" },
@@ -447,6 +451,7 @@ function belgianPeppol(): Invoice {
         number: "86C",
         city: "Brussel",
         postCode: "1000",
+        region: "BE-BRU",
         country: "BE",
       },
       channel: { kind: "PEPPOL", participantId: "0208:0888888895" },
@@ -681,44 +686,6 @@ function romeRestaurantBuyer(): Buyer {
   };
 }
 
-function lyonStoreSeller(): Party {
-  return {
-    name: "Quincaillerie Rhone Materiaux SARL",
-    tradeName: "Rhone Materiaux",
-    vatId: "FR40921803341",
-    legalRegId: "92180334100017",
-    legalRegScheme: "0002",
-    electronicAddress: { scheme: "0009", id: "92180334100017" },
-    address: {
-      street: "Rue de la Villette",
-      number: "42",
-      city: "Lyon",
-      postCode: "69003",
-      region: "Auvergne-Rhone-Alpes",
-      country: "FR",
-    },
-    contact: {
-      name: "Service facturation",
-      phone: "+33 4 72550140",
-      email: "facturation@rhone-materiaux.example",
-    },
-  };
-}
-
-function lyonStorePayment(number: string, terms: string): Payment {
-  return {
-    meansCode: "58",
-    meansText: "Virement SEPA",
-    italianMeansCode: "MP05",
-    conditions: "TP02",
-    terms,
-    iban: "FR7630006000011234567890189",
-    accountName: "Quincaillerie Rhone Materiaux SARL",
-    bic: "BNPAFRPPXXX",
-    remittanceInformation: number,
-  };
-}
-
 function germanHotelB2bZugferd(): Invoice {
   const number = "DE-MUC-2026-004182";
   return {
@@ -733,6 +700,24 @@ function germanHotelB2bZugferd(): Invoice {
       buyerReference: "KST-4711-MUSTERMANN",
       purchaseOrder: "BT-2026-00918",
       invoicedObject: "FOLIO-2026-004182",
+      contract: "RAHMEN-2026-0031",
+      project: "PRJ-DE-2026-7",
+    },
+    // BG-15 is the place of supply, which for accommodation is the hotel itself.
+    uapi: {
+      buyerAccountingRef: "KST-4711",
+      buyer: { buyerId: "0088:4012345000009", origin: "NATIONAL" },
+      delivery: {
+        name: "Hotel Isartor Muenchen",
+        address: {
+          street: "Zweibrueckenstrasse",
+          number: "8",
+          city: "Muenchen",
+          postCode: "80331",
+          region: "BY",
+          country: "DE",
+        },
+      },
     },
     seller: munichHotelSeller(),
     buyer: {
@@ -783,14 +768,12 @@ function germanHotelB2bZugferd(): Invoice {
         rate: "7.00",
         taxableAmount: "435.00",
         taxAmount: "30.45",
-        esigibilita: "I",
       },
       {
         category: "S",
         rate: "19.00",
         taxableAmount: "268.00",
         taxAmount: "50.92",
-        esigibilita: "I",
       },
     ],
     payment: munichHotelPayment(number),
@@ -868,9 +851,8 @@ function germanHotelB2gXrechnung(): Invoice {
         rate: "7.00",
         taxableAmount: "258.00",
         taxAmount: "18.06",
-        esigibilita: "I",
       },
-      { category: "S", rate: "19.00", taxableAmount: "36.00", taxAmount: "6.84", esigibilita: "I" },
+      { category: "S", rate: "19.00", taxableAmount: "36.00", taxAmount: "6.84" },
     ],
     payment: {
       ...munichHotelPayment(number),
@@ -1088,182 +1070,6 @@ function italianRestaurantTd04Credit(): Invoice {
   };
 }
 
-function frenchStoreB2bFacturx(): Invoice {
-  const number = "FR-LY-2026-0342";
-  return {
-    format: "cii",
-    number,
-    issueDate: ISSUE_DATE,
-    dueDate: DUE_DATE,
-    typeCode: "380",
-    currency: "EUR",
-    note: "Enlevement comptoir du 26/08/2026 - chantier Ecole Jean Moulin",
-    references: {
-      buyerReference: "CHANTIER-2026-118",
-      purchaseOrder: "BC-2026-0451",
-      salesOrder: "CDE-RM-2026-1187",
-      despatchAdvice: { number: "BL-2026-0873", issueDate: "2026-08-25" },
-    },
-    seller: lyonStoreSeller(),
-    buyer: {
-      name: "Menuiserie Dubois EURL",
-      vatId: "FR83842176059",
-      legalRegId: "84217605900023",
-      legalRegScheme: "0002",
-      electronicAddress: { scheme: "0009", id: "84217605900023" },
-      address: {
-        street: "Rue Leon Blum",
-        number: "17",
-        city: "Villeurbanne",
-        postCode: "69100",
-        region: "Auvergne-Rhone-Alpes",
-        country: "FR",
-      },
-      contact: { name: "Yann Dubois", email: "compta@menuiserie-dubois.example" },
-      channel: {
-        kind: "EMAIL",
-        email: "compta@menuiserie-dubois.example",
-        format: "ZUGFERD_V2",
-      },
-    },
-    lines: [
-      {
-        id: "1",
-        name: "Plaque de platre BA13 2500 x 1200",
-        quantity: "40.00",
-        unitCode: "H87",
-        unitPriceNet: "8.90",
-        netAmount: "356.00",
-        vat: { category: "S", rate: "20.00" },
-      },
-      {
-        id: "2",
-        name: "Rail metallique R48 - longueur 3 m",
-        quantity: "60.00",
-        unitCode: "C62",
-        unitPriceNet: "2.35",
-        netAmount: "141.00",
-        vat: { category: "S", rate: "20.00" },
-      },
-      {
-        id: "3",
-        name: "Vis autoperceuses TTPC 25 mm - boite de 1000",
-        quantity: "6.00",
-        unitCode: "H87",
-        unitPriceNet: "12.50",
-        netAmount: "75.00",
-        vat: { category: "S", rate: "20.00" },
-      },
-    ],
-    vatBreakdown: [
-      {
-        category: "S",
-        rate: "20.00",
-        taxableAmount: "572.00",
-        taxAmount: "114.40",
-        esigibilita: "I",
-      },
-    ],
-    payment: lyonStorePayment(
-      number,
-      "Paiement a 30 jours date de facture (art. L441-10 code de commerce)",
-    ),
-    totals: {
-      lineExtension: "572.00",
-      taxExclusive: "572.00",
-      taxAmount: "114.40",
-      taxInclusive: "686.40",
-      payable: "686.40",
-    },
-  };
-}
-
-function frenchStoreB2gChorus(): Invoice {
-  const number = "FR-LY-2026-0351";
-  const siret = "21690204400013";
-  return {
-    format: "ubl",
-    number,
-    issueDate: ISSUE_DATE,
-    dueDate: DUE_DATE,
-    typeCode: "380",
-    currency: "EUR",
-    note: "Renovation du gymnase municipal - marche 2026-TR-014",
-    references: {
-      buyerReference: "SERVICETECHNIQUE",
-      project: "GYMNASE-2026",
-      purchaseOrder: "EJ-2026-004512",
-      contract: "2026-TR-014",
-    },
-    seller: lyonStoreSeller(),
-    buyer: {
-      name: "Commune de Saint-Genis-Laval",
-      legalRegId: siret,
-      legalRegScheme: "0002",
-      electronicAddress: { scheme: "0009", id: siret },
-      address: {
-        street: "Avenue Clemenceau",
-        number: "106",
-        city: "Saint-Genis-Laval",
-        postCode: "69230",
-        region: "Auvergne-Rhone-Alpes",
-        country: "FR",
-      },
-      contact: { name: "Service technique", email: "technique@saint-genis-laval.example" },
-      channel: { kind: "PEPPOL", participantId: `0009:${siret}` },
-    },
-    lines: [
-      {
-        id: "1",
-        name: "Peinture de sol sportif - bidon 20 L",
-        quantity: "24.00",
-        unitCode: "H87",
-        unitPriceNet: "96.00",
-        netAmount: "2304.00",
-        vat: { category: "S", rate: "20.00" },
-      },
-      {
-        id: "2",
-        name: "Bandes de marquage sportif - rouleau 50 m",
-        quantity: "12.00",
-        unitCode: "C62",
-        unitPriceNet: "45.00",
-        netAmount: "540.00",
-        vat: { category: "S", rate: "20.00" },
-      },
-      {
-        id: "3",
-        name: "Livraison sur chantier",
-        quantity: "1.00",
-        unitCode: "C62",
-        unitPriceNet: "150.00",
-        netAmount: "150.00",
-        vat: { category: "S", rate: "20.00" },
-      },
-    ],
-    vatBreakdown: [
-      {
-        category: "S",
-        rate: "20.00",
-        taxableAmount: "2994.00",
-        taxAmount: "598.80",
-        esigibilita: "I",
-      },
-    ],
-    payment: lyonStorePayment(
-      number,
-      "Paiement a 30 jours - delai reglementaire des collectivites territoriales",
-    ),
-    totals: {
-      lineExtension: "2994.00",
-      taxExclusive: "2994.00",
-      taxAmount: "598.80",
-      taxInclusive: "3592.80",
-      payable: "3592.80",
-    },
-  };
-}
-
 // PEPPOL-COMMON-R043 runs the KBO/BCE mod-97 rule over every ICD 0208 identifier: the last two
 // digits must be 97 - (the first eight mod 97). 0888888895 satisfies it; 0888888896 does not.
 const BROKEN_KBO_NUMBER = "0888888896";
@@ -1302,33 +1108,6 @@ function germanHotelB2gBroken(): Invoice {
       contact: { name: "Rechnungswesen", email: "rechnung@hotel-isartor.example" },
     },
     payment: { ...base.payment, remittanceInformation: number },
-  };
-}
-
-function frenchStoreB2gBroken(): Invoice {
-  const number = "FR-LY-2026-0358";
-  const base = frenchStoreB2gChorus();
-  return {
-    ...base,
-    format: "cii",
-    number,
-    note: "Fourniture de peinture de sol - marche 2026-TR-014",
-    // Chorus Pro rejects a B2G invoice whose recipient needs a code service and whose BT-10 is
-    // empty. EN 16931 makes BT-10 optional, so no Schematron rule in this app sees it.
-    references: {
-      project: "GYMNASE-2026",
-      purchaseOrder: "EJ-2026-004531",
-      contract: "2026-TR-014",
-    },
-    // BR-S-02: every line charges 20% VAT, so the invoice needs BT-31, BT-32 or BT-63. This seller
-    // files only its SIRET in BT-30 (ISO 6523 scheme 0002) - the SIREN/SIRET-for-TVA mix-up - so
-    // the standard rate is charged with no VAT identifier behind it. BR-CO-26 is still satisfied
-    // by BT-30, which is why the model stage stays clean and only Schematron catches this.
-    seller: { ...lyonStoreSeller(), vatId: undefined },
-    payment: lyonStorePayment(
-      number,
-      "Paiement a 30 jours - delai reglementaire des collectivites territoriales",
-    ),
   };
 }
 
@@ -1439,9 +1218,6 @@ const BUILDERS: Record<PresetId, () => Invoice> = {
   "it-restaurant-b2b-fattura": italianRestaurantB2bFattura,
   "it-restaurant-b2g-fpa12": italianRestaurantB2gFpa12,
   "it-restaurant-td04-credit": italianRestaurantTd04Credit,
-  "fr-store-b2b-facturx": frenchStoreB2bFacturx,
-  "fr-store-b2g-chorus": frenchStoreB2gChorus,
-  "fr-store-b2g-broken": frenchStoreB2gBroken,
 };
 
 export function preset(id: PresetId): Invoice {

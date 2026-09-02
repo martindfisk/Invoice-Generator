@@ -11,7 +11,7 @@ import {
   type PresetId,
 } from "../src/presets";
 
-const GROUPS = ["Reference", "Munich hotel (DE)", "Rome restaurants (IT)", "Lyon store (FR)"];
+const GROUPS = ["Reference", "Munich hotel (DE)", "Rome restaurants (IT)"];
 
 // ISO 13616: move the first four characters to the end, map A-Z to 10-35, take the whole number
 // mod 97; a valid IBAN gives 1. BigInt because the number runs to ~30 digits - the same overflow
@@ -35,12 +35,7 @@ function isBelgianEnterpriseNumber(value: string): boolean {
 
 // The presets that exist to fail. Every guarantee below that describes a well-formed invoice is
 // stated for the others; what each broken preset carries instead is pinned in its own test.
-const BROKEN: PresetId[] = [
-  "broken",
-  "be-peppol-broken",
-  "de-hotel-b2g-broken",
-  "fr-store-b2g-broken",
-];
+const BROKEN: PresetId[] = ["broken", "be-peppol-broken", "de-hotel-b2g-broken"];
 
 function intact(): PresetId[] {
   return PRESET_IDS.filter((id) => !BROKEN.includes(id));
@@ -59,8 +54,8 @@ describe("listPresets", () => {
       expect(meta.legalBasis.length).toBeGreaterThan(10);
       expect(meta.formatLabel.length).toBeGreaterThan(0);
       expect(["B2C", "B2B", "B2G"]).toContain(meta.audience);
-      expect(["PEPPOL", "SDI", "EMAIL", "CHORUS_PRO"]).toContain(meta.channel);
-      expect(["DE", "IT", "FR", "BE"]).toContain(meta.country);
+      expect(["PEPPOL", "SDI", "EMAIL"]).toContain(meta.channel);
+      expect(["DE", "IT", "BE"]).toContain(meta.country);
       expect(PRESET_LABELS[meta.id]).toBe(meta.label);
       expect(PRESET_META[meta.id]).toBe(meta);
     }
@@ -85,7 +80,6 @@ describe("listPresets", () => {
       Reference: 4,
       "Munich hotel (DE)": 3,
       "Rome restaurants (IT)": 4,
-      "Lyon store (FR)": 3,
     });
   });
 });
@@ -108,17 +102,6 @@ describe("preset", () => {
     expect(preset("it-restaurant-b2b-fattura").format).toBe("fatturapa");
     expect(preset("it-restaurant-b2g-fpa12").format).toBe("fatturapa");
     expect(preset("it-restaurant-td04-credit").format).toBe("fatturapa");
-    expect(preset("fr-store-b2b-facturx").format).toBe("cii");
-    expect(preset("fr-store-b2g-chorus").format).toBe("ubl");
-  });
-
-  it("puts the Chorus Pro service code in BT-10 and the commitment number in BT-13", () => {
-    const references = preset("fr-store-b2g-chorus").references!;
-    expect(references.buyerReference).toBe("SERVICETECHNIQUE");
-    expect(references.purchaseOrder).toBe("EJ-2026-004512");
-    expect(references.contract).toBe("2026-TR-014");
-    expect(references.project).toBe("GYMNASE-2026");
-    expect(PRESET_META["fr-store-b2g-chorus"].channel).toBe("CHORUS_PRO");
   });
 
   it("gives every preset at least one document reference", () => {
@@ -160,11 +143,6 @@ describe("preset", () => {
     expect(references("it-restaurant-td04-credit").precedingInvoice).toEqual({
       number: "IT-RM-2026-0117",
       issueDate: "2026-08-24",
-    });
-    expect(references("fr-store-b2b-facturx")).toMatchObject({
-      purchaseOrder: "BC-2026-0451",
-      salesOrder: "CDE-RM-2026-1187",
-      despatchAdvice: { number: "BL-2026-0873", issueDate: "2026-08-25" },
     });
   });
 
@@ -269,8 +247,7 @@ describe("preset", () => {
     expect(cell("IT", "B2G")).toEqual(["it-restaurant-b2g-fpa12"]);
     expect(cell("DE", "B2G")).toEqual(["de-hotel-b2g-xrechnung", "de-hotel-b2g-broken"]);
     expect(cell("BE", "B2B")).toEqual(["be-peppol", "be-peppol-broken"]);
-    expect(cell("FR", "B2G")).toEqual(["fr-store-b2g-chorus", "fr-store-b2g-broken"]);
-    for (const country of ["DE", "IT", "BE", "FR"]) {
+    for (const country of ["DE", "IT", "BE"]) {
       expect(
         listPresets().some((meta) => meta.country === country),
         `${country} has no preset`,
@@ -280,7 +257,7 @@ describe("preset", () => {
 
   it("gives every country a preset that is broken on purpose", () => {
     const byCountry = new Map(BROKEN.map((id) => [PRESET_META[id].country, id]));
-    expect([...byCountry.keys()].sort()).toEqual(["BE", "DE", "FR", "IT"]);
+    expect([...byCountry.keys()].sort()).toEqual(["BE", "DE", "IT"]);
     for (const id of BROKEN) {
       expect(
         /broken|deliberate|intentional/i.test(`${id} ${PRESET_META[id].summary}`),
@@ -364,19 +341,5 @@ describe("preset", () => {
     // Everything the CIUS still needs is untouched, so nothing else can fire.
     expect(invoice.buyer.electronicAddress).toEqual({ scheme: "0204", id: "991-01234-56" });
     expect(invoice.delivery).toEqual({ date: "2026-08-26" });
-  });
-
-  it("breaks the French preset by filing a SIRET where the numero de TVA belongs", () => {
-    const invoice = preset("fr-store-b2g-broken");
-    // BR-S-02: standard-rated lines with no BT-31, BT-32 or BT-63 anywhere.
-    expect(invoice.seller.vatId).toBeUndefined();
-    expect(invoice.seller.taxId).toBeUndefined();
-    expect(invoice.seller.legalRegId).toBe("92180334100017");
-    expect(invoice.seller.legalRegScheme).toBe("0002");
-    expect(invoice.lines.every((line) => line.vat.category === "S")).toBe(true);
-    // Chorus Pro routes on the code service in BT-10; EN 16931 makes it optional.
-    expect(invoice.references?.buyerReference).toBeUndefined();
-    expect(preset("fr-store-b2g-chorus").references?.buyerReference).toBe("SERVICETECHNIQUE");
-    expect(invoice.format).toBe("cii");
   });
 });

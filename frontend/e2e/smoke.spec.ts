@@ -67,12 +67,8 @@ test.describe("setup", () => {
   test("lays the scenarios out as a country by audience matrix", async ({ page }) => {
     const matrix = picker(page).getByRole("table");
     await expect(matrix.getByRole("columnheader")).toHaveText([/^B2C/, /^B2B/, /^B2G/]);
-    await expect(matrix.getByRole("rowheader")).toHaveText([
-      /^Germany/,
-      /^Italy/,
-      /^Belgium/,
-      /^France/,
-    ]);
+    // Rows derive from the presets present; France is gone because the UAPI has no e-invoice-fr.
+    await expect(matrix.getByRole("rowheader")).toHaveText([/^Germany/, /^Italy/, /^Belgium/]);
 
     const empty = matrix.locator("[data-cell]", { hasText: "No preset" }).first();
     await expect(empty).toBeVisible();
@@ -220,6 +216,25 @@ test.describe("compose", () => {
     await page.getByRole("checkbox", { name: /cannot carry/ }).uncheck();
     await expect(page.locator("[data-uncarried]")).toHaveCount(0);
     await expect(page.locator("[data-field='number']")).toBeVisible();
+  });
+
+  test("admits the FatturaPA totals are discarded and drops the claim for Peppol", async ({
+    page,
+  }) => {
+    await chooseItalianPreset(page);
+    const pane = page.getByRole("tabpanel", { name: "fiskaly JSON view" });
+    await expect(pane.locator("[data-fate-notice='totals']")).toBeVisible();
+    await expect(pane.locator("[data-fate-notice='totals']")).toContainText(
+      "breakdown and totals are discarded",
+    );
+    await expect(pane.locator("[data-fate-notice='seller']")).toBeVisible();
+
+    await page
+      .getByRole("group", { name: "Predicted XML format" })
+      .getByRole("button", { name: "Peppol BIS Billing 3.0 (UBL 2.1)" })
+      .click();
+    await expect(pane.locator("[data-fate-notice='totals']")).toHaveCount(0);
+    await expect(pane.locator("[data-fate-notice='seller']")).toHaveCount(0);
   });
 
   test("says what the later steps will do without faking a result", async ({ page }) => {
@@ -619,6 +634,12 @@ test.describe("api log lifecycle", () => {
     await page.route("**/api/events", (route) =>
       route.fulfill({ status: 200, headers: { "content-type": "text/event-stream" }, body: "" }),
     );
+    // Same for the history seed: under parallel load (the entity tree alone records dozens of
+    // onboarding calls per runner page) GET /api/calls can resolve after Send's clear and
+    // repopulate the log with other workers' history.
+    await page.route("**/api/calls", (route) =>
+      route.fulfill({ status: 200, headers: { "content-type": "application/json" }, body: "[]" }),
+    );
     await page.goto("/");
     await page.evaluate(() => localStorage.clear());
     await page.reload();
@@ -630,6 +651,7 @@ test.describe("api log lifecycle", () => {
     // Whatever the recorder already held is not this send, so it must not be shown as if it were.
     await expect(log.locator("[data-group]")).toHaveCount(0);
     await page.unroute("**/api/events");
+    await page.unroute("**/api/calls");
 
     await page
       .getByRole("button", { name: /Send to fiskaly|Send anyway/i })
@@ -802,5 +824,71 @@ test.describe("test runner", () => {
     await sections.getByRole("button", { name: "Invoice flow" }).click();
     await expect(picker(page)).toBeVisible();
     await expect(page.getByRole("region", { name: "Test runner" })).toHaveCount(0);
+  });
+});
+
+test.describe("entity tree", () => {
+  test("selects one country, drives the collection, and provisions Germany to COMMISSIONED/OPERATIVE", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page
+      .getByRole("group", { name: "Section" })
+      .getByRole("button", { name: "Test runner" })
+      .click();
+
+    const tree = page.getByRole("region", { name: "Entity tree" });
+    await expect(tree).toBeVisible();
+    const seller = tree.locator("[data-persona-tree='seller']");
+    await expect(seller).toBeVisible();
+    // Both personas are in view — the round trip needs the buyer's account too.
+    await expect(tree.locator("[data-persona-tree='buyer']")).toBeVisible();
+
+    // One country at a time: picking Germany renders only Germany, per persona…
+    await tree
+      .getByRole("group", { name: "Country" })
+      .getByRole("button", { name: "Germany" })
+      .click();
+    await expect(seller.locator("[data-country]")).toHaveCount(1);
+    await expect(seller.locator("[data-country='DE']")).toBeVisible();
+
+    // …and the same choice selects the German collection in the runner.
+    const runner = page.getByRole("region", { name: "Test runner" });
+    await expect(runner.locator("[data-collection='de']")).toHaveAttribute("aria-pressed", "true");
+
+    await seller.getByRole("button", { name: "Provision Germany for seller" }).click();
+    const dialog = page.getByRole("dialog", { name: /Provision Germany/ });
+    await expect(dialog).toContainText("one-way state transition");
+    await expect(dialog).toContainText("TEST resources are not billed");
+    await dialog.getByRole("button", { name: "Provision Germany" }).click();
+
+    await expect(dialog.getByRole("list", { name: "Provision steps" })).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(dialog.locator("[data-provision-ready='true']")).toBeVisible();
+    await dialog.getByRole("button", { name: "Close" }).click();
+
+    const germany = seller.locator("[data-country='DE']");
+    await expect(germany).toHaveAttribute("data-ready", "true", { timeout: 20_000 });
+    await expect(germany.locator("[data-entity='taxpayer-DE']").first()).toHaveAttribute(
+      "data-entity-state",
+      "COMMISSIONED",
+    );
+    await expect(germany.locator("[data-entity='system-DE']").first()).toHaveAttribute(
+      "data-entity-state",
+      "COMMISSIONED / OPERATIVE",
+    );
+
+    // Folded, the panel still names the selected country and whether it is ready.
+    await tree.getByRole("button", { name: "fiskaly entities" }).click();
+    const summary = tree.locator("[data-tree-summary]");
+    await expect(summary).toContainText("Germany");
+    await expect(summary.locator("[data-summary-persona='seller']")).toHaveAttribute(
+      "data-summary-ready",
+      "true",
+    );
+    await expect(tree.locator("[data-persona-tree='seller']")).toHaveCount(0);
+    await tree.getByRole("button", { name: "fiskaly entities" }).click();
+    await expect(tree.locator("[data-persona-tree='seller']")).toBeVisible();
   });
 });

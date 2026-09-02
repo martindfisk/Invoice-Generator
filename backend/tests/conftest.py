@@ -1,10 +1,16 @@
 import contextlib
+import sys
+from pathlib import Path
 
 import httpx
 import pytest
 
 from app.main import create_app, lifespan
 from app.settings import Settings
+
+# tools/ has no package of its own; make its modules (fetch_assets, fetch_spec)
+# importable for the rule-set manifest tests without touching packaging.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 
 SELLER_KEY = "seller-key-0123456789"
 SELLER_SECRET = "seller-secret-0123456789"

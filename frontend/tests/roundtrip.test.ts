@@ -100,18 +100,6 @@ describe("serialise -> parse round trip", () => {
     expect(parsed.dueDate).toBe(source.dueDate);
   });
 
-  it("rebuilds the French Factur-X invoice, including the SIRET registrations", () => {
-    const source = preset("fr-store-b2b-facturx");
-    const parsed = getFormat("cii").parse(getFormat("cii").write(source));
-    expect(parsed.seller.legalRegId).toBe("92180334100017");
-    expect(parsed.seller.legalRegScheme).toBe("0002");
-    expect(parsed.buyer.legalRegId).toBe("84217605900023");
-    expect(parsed.buyer.legalRegScheme).toBe("0002");
-    expect(parsed.buyer.electronicAddress).toEqual(source.buyer.electronicAddress);
-    expect(parsed.payment.iban).toBe(source.payment.iban);
-    expect(parsed.payment.bic).toBe(source.payment.bic);
-  });
-
   it("keeps the TD04 link to the original invoice through FatturaPA and CII", () => {
     const source = preset("it-restaurant-td04-credit");
     for (const format of ["fatturapa", "cii"] as const) {
@@ -143,12 +131,36 @@ describe("serialise -> parse round trip", () => {
         3,
       );
     }
-    expect(new Set(carried.ubl)).toContain("references.salesOrder");
     expect(new Set(carried.ubl)).toContain("references.invoicedObject");
-    expect(new Set(carried.cii)).toContain("references.despatchAdvice.number");
-    expect(new Set(carried.cii)).toContain("references.project");
     expect(new Set(carried.fatturapa)).toContain("references.tenderOrLot");
-    expect(new Set(carried.fatturapa)).toContain("references.despatchAdvice.issueDate");
+  });
+
+  it("keeps the sales order, despatch advice and project through the formats that map them", () => {
+    // No preset carries these three references, so the round trip for BT-14, BT-16 and BT-11
+    // is pinned on an augmented invoice instead.
+    const base = preset("be-peppol");
+    const source: Invoice = {
+      ...base,
+      references: {
+        ...base.references,
+        salesOrder: "SO-2026-0042",
+        despatchAdvice: { number: "DA-2026-0087", issueDate: "2026-08-25" },
+        project: "PRJ-2026-01",
+      },
+    };
+    for (const format of ["ubl", "xrechnung", "cii"] as const) {
+      const plugin = getFormat(format);
+      const parsed = plugin.parse(plugin.write(source));
+      expect(parsed.references?.salesOrder, format).toBe("SO-2026-0042");
+      expect(parsed.references?.despatchAdvice?.number, format).toBe("DA-2026-0087");
+      expect(parsed.references?.project, format).toBe("PRJ-2026-01");
+    }
+    const fatturapa = getFormat("fatturapa");
+    const parsed = fatturapa.parse(fatturapa.write(source));
+    expect(parsed.references?.despatchAdvice).toEqual({
+      number: "DA-2026-0087",
+      issueDate: "2026-08-25",
+    });
   });
 
   it("keeps the Italian stamp duty, CUP and CIG through FatturaPA", () => {

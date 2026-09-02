@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Query, Request, Response
 from fastapi.responses import StreamingResponse
 
 from app.collections import load_collections
+from app.fields import field_metadata
 from app.inbox import after, get_inbox_item, list_inbox, simulate_delivery, sort_inbox
 from app.mock import MockTransport
 from app.models import (
@@ -22,12 +23,16 @@ from app.models import (
     InvoiceRequest,
     ModeState,
     ModeUpdate,
+    OnboardingStatus,
     PersonaState,
+    ProvisionRequest,
+    ProvisionResult,
     RecipientState,
     RecordListing,
     SettingsState,
     SettingsUpdate,
     SimulateRequest,
+    SpecFields,
     SystemState,
     TransmissionWait,
     UapiSchemaRequest,
@@ -35,10 +40,18 @@ from app.models import (
     XsdRequest,
     XsdResult,
 )
+from app.onboarding import (
+    MissingTaxpayerFields,
+    TaxpayerExists,
+    build_taxpayer,
+    onboarding_status,
+    provision,
+)
 from app.recorder import CallRecord
 from app.session import BASE_URLS
 from app.settings import COUNTRIES, PERSONAS
-from app.validate import SCHEMAS
+from app.spec import load_schemas, manifest
+from app.validate import OPERATION_SCHEMAS, SCHEMAS
 from app.workflow import (
     ARTIFACT_KINDS,
     INVOICE_TYPE,
@@ -76,13 +89,26 @@ async def config(request: Request):
     for name in PERSONAS:
         systems = store.persona(name).systems
         personas[name] = {country: system for country, system in systems.items() if system}
+    recorded = manifest(store.settings.spec_dir) or {}
+    active = recorded.get("spec") or {}
     return Config(
         mode=current_mode(request.app),
         environment=store.environment,
         api_version=store.api_version,
         reception_mode=store.reception_mode,
         personas=personas,
+        spec_source=active.get("file") or _fallback_source(recorded),
+        spec_sha256=active.get("sha256"),
+        spec_origin=active.get("origin") or ("fetched" if recorded else None),
+        spec_ingested_at=active.get("ingestedAt") or recorded.get("generatedAt"),
     )
+
+
+def _fallback_source(recorded):
+    for entry in recorded.get("fallback", []):
+        if entry["country"] == "it":
+            return entry["file"]
+    return None
 
 
 def settings_state(app):
@@ -225,7 +251,10 @@ async def put_mode(body: ModeUpdate, request: Request):
 
 def collections_for(app):
     settings = app.state.store.settings
-    collections = load_collections(settings.spec_dir, settings.poll_timeout_s)
+    collections = getattr(app.state, "collections", None)
+    if collections is None:
+        collections = load_collections(settings.spec_dir, settings.poll_timeout_s)
+        app.state.collections = collections
     if not collections:
         raise HTTPException(503, f"no Postman collections in {settings.spec_dir}; run: make spec")
     return collections
@@ -289,6 +318,52 @@ async def validate_xsd(body: XsdRequest, request: Request):
         raise HTTPException(503, str(exc)) from exc
 
 
+SPEC_FIELD_CACHE_MAX = 8
+
+
+def cached_fields(app, spec_dir, country, operation):
+    cache = app.state.spec_fields
+    _, digest, _ = load_schemas(spec_dir, country)
+    key = (digest, country, operation)
+    if key not in cache:
+        if len(cache) >= SPEC_FIELD_CACHE_MAX:
+            cache.clear()
+        cache[key] = field_metadata(spec_dir, country, operation)
+    return cache[key]
+
+
+# Deliberately /spec/fields, not /uapi/fields: the /uapi/{path:path} passthrough below is a
+# catch-all that would forward this upstream as a real fiskaly call and log it as one.
+@router.get("/spec/fields", response_model=SpecFields)
+async def spec_fields(
+    request: Request,
+    response: Response,
+    country: str = Query("IT"),
+    operation: str = Query("INVOICE"),
+):
+    key = country.upper()
+    if key not in COUNTRIES:
+        raise HTTPException(422, f"unknown country {key!r}; expected one of {COUNTRIES}")
+    wanted = operation.upper()
+    if wanted not in OPERATION_SCHEMAS:
+        raise HTTPException(
+            422, f"unknown operation {wanted!r}; expected one of {sorted(OPERATION_SCHEMAS)}"
+        )
+    settings = request.app.state.store.settings
+    try:
+        payload = await asyncio.to_thread(
+            cached_fields, request.app, settings.spec_dir, key, wanted
+        )
+    except (FileNotFoundError, KeyError, ValueError) as exc:
+        raise HTTPException(503, f"{exc}") from exc
+    etag = f'W/"{payload["source_sha256"][:12]}-{wanted}-{key}"'
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304, headers={"ETag": etag})
+    response.headers["ETag"] = etag
+    response.headers["Cache-Control"] = "no-cache"
+    return SpecFields(api_version=request.app.state.store.api_version, **payload)
+
+
 @router.post("/validate/uapi", response_model=UapiSchemaResult)
 async def validate_uapi(body: UapiSchemaRequest, request: Request):
     country = body.country.upper()
@@ -333,6 +408,37 @@ def require_system(app, persona, country):
             409, f"{persona.upper()}_SYSTEM_ID_{country} is not set in .env; cannot reach {country}"
         )
     return system_id
+
+
+@router.get("/onboarding/status", response_model=OnboardingStatus)
+async def get_onboarding_status(request: Request, persona: str = "seller"):
+    client = client_for(request.app, persona)
+    return await onboarding_status(client, request.app.state.store)
+
+
+@router.post("/onboarding/provision", response_model=ProvisionResult)
+async def post_onboarding_provision(body: ProvisionRequest, request: Request):
+    app = request.app
+    client = client_for(app, body.persona)
+    country = body.country.upper()
+    if country not in COUNTRIES:
+        raise HTTPException(400, f"unknown country {country!r}; expected one of {COUNTRIES}")
+    if not body.confirm:
+        raise HTTPException(
+            409,
+            f"refusing to provision in the {app.state.store.environment} environment without "
+            f"confirm=true: commissioning is a one-way state transition "
+            f"(ACQUIRED -> COMMISSIONED -> DECOMMISSIONED). Billing starts only when a system "
+            f"is commissioned on LIVE; TEST resources are not billed.",
+        )
+    try:
+        taxpayer = build_taxpayer(country, body.taxpayer)
+    except MissingTaxpayerFields as exc:
+        raise HTTPException(400, str(exc)) from exc
+    try:
+        return await provision(client, app.state.store, country, taxpayer, reuse=body.reuse)
+    except TaxpayerExists as exc:
+        raise HTTPException(409, str(exc)) from exc
 
 
 @router.post("/invoices", response_model=InvoiceCreated)

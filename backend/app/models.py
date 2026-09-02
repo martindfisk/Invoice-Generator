@@ -26,6 +26,10 @@ class Config(BaseModel):
     api_version: str
     reception_mode: Literal["live", "simulated"]
     personas: dict[str, dict[str, SystemRef]]
+    spec_source: str | None = None
+    spec_sha256: str | None = None
+    spec_origin: str | None = None
+    spec_ingested_at: str | None = None
 
 
 class SystemState(BaseModel):
@@ -117,6 +121,48 @@ class UapiSchemaResult(BaseModel):
     findings: list[UapiSchemaFinding]
 
 
+class SpecApplicability(BaseModel):
+    status: Literal["applicable", "not_required", "not_applicable", "not_supported"]
+    note: str | None = None
+
+
+class SpecField(BaseModel):
+    pointer: str
+    kind: Literal["leaf", "group", "map"]
+    type: str | None = None
+    schema_name: str | None = Field(default=None, alias="schema")
+    required: bool
+    optional_ancestor: str | None = None
+    constraints: dict[str, Any] = {}
+    description: str | None = None
+    example: Any = None
+    example_source: str | None = None
+    bt: list[str] = []
+    applicability: dict[str, SpecApplicability] = {}
+    applicable: bool = True
+    variants: dict[str, list[str]] = {}
+
+    model_config = {"populate_by_name": True}
+
+
+class SpecUnion(BaseModel):
+    pointer: str
+    property_name: str | None = None
+    values: list[str]
+
+
+class SpecFields(BaseModel):
+    api_version: str
+    source: str
+    source_sha256: str
+    country: str
+    operation: Literal["INVOICE", "CORRECTION"]
+    profile: str | None = None
+    fields: list[SpecField]
+    unions: list[SpecUnion]
+    warnings: list[str] = []
+
+
 class InvoiceRequest(BaseModel):
     persona: str = "seller"
     country: str
@@ -188,6 +234,84 @@ class InboxItem(BaseModel):
 class SimulateRequest(BaseModel):
     xml: str
     meta: dict[str, Any] = Field(default_factory=dict)
+
+
+class OnboardingCounts(BaseModel):
+    organizations: int = 0
+    subjects: int = 0
+    taxpayers: int = 0
+    systems: int = 0
+
+
+class OnboardingEntity(BaseModel):
+    id: str | None = None
+    type: str | None = None
+    state: str | None = None
+    name: str | None = None
+
+
+class OnboardingTaxpayer(BaseModel):
+    id: str | None = None
+    state: str | None = None
+    country: str | None = None
+    name: str | None = None
+    vat_id: str | None = None
+    fiscalization_type: str | None = None
+
+
+class OnboardingSystem(BaseModel):
+    id: str | None = None
+    type: str | None = None
+    state: str | None = None
+    mode: str | None = None
+    taxpayer_id: str | None = None
+    location_id: str | None = None
+    compliance_state: str | None = None
+    peppol_id: str | None = None
+    registrations: list[dict[str, Any]] = Field(default_factory=list)
+    blocked_by: str | None = None
+
+
+class OnboardingStatus(BaseModel):
+    persona: str
+    environment: Environment
+    credentials: CredentialState
+    counts: OnboardingCounts
+    organizations: list[OnboardingEntity]
+    subjects: list[OnboardingEntity]
+    taxpayers: list[OnboardingTaxpayer]
+    systems: list[OnboardingSystem]
+    ready: dict[str, bool]
+    missing: list[str]
+
+
+class ProvisionRequest(BaseModel):
+    persona: str = "seller"
+    country: str
+    confirm: bool = False
+    reuse: bool = True
+    taxpayer: dict[str, Any] = Field(default_factory=dict)
+
+
+class ProvisionStep(BaseModel):
+    name: str
+    method: str
+    path: str
+    status: Literal["passed", "failed", "skipped"]
+    id: str | None = None
+    error: dict[str, Any] | None = None
+
+
+class ProvisionCreated(BaseModel):
+    taxpayer_id: str | None = None
+    location_id: str | None = None
+    system_id: str | None = None
+
+
+class ProvisionResult(BaseModel):
+    steps: list[ProvisionStep]
+    created: ProvisionCreated
+    ready: bool
 
 
 class StepCapture(BaseModel):

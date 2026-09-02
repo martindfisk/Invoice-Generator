@@ -29,3 +29,19 @@ RC ricevuta di consegna · NS notifica di scarto (rejected, codes above; must be
 
 ## References
 `references/` (field table + XSD once vendored), fiskaly IT docs `meta/doc/unified/e-invoice/italy.md`, local spec PDF `/Users/martin.dutzler/Documents/GitHub/E-Invoicing-Formats-and-Profiles/Italy FatturaPA/Specifiche_tecniche_del_formato_FatturaPA_V1.4.pdf` (old), mapping `Outputted files/GOBL_to_FatturaPA_Field_Mapping.md`. Official: https://www.fatturapa.gov.it/it/norme-e-regole/documentazione-fattura-elettronica/formato-fatturapa/ , https://www.agenziaentrate.gov.it (specifiche tecniche 1.9.1).
+
+## What the gateway actually does with the payload
+
+`docs/reference/fatturapa/` holds a **real** `TRANSACTION::INVOICE` request and the FatturaPA XML
+fiskaly's gateway generated from it (captured 2026-08-25), plus a field-by-field mapping. Read it
+before changing `uapi-map.ts` or reasoning about what reaches the XML. The headline facts:
+
+- A field you send has one of four fates: **mapped**, **not rendered** (accepted, no element),
+  **discarded** (accepted then thrown away), or **platform** (comes from the Taxpayer/System, not
+  the request).
+- **`breakdown[]` and `totals` are discarded** — `DatiRiepilogo` is always recomputed server-side.
+  They are still schema-*required* on an INVOICE operation. Both are true at once.
+- The **seller's identity, address, RegimeFiscale and REA are platform**, from the Taxpayer entity.
+  Only `seller.phone` and `seller.email` come from the request; `seller.name` is not rendered.
+- `ModalitaPagamento` / `CondizioniPagamento` are derived defaults — the request has no field for
+  either, so a model's MP/TP code cannot influence them.

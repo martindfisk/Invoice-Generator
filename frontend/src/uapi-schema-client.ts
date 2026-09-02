@@ -1,15 +1,5 @@
 export const UAPI_SCHEMA_ENDPOINT = "/api/validate/uapi";
 
-// fiskaly publishes the e-invoice OpenAPI document per country and `make spec` fetches these two.
-// Their InvoiceTransaction graphs differ only in three `description` strings — not one constraint —
-// so a German or French invoice is checked against the Italian copy rather than skipped.
-export const SPEC_COUNTRIES = ["IT", "BE"];
-
-export function specCountry(country: string | undefined): string | undefined {
-  const wanted = country?.toUpperCase();
-  return wanted && SPEC_COUNTRIES.includes(wanted) ? wanted : undefined;
-}
-
 export type UapiSchemaError = { pointer: string; keyword: string; message: string };
 
 export type UapiSchemaOutcome =
@@ -32,7 +22,7 @@ export async function validateUapiOperation(
       reason: "The operation is not a JSON object, so there is nothing to check against the spec.",
     };
   }
-  const resolved = specCountry(country);
+  const resolved = country?.toUpperCase();
   let response: Response;
   try {
     response = await fetch(UAPI_SCHEMA_ENDPOINT, {

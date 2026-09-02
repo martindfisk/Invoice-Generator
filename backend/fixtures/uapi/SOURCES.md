@@ -36,6 +36,20 @@ Transmission, so the two artifacts are visibly different documents about the sam
 default 10) and a base64 offset `token`, and emits `pagination{next, token, limit}` while more
 results remain — the shape `components.schemas.Pagination` declares.
 
+Onboarding resources (`/organizations`, `/subjects`, `/taxpayers`, `/locations`, `/systems`) are
+likewise built **in code**, synthetic by construction: every list starts **empty** — mirroring a
+fresh fiskaly account — and fills as `POST /taxpayers` → `PATCH` (COMMISSION) → `POST /systems` →
+`PATCH` (COMMISSION) are replayed (deterministic ids, `state ACQUIRED`/`mode INACTIVE` on create,
+`COMMISSIONED`/`OPERATIVE` on commission, `compliance.state TRANSMISSION_RECEPTION`, and an
+`annotations.peppol_id` derived from the taxpayer's country and fiscalization numbers when a
+PEPPOL registration is present). Credentials inside `fiscalization.credentials` are stored and
+echoed as `{type}` only — never the PIN/password. `GET /taxpayers/{id}` and `GET /systems/{id}`
+still fall back to the JSON fixtures above for ids that were never created, so the unprovisioned
+send flow (`mock-*-system-*` ids) keeps working. One deliberate simplification: commissioning a
+BE/DE system yields `mode OPERATIVE` immediately, whereas the real TEST environment answers
+`DEGRADED` until the Peppol proof-of-ownership upload completes (the published collections assert
+exactly that).
+
 A `TRANSACTION::CORRECTION` is created from
 `{"type": "CORRECTION", "record": {"id": <corrected invoice record>}, "reason": ..., "data": {"type": "INVOICE", ...}}`
 and 404s when the corrected record does not exist. It advances to its **own**

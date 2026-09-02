@@ -1,9 +1,10 @@
 import re
 from pathlib import Path
 
-import yaml
 from jsonschema import Draft202012Validator, FormatChecker
 from lxml import etree
+
+from app.spec import load_schemas
 
 XMLDSIG_URL = "http://www.w3.org/TR/2002/REC-xmldsig-core-20020212/xmldsig-core-schema.xsd"
 SCHEMAS = {
@@ -60,7 +61,6 @@ def _findings(error_log):
     ]
 
 
-SPEC_PATTERN = "fiskaly.uapi.e-invoice-{country}.*.yaml"
 SCHEMA_PREFIX = "#/components/schemas/"
 DEFS_PREFIX = "#/$defs/"
 OPERATION_SCHEMAS = {"INVOICE": "InvoiceTransaction", "CORRECTION": "CorrectionTransaction"}
@@ -198,12 +198,14 @@ class UapiSchemaValidator:
         return self._validator(country).schema
 
     def _validator(self, country):
-        key = country.upper()
+        # Keyed on the spec's content, not the country: with an all-products spec active every
+        # country resolves to the same bytes and shares one compiled validator, and replacing the
+        # spec invalidates the memo instead of serving the previous graph.
+        schemas, key, name = load_schemas(self.spec_dir, country)
         if key not in self._validators:
-            schemas = yaml.safe_load(self._locate(key).read_text())["components"]["schemas"]
-            missing = [name for name in OPERATION_SCHEMAS.values() if name not in schemas]
+            missing = [n for n in OPERATION_SCHEMAS.values() if n not in schemas]
             if missing:
-                raise KeyError(f"{', '.join(missing)} missing from the {key} spec; run: make spec")
+                raise KeyError(f"{', '.join(missing)} missing from {name}; run: make spec")
             names = _reachable(schemas, OPERATION_SCHEMAS.values())
             root = {
                 "discriminator": {
@@ -221,12 +223,3 @@ class UapiSchemaValidator:
             }
             self._validators[key] = Draft202012Validator(schema, format_checker=UAPI_FORMATS)
         return self._validators[key]
-
-    def _locate(self, country):
-        matches = sorted(self.spec_dir.glob(SPEC_PATTERN.format(country=country.lower())))
-        if not matches:
-            raise FileNotFoundError(
-                f"{self.spec_dir / SPEC_PATTERN.format(country=country.lower())} missing; "
-                "run: make spec"
-            )
-        return matches[-1]

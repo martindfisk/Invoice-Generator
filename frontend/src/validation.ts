@@ -3,11 +3,12 @@ import { getFormat, type ValidationStage } from "./formats";
 import { annotateKnownDefects } from "./known-defects";
 import type { FormatId, Invoice } from "./model";
 import { checkModel, type Severity } from "./model-rules";
-import { runSchematron } from "./schematron.worker";
+import { loadSefManifest, resolveRuleSets } from "./schematron-sets";
+import { runSchematron, type SchematronRun } from "./schematron.worker";
 import { parseSvrl, type SvrlFinding } from "./svrl";
 import { buildFieldIndex, type FieldIndex } from "./xml-locate";
 import { fieldForPointer, toInvoiceTransaction, type UapiContext } from "./uapi-map";
-import { specCountry, validateUapiOperation, type UapiSchemaError } from "./uapi-schema-client";
+import { validateUapiOperation, type UapiSchemaError } from "./uapi-schema-client";
 import { toDocumentPath, validateXsd } from "./xsd-client";
 
 export type { Severity };
@@ -38,6 +39,9 @@ export type StageResult = {
   findings: Finding[];
   durationMs?: number;
   note?: string;
+  // Which compiled rule sets produced the findings (schematron only). A missing version means
+  // the run fell back to the built-in list because public/sef/manifest.json is not built yet.
+  ruleSets?: { id: string; version?: string }[];
 };
 
 const STAGE_LABELS: Record<FindingSource, string> = {
@@ -50,17 +54,10 @@ const STAGE_LABELS: Record<FindingSource, string> = {
   fiskaly: "fiskaly response",
 };
 
-// Which compiled rule sets each syntax is checked against, in the order a real access point
-// applies them: the EN 16931 core rules first, then the CIUS on top. Names are the SEF base
-// names produced by `frontend/scripts/build-sef.mjs` and served from `public/sef/`.
-// XRechnung reuses `cen-ubl` rather than the standalone `en16931-ubl`: both are CEN 1.3.15 and
-// differ only in the ISO 6523 / CEF EAS code list (the Peppol copy adds 0245), and sharing one
-// SEF saves a second 8 MB fetch in a session that validates both syntaxes.
-export const SCHEMATRON_RULE_SETS: Partial<Record<FormatId, string[]>> = {
-  ubl: ["cen-ubl", "peppol-ubl"],
-  xrechnung: ["cen-ubl", "xrechnung-ubl"],
-  cii: ["en16931-cii"],
-};
+// The fallback table lives in schematron-sets.ts next to the manifest resolution, so which
+// rule sets run and which versions they carry come from one place; re-exported because the
+// goldens test (and the format table it documents) address it here.
+export { SCHEMATRON_RULE_SETS } from "./schematron-sets";
 
 // formats.ts still lists CII as model + well-formedness only, from before the CEN CII rule set
 // was vendored. The SEF exists now, so the stage is appended here; drop this once the format
@@ -218,9 +215,8 @@ registerStage("uapi-schema", async (input) => {
   const country = input.country ?? input.invoice.seller.address.country;
   const outcome = await validateUapiOperation(operationFor(input), country);
   if (outcome.status === "unavailable") return unavailable("uapi-schema", outcome.reason);
-  const used = outcome.country || specCountry(country) || "IT";
-  const substitute =
-    used === country.toUpperCase() ? "" : ` — fiskaly publishes no ${country} spec`;
+  const used = outcome.country || country?.toUpperCase() || "IT";
+  const substitute = used === country?.toUpperCase() ? "" : ` — checked against the ${used} spec`;
   return {
     ...settle("uapi-schema", outcome.errors.map(uapiSchemaFinding), startedAt),
     note:
@@ -277,10 +273,15 @@ function schematronFinding(svrl: SvrlFinding, fields: FieldIndex): Finding {
   };
 }
 
+function nameRun(run: SchematronRun, versions: Map<string, string | undefined>): string {
+  const version = versions.get(run.ruleSet);
+  return `${run.ruleSet}${version ? ` ${version}` : ""} (${run.loadMs + run.runMs} ms)`;
+}
+
 registerStage("schematron", async (input) => {
   const startedAt = performance.now();
-  const ruleSets = SCHEMATRON_RULE_SETS[input.formatId];
-  if (!ruleSets?.length) {
+  const ruleSets = resolveRuleSets(input.formatId, await loadSefManifest());
+  if (ruleSets.length === 0) {
     return unavailable("schematron", `No Schematron rule set is compiled for ${input.formatId}.`);
   }
   const runs = await runSchematron(input.xml, ruleSets);
@@ -296,11 +297,11 @@ registerStage("schematron", async (input) => {
     }
   }
   const annotated = annotateKnownDefects(findings, input.invoice);
+  const versions = new Map(ruleSets.map((set) => [set.id, set.version]));
   return {
     ...settle("schematron", annotated, startedAt),
-    note: `${runs
-      .map((run) => `${run.ruleSet} (${run.loadMs + run.runMs} ms)`)
-      .join(", ")}. ${PREDICTED_DOCUMENT_NOTE}`,
+    ruleSets: ruleSets.map(({ id, version }) => ({ id, version })),
+    note: `${runs.map((run) => nameRun(run, versions)).join(", ")}. ${PREDICTED_DOCUMENT_NOTE}`,
   };
 });
 

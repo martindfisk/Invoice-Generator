@@ -52,3 +52,19 @@ Recipient without `invoicing` (COMPLETED + ERROR log, no transmission) · SDI `0
 
 ## References
 `references/choreography.md` (request bodies as cURL, kept in sync with `backend/app/workflow.py`), `references/open-questions.md`. Sources: `spec/SOURCES.md`; workspace.fiskaly.com `/e-invoice/2026-06-01/{integration-guide,italy,belgium,country-coverage}`, `/e-invoice/faq`, `/reference/base-urls`, `/blog/unified-api-idempotency-transparency`; fiskaly internals `/Users/martin.dutzler/Documents/GitHub/meta/doc/unified/e-invoice/`, hurl e2e `meta/etc/test/unified/v5/`.
+
+## What the gateway actually does with the payload
+
+`docs/reference/fatturapa/` holds a **real** `TRANSACTION::INVOICE` request and the FatturaPA XML
+fiskaly's gateway generated from it (captured 2026-08-25), plus a field-by-field mapping. Read it
+before changing `uapi-map.ts` or reasoning about what reaches the XML. The headline facts:
+
+- A field you send has one of four fates: **mapped**, **not rendered** (accepted, no element),
+  **discarded** (accepted then thrown away), or **platform** (comes from the Taxpayer/System, not
+  the request).
+- **`breakdown[]` and `totals` are discarded** — `DatiRiepilogo` is always recomputed server-side.
+  They are still schema-*required* on an INVOICE operation. Both are true at once.
+- The **seller's identity, address, RegimeFiscale and REA are platform**, from the Taxpayer entity.
+  Only `seller.phone` and `seller.email` come from the request; `seller.name` is not rendered.
+- `ModalitaPagamento` / `CondizioniPagamento` are derived defaults — the request has no field for
+  either, so a model's MP/TP code cannot influence them.

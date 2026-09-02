@@ -11,7 +11,7 @@ import { parseCii } from "../src/cii-parse";
 import { writeCii } from "../src/cii-write";
 import { preset, PRESET_IDS } from "../src/presets";
 
-const CII_GOLDEN_PRESETS = ["de-hotel-b2b-zugferd", "fr-store-b2b-facturx"] as const;
+const CII_GOLDEN_PRESETS = ["de-hotel-b2b-zugferd"] as const;
 
 const SEQUENCES: Record<string, string[]> = {
   CrossIndustryInvoice: [
@@ -345,8 +345,8 @@ describe("writeCii", () => {
   });
 
   it("stamps a currency only on the total VAT amount, as EN 16931 CII requires", () => {
-    const xml = writeCii(preset("fr-store-b2b-facturx"));
-    expect(xml).toContain('<ram:TaxTotalAmount currencyID="EUR">114.40</ram:TaxTotalAmount>');
+    const xml = writeCii(preset("de-hotel-b2b-zugferd"));
+    expect(xml).toContain('<ram:TaxTotalAmount currencyID="EUR">81.37</ram:TaxTotalAmount>');
     expect([...xml.matchAll(/currencyID=/g)]).toHaveLength(1);
   });
 
@@ -367,10 +367,10 @@ describe("writeCii", () => {
     expect([...xml.matchAll(/<ram:CategoryCode>S<\/ram:CategoryCode>/g)]).toHaveLength(4);
   });
 
-  it("puts the French buyer SIRET in the legal organisation with ISO 6523 scheme 0002", () => {
-    const xml = writeCii(preset("fr-store-b2b-facturx"));
-    expect(xml).toContain('<ram:ID schemeID="0002">84217605900023</ram:ID>');
-    expect(xml).toContain('<ram:URIID schemeID="0009">84217605900023</ram:URIID>');
+  it("puts the buyer legal registration in the legal organisation with its ISO 6523 scheme", () => {
+    const xml = writeCii(preset("be-peppol"));
+    expect(xml).toContain('<ram:ID schemeID="0208">0888888895</ram:ID>');
+    expect(xml).toContain('<ram:URIID schemeID="0208">0888888895</ram:URIID>');
   });
 
   it("emits an exemption reason before the basis amount and the code after the category", () => {
@@ -395,28 +395,45 @@ describe("writeCii", () => {
   });
 
   it("keeps the mandatory delivery group, empty when there is no despatch advice", () => {
-    expect(preset("be-peppol").references?.despatchAdvice).toBeUndefined();
-    expect(writeCii(preset("be-peppol"))).toContain("<ram:ApplicableHeaderTradeDelivery/>");
+    expect(preset("de-hotel-b2b-zugferd").references?.despatchAdvice).toBeUndefined();
+    expect(writeCii(preset("de-hotel-b2b-zugferd"))).toContain(
+      "<ram:ApplicableHeaderTradeDelivery/>",
+    );
   });
 
   it("puts every document reference at its EN 16931 CII path", () => {
-    const lyon = writeCii(preset("fr-store-b2b-facturx"));
-    expect(lyon).toContain("<ram:BuyerReference>CHANTIER-2026-118</ram:BuyerReference>");
-    expect(lyon).toContain(
+    const base = preset("de-hotel-b2b-zugferd");
+    // No preset carries a sales order, a despatch advice or a project, so the CII paths for
+    // BT-14, BT-16 and BT-11 are pinned on an augmented invoice instead.
+    const augmented = writeCii({
+      ...base,
+      references: {
+        ...base.references,
+        salesOrder: "SO-2026-0042",
+        despatchAdvice: { number: "DA-2026-0087", issueDate: "2026-08-25" },
+        project: "PRJ-2026-01",
+      },
+    });
+    expect(augmented).toContain("<ram:BuyerReference>KST-4711-MUSTERMANN</ram:BuyerReference>");
+    expect(augmented).toContain(
       "<ram:SellerOrderReferencedDocument>\n        " +
-        "<ram:IssuerAssignedID>CDE-RM-2026-1187</ram:IssuerAssignedID>\n" +
+        "<ram:IssuerAssignedID>SO-2026-0042</ram:IssuerAssignedID>\n" +
         "      </ram:SellerOrderReferencedDocument>",
     );
-    expect(lyon).toContain(
+    expect(augmented).toContain(
       "<ram:BuyerOrderReferencedDocument>\n        " +
-        "<ram:IssuerAssignedID>BC-2026-0451</ram:IssuerAssignedID>\n" +
+        "<ram:IssuerAssignedID>BT-2026-00918</ram:IssuerAssignedID>\n" +
         "      </ram:BuyerOrderReferencedDocument>",
     );
-    expect(lyon).toContain(
+    expect(augmented).toContain(
       "<ram:ApplicableHeaderTradeDelivery>\n      <ram:DespatchAdviceReferencedDocument>\n" +
-        "        <ram:IssuerAssignedID>BL-2026-0873</ram:IssuerAssignedID>\n" +
+        "        <ram:IssuerAssignedID>DA-2026-0087</ram:IssuerAssignedID>\n" +
         "      </ram:DespatchAdviceReferencedDocument>\n" +
         "    </ram:ApplicableHeaderTradeDelivery>",
+    );
+    expect(augmented).toContain(
+      "<ram:SpecifiedProcuringProject>\n        <ram:ID>PRJ-2026-01</ram:ID>\n" +
+        "        <ram:Name>PRJ-2026-01</ram:Name>\n      </ram:SpecifiedProcuringProject>",
     );
 
     const munich = writeCii(preset("de-hotel-b2b-zugferd"));
@@ -433,12 +450,6 @@ describe("writeCii", () => {
         "<ram:IssuerAssignedID>CONV-MIC-2026-0042</ram:IssuerAssignedID>\n" +
         `        <ram:TypeCode>${CII_TENDER_TYPE_CODE}</ram:TypeCode>\n` +
         "      </ram:AdditionalReferencedDocument>",
-    );
-
-    const commune = writeCii(preset("fr-store-b2g-chorus"));
-    expect(commune).toContain(
-      "<ram:SpecifiedProcuringProject>\n        <ram:ID>GYMNASE-2026</ram:ID>\n" +
-        "        <ram:Name>GYMNASE-2026</ram:Name>\n      </ram:SpecifiedProcuringProject>",
     );
   });
 
