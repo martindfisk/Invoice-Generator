@@ -613,16 +613,16 @@ export const UAPI_LOSSY_FIELDS: Record<string, FieldId[]> = {
       "seller.it.rea.soleShareholder",
       "seller.it.rea.liquidation",
     ],
-  "BusinessRecipient has no trading name, no ISO 6523 scheme for company_id, no EAS electronic address and no contact group":
-    [
-      "buyer.tradeName",
-      "buyer.legalRegScheme",
-      "buyer.electronicAddress.scheme",
-      "buyer.electronicAddress.id",
-      "buyer.contact.name",
-      "buyer.contact.phone",
-      "buyer.contact.email",
-    ],
+  // BT-49 is deliberately absent from this list: the buyer's electronic address is carried as the
+  // routing identifier under recipients[].invoicing — identifier for PEPPOL, destination_code for
+  // SDI, email for EMAIL — which is the same datum as buyer.channel.participantId.
+  "BusinessRecipient has no trading name, no ISO 6523 scheme for company_id and no contact group": [
+    "buyer.tradeName",
+    "buyer.legalRegScheme",
+    "buyer.contact.name",
+    "buyer.contact.phone",
+    "buyer.contact.email",
+  ],
   "rateCode/exemptionCode are many-to-one: the SystemVatRateCode and SystemVatExemptionCode enums cannot express Natura or a VATEX code":
     [
       "lines.{i}.vat.natura",
@@ -639,8 +639,8 @@ export const UAPI_LOSSY_FIELDS: Record<string, FieldId[]> = {
     "lines.{i}.it.altriDatiGestionali.riferimentoNumero",
     "lines.{i}.it.altriDatiGestionali.riferimentoData",
   ],
-  "The payment instruction is a bank transfer or nothing: UNCL4461/ModalitaPagamento and the FatturaPA payment conditions are not carried":
-    ["payment.meansCode", "payment.meansText", "payment.italianMeansCode", "payment.conditions"],
+  "The payment instruction is a bank transfer or nothing; ModalitaPagamento and the FatturaPA payment conditions are not carried":
+    ["payment.italianMeansCode", "payment.conditions"],
   "totals.vat is a three-value VAT summary; the EN 16931 document-level sums and adjustments are not carried":
     [
       "totals.lineExtension",
@@ -649,6 +649,71 @@ export const UAPI_LOSSY_FIELDS: Record<string, FieldId[]> = {
       "totals.prepaid",
       "totals.rounding",
     ],
+};
+
+/**
+ * What becomes of a field the operation cannot carry.
+ *
+ * "Not carried" is not the same as "not in the document". fiskaly derives BT-3, takes the seller
+ * identity from the commissioned Taxpayer, recomputes the VAT summary and defaults the payment
+ * method — all of those still appear in the XML it transmits. Others genuinely never arrive.
+ * The predicted XML has to tell the two apart, or it shows elements fiskaly will not produce.
+ *
+ * `platform` — fiskaly supplies it; the element appears, though the value may be its own.
+ * `lost`     — nothing supplies it; the element will not be in the transmitted document.
+ * `unknown`  — no evidence either way. Rendered, and listed for review rather than guessed at.
+ *
+ * Keyed by the reason itself so the two tables cannot drift; a test asserts the key sets match.
+ */
+/**
+ * Model fields that are two names for one datum.
+ *
+ * BT-49 is the buyer's electronic address. The model spells it both as `buyer.electronicAddress`
+ * and, in routing form, as `buyer.channel` — the Peppol participant id, the SDI destination code
+ * or the delivery email. A syntax that writes one has written the other, so reporting the unwritten
+ * spelling as a missing business term is an artefact of the model, not a gap in the mapping.
+ */
+export const SAME_DATUM: Record<string, string[]> = {
+  "buyer.electronicAddress.id": [
+    "buyer.channel.participantId",
+    "buyer.channel.codiceDestinatario",
+    "buyer.channel.email",
+  ],
+  "buyer.electronicAddress.scheme": ["buyer.channel.participantId"],
+  // FatturaPA renders the VAT category as Natura, and its mapping rows are tagged BT-118 and
+  // BT-151 accordingly; categoryForNatura() converts between the two spellings. A syntax that
+  // writes Natura has written the category.
+  "vatBreakdown.{i}.category": ["vatBreakdown.{i}.natura"],
+  "lines.{i}.vat.category": ["lines.{i}.vat.natura"],
+};
+
+export type LossKind = "platform" | "lost" | "unknown";
+
+export const LOSS_KIND: Record<string, LossKind> = {
+  "The syntax is chosen by fiskaly from the recipient's channel and the taxpayer's country, not by the operation":
+    "platform",
+  "BT-3 is derived by fiskaly; the operation only distinguishes INVOICE from CORRECTION":
+    "platform",
+  "document.references carries neither BT-14 nor BT-18, and despatch_advice is a bare number without BT-16's date":
+    "lost",
+  "The Italian document extras (bollo virtuale, CUP, CIG) have no counterpart in the operation":
+    "lost",
+  "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)":
+    "platform",
+  // Bundles fields with different fates, so nothing here is suppressed: the trading name and the
+  // contact group really are lost, but the buyer's EAS address (BT-49) is carried as the Peppol
+  // participant id inside recipients[].invoicing, and dropping it would make the predicted UBL
+  // fail Peppol's own mandatory-endpoint rule. Split the reason before classifying it.
+  "BusinessRecipient has no trading name, no ISO 6523 scheme for company_id and no contact group":
+    "lost",
+  "rateCode/exemptionCode are many-to-one: the SystemVatRateCode and SystemVatExemptionCode enums cannot express Natura or a VATEX code":
+    "platform",
+  "esigibilita (FatturaPA EsigibilitaIVA) has no counterpart in the VAT breakdown": "unknown",
+  "AltriDatiGestionali has no counterpart in the operation": "lost",
+  "The payment instruction is a bank transfer or nothing; ModalitaPagamento and the FatturaPA payment conditions are not carried":
+    "platform",
+  "totals.vat is a three-value VAT summary; the EN 16931 document-level sums and adjustments are not carried":
+    "platform",
 };
 
 export const UAPI_LOSSY_FIELD_IDS: FieldId[] = Object.values(UAPI_LOSSY_FIELDS).flat();
@@ -1083,6 +1148,9 @@ export const UAPI_POINTER_FIELDS: Record<string, FieldId> = {
   "/recipients/{i}/shipping/address/country": "uapi.delivery.address.country",
   "/recipients/{i}/shipping/date": "delivery.date",
   "/document/number": "number",
+  "/document/text": "note",
+  "/payments/{i}/type": "payment.meansCode",
+  "/payments/{i}/name": "payment.meansText",
   "/document/issued_at": "issueDate",
   "/document/payment_terms": "payment.terms",
   "/document/references/buyer": "references.buyerReference",

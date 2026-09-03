@@ -35,6 +35,8 @@ jobs:
         run: make spec-check
       - name: SEF staleness check
         run: make sef-check
+      - name: Gap report staleness check
+        run: make gap-check
       - name: Unit tests
         run: make test
       - name: Playwright browsers

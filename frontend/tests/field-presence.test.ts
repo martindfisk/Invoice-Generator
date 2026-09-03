@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { fieldPresence, missingCount } from "../src/field-presence";
 import { getFormat } from "../src/formats";
+import { allFields } from "../src/field-registry";
 import { preset } from "../src/presets";
 import { buildOperation, indexJson, stringifyOperation } from "../src/uapi-json";
 import { buildFieldIndex } from "../src/xml-locate";
@@ -58,9 +59,29 @@ describe("fieldPresence", () => {
   });
 
   it("counts a Belgian invoice's Italian-only field as absent everywhere but the model", () => {
+    // The app models CUP; Peppol UBL renders no element for it and the operation cannot carry it.
+    // Model presence must come from the registry, or this reads as "we never heard of CUP".
     const found = byStructure("it.cup", "be-peppol");
-    expect(found.human?.present).toBe(false);
+    expect(found.human?.present).toBe(true);
     expect(found.json?.present).toBe(false);
-    expect(missingCount(Object.values(found))).toBeGreaterThanOrEqual(2);
+    expect(found.xml?.present).toBe(false);
+    expect(missingCount(Object.values(found))).toBe(2);
+  });
+
+  it("keeps the three structures independent", () => {
+    // Model presence used to be `entry.rows.length > 0` and XML presence `entry.path !== undefined`.
+    // MappingRow.path is non-optional and pathForRows() returns undefined only for zero rows, so the
+    // two were the same predicate and the strip had a column that could never disagree.
+    const input = inputFor("be-peppol");
+    const vectors = { human: [] as boolean[], json: [] as boolean[], xml: [] as boolean[] };
+    for (const spec of allFields()) {
+      for (const entry of fieldPresence(spec.field, input)) {
+        vectors[entry.structure].push(entry.present);
+      }
+    }
+    const differs = (a: boolean[], b: boolean[]) => a.filter((v, i) => v !== b[i]).length;
+    expect(differs(vectors.human, vectors.xml)).toBeGreaterThan(3);
+    expect(differs(vectors.human, vectors.json)).toBeGreaterThan(3);
+    expect(differs(vectors.json, vectors.xml)).toBeGreaterThan(3);
   });
 });

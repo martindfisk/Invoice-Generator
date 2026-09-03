@@ -1,0 +1,29 @@
+{
+  "uapi-map.UAPI_LOSSY_FIELDS": [
+    "The syntax is chosen by fiskaly from the recipient's channel and the taxpayer's country, not by the operation",
+    "BT-3 is derived by fiskaly; the operation only distinguishes INVOICE from CORRECTION",
+    "document.references carries neither BT-14 nor BT-18, and despatch_advice is a bare number without BT-16's date",
+    "The Italian document extras (bollo virtuale, CUP, CIG) have no counterpart in the operation",
+    "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
+    "BusinessRecipient has no trading name, no ISO 6523 scheme for company_id and no contact group",
+    "rateCode/exemptionCode are many-to-one: the SystemVatRateCode and SystemVatExemptionCode enums cannot express Natura or a VATEX code",
+    "esigibilita (FatturaPA EsigibilitaIVA) has no counterpart in the VAT breakdown",
+    "AltriDatiGestionali has no counterpart in the operation",
+    "The payment instruction is a bank transfer or nothing; ModalitaPagamento and the FatturaPA payment conditions are not carried",
+    "totals.vat is a three-value VAT summary; the EN 16931 document-level sums and adjustments are not carried"
+  ],
+  "uapi-map.UAPI_PARTIAL_FIELDS": [
+    "Only a VAT_RATE row has a percentage; an exemption or reverse-charge row carries none",
+    "identification names one identifier, so a buyer with a VAT id sends only that; its codice fiscale is preserved but not editable through the JSON",
+    "Only a CONSUMER recipient carries a PersonName; a BUSINESS recipient has one legal name and no forename, surname or gender",
+    "The bank details only travel inside a CREDIT_TRANSFER instruction",
+    "An UNKNOWN instruction reuses `text` for the payment terms, so a remittance reference equal to the terms is indistinguishable",
+    "details.number is optional; without it the entry's position becomes the line id",
+    "BT-72 only travels inside recipients[].shipping, which requires BG-15: without a delivery address there is nowhere to put it"
+  ],
+  "gap-report.ts": [
+    "The format's mapping table carries no row for this field",
+    "The operation has no pointer for this field",
+    "The operation accepts this pointer but no model field addresses it"
+  ]
+}

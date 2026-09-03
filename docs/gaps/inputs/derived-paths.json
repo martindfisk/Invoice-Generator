@@ -1,0 +1,15 @@
+[
+  "entries[].data.unit.factor",
+  "entries[].data.unit.price.inclusive",
+  "entries[].data.vat.code",
+  "entries[].data.vat.amount",
+  "entries[].data.vat.exclusive",
+  "entries[].data.vat.inclusive",
+  "entries[].details.concept",
+  "breakdown[].code",
+  "breakdown[].inclusive",
+  "payments[].type",
+  "payments[].concept",
+  "recipients[].type",
+  "recipients[].identification.type"
+]

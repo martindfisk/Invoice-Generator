@@ -28,9 +28,10 @@ Browser tool: **create → validate → send → receive** e-invoices (FatturaPA
 | UAPI client/choreography/inbox, spec fetch, fixtures, spikes | `fiskaly-api-integrator` |
 | Tests, Playwright, CI test job | `qa-engineer` |
 | Standards/legal review (read-only) | `compliance-reviewer` |
+| Verify gap-report claims with citations | `gap-reviewer` |
 | Makefile, Docker, CI, env | `devops-engineer` |
 | README, demo script, glossary | `docs-writer` |
 
-Workflows: `/compliance-audit` (fixtures vs standards), `/review-change` (diff review, 3 lenses). Skills load automatically per agent; see `.claude/skills/*/SKILL.md`.
+Workflows: `/compliance-audit` (fixtures vs standards), `/gap-audit` (verify `docs/gaps/` claims, offline sources first), `/review-change` (diff review, 3 lenses). Skills load automatically per agent; see `.claude/skills/*/SKILL.md`.
 
 @docs/ARCHITECTURE.md

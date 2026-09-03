@@ -1,5 +1,5 @@
 import { fateEntry, fateLabel } from "./field-fate";
-import { genericField } from "./field-registry";
+import { allFields, genericField, type FieldSpec } from "./field-registry";
 import type { FormatPlugin } from "./formats";
 import type { FieldId, Invoice } from "./model";
 import { lossyGroups, partialGroups, pointerForField, type JsonIndex } from "./uapi-json";
@@ -40,18 +40,31 @@ function declared(map: Map<FieldId, string>, field: FieldId): string | undefined
   return map.get(field) ?? map.get(genericField(field));
 }
 
+// Model presence comes from the registry, not from the chosen format's mapping table. Deriving it
+// from the table made it identical to XML presence — MappingRow.path is non-optional and
+// pathForRows() returns undefined only for zero rows — so the strip had a column that could never
+// disagree with another. `it.cup` is a field this app models even when UBL renders no element.
+let registry: Map<FieldId, FieldSpec> | null = null;
+
+function modelled(field: FieldId): FieldSpec | undefined {
+  if (!registry) registry = new Map(allFields().map((spec) => [spec.field, spec]));
+  return registry.get(field) ?? registry.get(genericField(field));
+}
+
 export function fieldPresence(field: FieldId, input: PresenceInput): FieldPresence[] {
   const { invoice, format, fields, jsonIndex, jsonPrefix } = input;
   const entry = fields.entry(field);
   const declaredReasons = reasons(invoice);
 
-  const inHuman = entry.rows.length > 0;
+  const spec = modelled(field);
   const human: FieldPresence = {
     structure: "human",
     label: "Fields",
-    present: inHuman,
-    detail: inHuman ? (entry.bt ?? entry.label ?? field) : field,
-    reason: inHuman ? undefined : `${format.label} does not carry this business term`,
+    present: spec !== undefined,
+    detail: spec ? (spec.bt ?? spec.label) : field,
+    reason: spec
+      ? undefined
+      : "not part of the canonical invoice model — it rides on the fiskaly operation only",
   };
 
   const pointer = pointerForField(field, jsonPrefix);

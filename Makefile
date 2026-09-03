@@ -5,10 +5,10 @@ PY := "$(ROOT)/backend/.venv/bin/python"
 PIP := "$(ROOT)/backend/.venv/bin/pip"
 NPM := npm --prefix "$(ROOT)/frontend"
 
-.PHONY: help setup doctor node spec spec-check spec-integrity gen-types schemas sef sef-check dev test e2e lint docker clean
+.PHONY: help setup doctor node spec spec-check spec-integrity gap-report gap-check gen-types schemas sef sef-check dev test e2e lint docker clean
 
 help:
-	echo "Targets: setup doctor spec spec-check gen-types schemas sef sef-check dev test e2e lint docker clean"
+	echo "Targets: setup doctor spec spec-check gap-report gen-types schemas sef sef-check dev test e2e lint docker clean"
 
 node:
 	command -v node >/dev/null 2>&1 || brew install node
@@ -32,6 +32,9 @@ doctor:
 	[ -x "$(ROOT)/.claude/hooks/format.sh" ] && [ -x "$(ROOT)/.claude/hooks/guard.sh" ] && echo "hooks     ok" || { echo "hooks     not executable (chmod +x .claude/hooks/*.sh)"; ok=0; }; \
 	sd=$${STANDARDS_DIRS:-$$(grep -E '^STANDARDS_DIRS=' "$(ROOT)/.env" 2>/dev/null | cut -d= -f2-)}; \
 	if [ -n "$$sd" ]; then echo "standards ok (STANDARDS_DIRS=$$sd)"; else echo "standards unset (STANDARDS_DIRS; make schemas downloads everything)"; fi; \
+	if [ -f "$(ROOT)/docs/gaps/gap-report.json" ]; then \
+	  (cd "$(ROOT)/frontend" && node scripts/gap-report.mjs --check >/dev/null 2>&1) && echo "gaps      ok (in sync)" || { echo "gaps      stale (make gap-report)"; ok=0; }; \
+	else echo "gaps      not generated (make gap-report)"; fi; \
 	(cd "$(ROOT)/frontend" && node scripts/build-sef.mjs --check >/dev/null 2>&1) && echo "sef       ok (fresh)" || { echo "sef       stale or missing (make schemas && make sef)"; ok=0; }; \
 	python3 "$(ROOT)/tools/check_env_example.py" 2>/dev/null || true; \
 	[ $$ok = 1 ]
@@ -44,6 +47,13 @@ spec-check:
 
 spec-integrity:
 	python3 "$(ROOT)/tools/spec_check.py"
+
+gap-report:
+	cd "$(ROOT)/frontend" && node scripts/gap-report.mjs
+
+gap-check:
+	cd "$(ROOT)/frontend" && node scripts/gap-report.mjs --check
+	cd "$(ROOT)/backend" && .venv/bin/python -m pytest -q tests/test_gap_report.py tests/test_gap_remediation.py
 
 gen-types: spec-integrity
 	cd "$(ROOT)/frontend" && npm run gen-types

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { FORMATS, unsupportedReason, type FormatPlugin } from "./formats";
+import { transmittable } from "./transmittable";
 import { InvoiceViewer } from "./InvoiceViewer";
 import type { FieldId, FormatId, Invoice } from "./model";
 import { listPresets, type PresetId } from "./presets";
@@ -23,7 +24,10 @@ function renderAll(invoice: Invoice): Map<FormatId, Render> {
       continue;
     }
     try {
-      renders.set(plugin.id, { xml: plugin.write(invoice) });
+      // The prediction is what fiskaly will generate, not what our writer can. Fields the
+      // operation provably cannot deliver are blanked first, so the pane does not show elements
+      // the transmitted document will not have — see transmittable.ts.
+      renders.set(plugin.id, { xml: plugin.write(transmittable(invoice, plugin.id)) });
     } catch (error) {
       renders.set(plugin.id, { error: error instanceof Error ? error.message : String(error) });
     }

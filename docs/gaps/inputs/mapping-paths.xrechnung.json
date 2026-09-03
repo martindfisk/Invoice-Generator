@@ -1,0 +1,500 @@
+[
+  {
+    "field": "",
+    "path": "Invoice/cbc:CustomizationID",
+    "bt": "BT-24",
+    "fpa": null
+  },
+  {
+    "field": "",
+    "path": "Invoice/cbc:ProfileID",
+    "bt": "BT-23",
+    "fpa": null
+  },
+  {
+    "field": "number",
+    "path": "Invoice/cbc:ID",
+    "bt": "BT-1",
+    "fpa": null
+  },
+  {
+    "field": "issueDate",
+    "path": "Invoice/cbc:IssueDate",
+    "bt": "BT-2",
+    "fpa": null
+  },
+  {
+    "field": "dueDate",
+    "path": "Invoice/cbc:DueDate",
+    "bt": "BT-9",
+    "fpa": null
+  },
+  {
+    "field": "typeCode",
+    "path": "Invoice/cbc:InvoiceTypeCode",
+    "bt": "BT-3",
+    "fpa": null
+  },
+  {
+    "field": "note",
+    "path": "Invoice/cbc:Note",
+    "bt": "BT-22",
+    "fpa": null
+  },
+  {
+    "field": "currency",
+    "path": "Invoice/cbc:DocumentCurrencyCode",
+    "bt": "BT-5",
+    "fpa": null
+  },
+  {
+    "field": "references.buyerReference",
+    "path": "Invoice/cbc:BuyerReference",
+    "bt": "BT-10",
+    "fpa": null
+  },
+  {
+    "field": "references.purchaseOrder",
+    "path": "Invoice/cac:OrderReference/cbc:ID",
+    "bt": "BT-13",
+    "fpa": null
+  },
+  {
+    "field": "references.salesOrder",
+    "path": "Invoice/cac:OrderReference/cbc:SalesOrderID",
+    "bt": "BT-14",
+    "fpa": null
+  },
+  {
+    "field": "references.precedingInvoice.number",
+    "path": "Invoice/cac:BillingReference/cac:InvoiceDocumentReference/cbc:ID",
+    "bt": "BT-25",
+    "fpa": null
+  },
+  {
+    "field": "references.precedingInvoice.issueDate",
+    "path": "Invoice/cac:BillingReference/cac:InvoiceDocumentReference/cbc:IssueDate",
+    "bt": "BT-26",
+    "fpa": null
+  },
+  {
+    "field": "references.despatchAdvice.number",
+    "path": "Invoice/cac:DespatchDocumentReference/cbc:ID",
+    "bt": "BT-16",
+    "fpa": null
+  },
+  {
+    "field": "references.tenderOrLot",
+    "path": "Invoice/cac:OriginatorDocumentReference/cbc:ID",
+    "bt": "BT-17",
+    "fpa": null
+  },
+  {
+    "field": "references.contract",
+    "path": "Invoice/cac:ContractDocumentReference/cbc:ID",
+    "bt": "BT-12",
+    "fpa": null
+  },
+  {
+    "field": "references.invoicedObject",
+    "path": "Invoice/cac:AdditionalDocumentReference/cbc:ID",
+    "bt": "BT-18",
+    "fpa": null
+  },
+  {
+    "field": "",
+    "path": "Invoice/cac:AdditionalDocumentReference/cbc:DocumentTypeCode",
+    "bt": "BT-18",
+    "fpa": null
+  },
+  {
+    "field": "references.project",
+    "path": "Invoice/cac:ProjectReference/cbc:ID",
+    "bt": "BT-11",
+    "fpa": null
+  },
+  {
+    "field": "seller.electronicAddress.id",
+    "path": "Invoice/cac:AccountingSupplierParty/cac:Party/cbc:EndpointID",
+    "bt": "BT-34",
+    "fpa": null
+  },
+  {
+    "field": "seller.electronicAddress.scheme",
+    "path": "Invoice/cac:AccountingSupplierParty/cac:Party/cbc:EndpointID/@schemeID",
+    "bt": "BT-34-1",
+    "fpa": null
+  },
+  {
+    "field": "seller.tradeName",
+    "path": "Invoice/cac:AccountingSupplierParty/cac:Party/cac:PartyName/cbc:Name",
+    "bt": "BT-28",
+    "fpa": null
+  },
+  {
+    "field": "seller.address.street",
+    "path": "Invoice/cac:AccountingSupplierParty/cac:Party/cac:PostalAddress/cbc:StreetName",
+    "bt": "BT-35",
+    "fpa": null
+  },
+  {
+    "field": "seller.address.number",
+    "path": "Invoice/cac:AccountingSupplierParty/cac:Party/cac:PostalAddress/cbc:AdditionalStreetName",
+    "bt": "BT-36",
+    "fpa": null
+  },
+  {
+    "field": "seller.address.city",
+    "path": "Invoice/cac:AccountingSupplierParty/cac:Party/cac:PostalAddress/cbc:CityName",
+    "bt": "BT-37",
+    "fpa": null
+  },
+  {
+    "field": "seller.address.postCode",
+    "path": "Invoice/cac:AccountingSupplierParty/cac:Party/cac:PostalAddress/cbc:PostalZone",
+    "bt": "BT-38",
+    "fpa": null
+  },
+  {
+    "field": "seller.address.region",
+    "path": "Invoice/cac:AccountingSupplierParty/cac:Party/cac:PostalAddress/cbc:CountrySubentity",
+    "bt": "BT-39",
+    "fpa": null
+  },
+  {
+    "field": "seller.address.country",
+    "path": "Invoice/cac:AccountingSupplierParty/cac:Party/cac:PostalAddress/cac:Country/cbc:IdentificationCode",
+    "bt": "BT-40",
+    "fpa": null
+  },
+  {
+    "field": "seller.vatId",
+    "path": "Invoice/cac:AccountingSupplierParty/cac:Party/cac:PartyTaxScheme/cbc:CompanyID",
+    "bt": "BT-31",
+    "fpa": null
+  },
+  {
+    "field": "seller.name",
+    "path": "Invoice/cac:AccountingSupplierParty/cac:Party/cac:PartyLegalEntity/cbc:RegistrationName",
+    "bt": "BT-27",
+    "fpa": null
+  },
+  {
+    "field": "seller.legalRegId",
+    "path": "Invoice/cac:AccountingSupplierParty/cac:Party/cac:PartyLegalEntity/cbc:CompanyID",
+    "bt": "BT-30",
+    "fpa": null
+  },
+  {
+    "field": "seller.legalRegScheme",
+    "path": "Invoice/cac:AccountingSupplierParty/cac:Party/cac:PartyLegalEntity/cbc:CompanyID/@schemeID",
+    "bt": "BT-30-1",
+    "fpa": null
+  },
+  {
+    "field": "seller.contact.name",
+    "path": "Invoice/cac:AccountingSupplierParty/cac:Party/cac:Contact/cbc:Name",
+    "bt": "BT-41",
+    "fpa": null
+  },
+  {
+    "field": "seller.contact.phone",
+    "path": "Invoice/cac:AccountingSupplierParty/cac:Party/cac:Contact/cbc:Telephone",
+    "bt": "BT-42",
+    "fpa": null
+  },
+  {
+    "field": "seller.contact.email",
+    "path": "Invoice/cac:AccountingSupplierParty/cac:Party/cac:Contact/cbc:ElectronicMail",
+    "bt": "BT-43",
+    "fpa": null
+  },
+  {
+    "field": "buyer.electronicAddress.id",
+    "path": "Invoice/cac:AccountingCustomerParty/cac:Party/cbc:EndpointID",
+    "bt": "BT-49",
+    "fpa": null
+  },
+  {
+    "field": "buyer.electronicAddress.scheme",
+    "path": "Invoice/cac:AccountingCustomerParty/cac:Party/cbc:EndpointID/@schemeID",
+    "bt": "BT-49-1",
+    "fpa": null
+  },
+  {
+    "field": "buyer.tradeName",
+    "path": "Invoice/cac:AccountingCustomerParty/cac:Party/cac:PartyName/cbc:Name",
+    "bt": "BT-45",
+    "fpa": null
+  },
+  {
+    "field": "buyer.address.street",
+    "path": "Invoice/cac:AccountingCustomerParty/cac:Party/cac:PostalAddress/cbc:StreetName",
+    "bt": "BT-50",
+    "fpa": null
+  },
+  {
+    "field": "buyer.address.number",
+    "path": "Invoice/cac:AccountingCustomerParty/cac:Party/cac:PostalAddress/cbc:AdditionalStreetName",
+    "bt": "BT-51",
+    "fpa": null
+  },
+  {
+    "field": "buyer.address.city",
+    "path": "Invoice/cac:AccountingCustomerParty/cac:Party/cac:PostalAddress/cbc:CityName",
+    "bt": "BT-52",
+    "fpa": null
+  },
+  {
+    "field": "buyer.address.postCode",
+    "path": "Invoice/cac:AccountingCustomerParty/cac:Party/cac:PostalAddress/cbc:PostalZone",
+    "bt": "BT-53",
+    "fpa": null
+  },
+  {
+    "field": "buyer.address.region",
+    "path": "Invoice/cac:AccountingCustomerParty/cac:Party/cac:PostalAddress/cbc:CountrySubentity",
+    "bt": "BT-54",
+    "fpa": null
+  },
+  {
+    "field": "buyer.address.country",
+    "path": "Invoice/cac:AccountingCustomerParty/cac:Party/cac:PostalAddress/cac:Country/cbc:IdentificationCode",
+    "bt": "BT-55",
+    "fpa": null
+  },
+  {
+    "field": "buyer.vatId",
+    "path": "Invoice/cac:AccountingCustomerParty/cac:Party/cac:PartyTaxScheme/cbc:CompanyID",
+    "bt": "BT-48",
+    "fpa": null
+  },
+  {
+    "field": "buyer.name",
+    "path": "Invoice/cac:AccountingCustomerParty/cac:Party/cac:PartyLegalEntity/cbc:RegistrationName",
+    "bt": "BT-44",
+    "fpa": null
+  },
+  {
+    "field": "buyer.legalRegId",
+    "path": "Invoice/cac:AccountingCustomerParty/cac:Party/cac:PartyLegalEntity/cbc:CompanyID",
+    "bt": "BT-47",
+    "fpa": null
+  },
+  {
+    "field": "buyer.legalRegScheme",
+    "path": "Invoice/cac:AccountingCustomerParty/cac:Party/cac:PartyLegalEntity/cbc:CompanyID/@schemeID",
+    "bt": "BT-47-1",
+    "fpa": null
+  },
+  {
+    "field": "buyer.contact.name",
+    "path": "Invoice/cac:AccountingCustomerParty/cac:Party/cac:Contact/cbc:Name",
+    "bt": "BT-56",
+    "fpa": null
+  },
+  {
+    "field": "buyer.contact.phone",
+    "path": "Invoice/cac:AccountingCustomerParty/cac:Party/cac:Contact/cbc:Telephone",
+    "bt": "BT-57",
+    "fpa": null
+  },
+  {
+    "field": "buyer.contact.email",
+    "path": "Invoice/cac:AccountingCustomerParty/cac:Party/cac:Contact/cbc:ElectronicMail",
+    "bt": "BT-58",
+    "fpa": null
+  },
+  {
+    "field": "delivery.date",
+    "path": "Invoice/cac:Delivery/cbc:ActualDeliveryDate",
+    "bt": "BT-72",
+    "fpa": null
+  },
+  {
+    "field": "payment.meansCode",
+    "path": "Invoice/cac:PaymentMeans/cbc:PaymentMeansCode",
+    "bt": "BT-81",
+    "fpa": null
+  },
+  {
+    "field": "payment.meansText",
+    "path": "Invoice/cac:PaymentMeans/cbc:PaymentMeansCode/@name",
+    "bt": "BT-82",
+    "fpa": null
+  },
+  {
+    "field": "payment.remittanceInformation",
+    "path": "Invoice/cac:PaymentMeans/cbc:PaymentID",
+    "bt": "BT-83",
+    "fpa": null
+  },
+  {
+    "field": "payment.iban",
+    "path": "Invoice/cac:PaymentMeans/cac:PayeeFinancialAccount/cbc:ID",
+    "bt": "BT-84",
+    "fpa": null
+  },
+  {
+    "field": "payment.accountName",
+    "path": "Invoice/cac:PaymentMeans/cac:PayeeFinancialAccount/cbc:Name",
+    "bt": "BT-85",
+    "fpa": null
+  },
+  {
+    "field": "payment.bic",
+    "path": "Invoice/cac:PaymentMeans/cac:PayeeFinancialAccount/cac:FinancialInstitutionBranch/cbc:ID",
+    "bt": "BT-86",
+    "fpa": null
+  },
+  {
+    "field": "payment.terms",
+    "path": "Invoice/cac:PaymentTerms/cbc:Note",
+    "bt": "BT-20",
+    "fpa": null
+  },
+  {
+    "field": "totals.taxAmount",
+    "path": "Invoice/cac:TaxTotal/cbc:TaxAmount",
+    "bt": "BT-110",
+    "fpa": null
+  },
+  {
+    "field": "vatBreakdown.{i}.taxableAmount",
+    "path": "Invoice/cac:TaxTotal/cac:TaxSubtotal[{i}]/cbc:TaxableAmount",
+    "bt": "BT-116",
+    "fpa": null
+  },
+  {
+    "field": "vatBreakdown.{i}.taxAmount",
+    "path": "Invoice/cac:TaxTotal/cac:TaxSubtotal[{i}]/cbc:TaxAmount",
+    "bt": "BT-117",
+    "fpa": null
+  },
+  {
+    "field": "vatBreakdown.{i}.category",
+    "path": "Invoice/cac:TaxTotal/cac:TaxSubtotal[{i}]/cac:TaxCategory/cbc:ID",
+    "bt": "BT-118",
+    "fpa": null
+  },
+  {
+    "field": "vatBreakdown.{i}.rate",
+    "path": "Invoice/cac:TaxTotal/cac:TaxSubtotal[{i}]/cac:TaxCategory/cbc:Percent",
+    "bt": "BT-119",
+    "fpa": null
+  },
+  {
+    "field": "vatBreakdown.{i}.vatexCode",
+    "path": "Invoice/cac:TaxTotal/cac:TaxSubtotal[{i}]/cac:TaxCategory/cbc:TaxExemptionReasonCode",
+    "bt": "BT-121",
+    "fpa": null
+  },
+  {
+    "field": "vatBreakdown.{i}.reason",
+    "path": "Invoice/cac:TaxTotal/cac:TaxSubtotal[{i}]/cac:TaxCategory/cbc:TaxExemptionReason",
+    "bt": "BT-120",
+    "fpa": null
+  },
+  {
+    "field": "totals.lineExtension",
+    "path": "Invoice/cac:LegalMonetaryTotal/cbc:LineExtensionAmount",
+    "bt": "BT-106",
+    "fpa": null
+  },
+  {
+    "field": "totals.taxExclusive",
+    "path": "Invoice/cac:LegalMonetaryTotal/cbc:TaxExclusiveAmount",
+    "bt": "BT-109",
+    "fpa": null
+  },
+  {
+    "field": "totals.taxInclusive",
+    "path": "Invoice/cac:LegalMonetaryTotal/cbc:TaxInclusiveAmount",
+    "bt": "BT-112",
+    "fpa": null
+  },
+  {
+    "field": "totals.allowance",
+    "path": "Invoice/cac:LegalMonetaryTotal/cbc:AllowanceTotalAmount",
+    "bt": "BT-107",
+    "fpa": null
+  },
+  {
+    "field": "totals.charge",
+    "path": "Invoice/cac:LegalMonetaryTotal/cbc:ChargeTotalAmount",
+    "bt": "BT-108",
+    "fpa": null
+  },
+  {
+    "field": "totals.prepaid",
+    "path": "Invoice/cac:LegalMonetaryTotal/cbc:PrepaidAmount",
+    "bt": "BT-113",
+    "fpa": null
+  },
+  {
+    "field": "totals.rounding",
+    "path": "Invoice/cac:LegalMonetaryTotal/cbc:PayableRoundingAmount",
+    "bt": "BT-114",
+    "fpa": null
+  },
+  {
+    "field": "totals.payable",
+    "path": "Invoice/cac:LegalMonetaryTotal/cbc:PayableAmount",
+    "bt": "BT-115",
+    "fpa": null
+  },
+  {
+    "field": "lines.{i}.id",
+    "path": "Invoice/cac:InvoiceLine[{i}]/cbc:ID",
+    "bt": "BT-126",
+    "fpa": null
+  },
+  {
+    "field": "lines.{i}.quantity",
+    "path": "Invoice/cac:InvoiceLine[{i}]/cbc:InvoicedQuantity",
+    "bt": "BT-129",
+    "fpa": null
+  },
+  {
+    "field": "lines.{i}.unitCode",
+    "path": "Invoice/cac:InvoiceLine[{i}]/cbc:InvoicedQuantity/@unitCode",
+    "bt": "BT-130",
+    "fpa": null
+  },
+  {
+    "field": "lines.{i}.netAmount",
+    "path": "Invoice/cac:InvoiceLine[{i}]/cbc:LineExtensionAmount",
+    "bt": "BT-131",
+    "fpa": null
+  },
+  {
+    "field": "lines.{i}.description",
+    "path": "Invoice/cac:InvoiceLine[{i}]/cac:Item/cbc:Description",
+    "bt": "BT-154",
+    "fpa": null
+  },
+  {
+    "field": "lines.{i}.name",
+    "path": "Invoice/cac:InvoiceLine[{i}]/cac:Item/cbc:Name",
+    "bt": "BT-153",
+    "fpa": null
+  },
+  {
+    "field": "lines.{i}.vat.category",
+    "path": "Invoice/cac:InvoiceLine[{i}]/cac:Item/cac:ClassifiedTaxCategory/cbc:ID",
+    "bt": "BT-151",
+    "fpa": null
+  },
+  {
+    "field": "lines.{i}.vat.rate",
+    "path": "Invoice/cac:InvoiceLine[{i}]/cac:Item/cac:ClassifiedTaxCategory/cbc:Percent",
+    "bt": "BT-152",
+    "fpa": null
+  },
+  {
+    "field": "lines.{i}.unitPriceNet",
+    "path": "Invoice/cac:InvoiceLine[{i}]/cac:Price/cbc:PriceAmount",
+    "bt": "BT-146",
+    "fpa": null
+  }
+]

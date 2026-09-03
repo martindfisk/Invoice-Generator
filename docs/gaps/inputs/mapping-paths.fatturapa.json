@@ -1,0 +1,494 @@
+[
+  {
+    "field": "seller.address.country",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/DatiTrasmissione/IdTrasmittente/IdPaese",
+    "bt": null,
+    "fpa": "1.1.1.1"
+  },
+  {
+    "field": "seller.taxId",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/DatiTrasmissione/IdTrasmittente/IdCodice",
+    "bt": null,
+    "fpa": "1.1.1.2"
+  },
+  {
+    "field": "number",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/DatiTrasmissione/ProgressivoInvio",
+    "bt": null,
+    "fpa": "1.1.2"
+  },
+  {
+    "field": "",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/DatiTrasmissione/FormatoTrasmissione",
+    "bt": null,
+    "fpa": "1.1.3"
+  },
+  {
+    "field": "buyer.channel.codiceDestinatario",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/DatiTrasmissione/CodiceDestinatario",
+    "bt": "BT-49",
+    "fpa": "1.1.4"
+  },
+  {
+    "field": "buyer.channel.pec",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/DatiTrasmissione/PECDestinatario",
+    "bt": "BT-49",
+    "fpa": "1.1.6"
+  },
+  {
+    "field": "seller.vatId",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CedentePrestatore/DatiAnagrafici/IdFiscaleIVA/IdPaese",
+    "bt": "BT-31",
+    "fpa": "1.2.1.1.1"
+  },
+  {
+    "field": "seller.vatId",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CedentePrestatore/DatiAnagrafici/IdFiscaleIVA/IdCodice",
+    "bt": "BT-31",
+    "fpa": "1.2.1.1.2"
+  },
+  {
+    "field": "seller.taxId",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CedentePrestatore/DatiAnagrafici/CodiceFiscale",
+    "bt": "BT-32",
+    "fpa": "1.2.1.2"
+  },
+  {
+    "field": "seller.name",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CedentePrestatore/DatiAnagrafici/Anagrafica/Denominazione",
+    "bt": "BT-27",
+    "fpa": "1.2.1.3.1"
+  },
+  {
+    "field": "seller.person.forename",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CedentePrestatore/DatiAnagrafici/Anagrafica/Nome",
+    "bt": null,
+    "fpa": "1.2.1.3.2"
+  },
+  {
+    "field": "seller.person.surname",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CedentePrestatore/DatiAnagrafici/Anagrafica/Cognome",
+    "bt": null,
+    "fpa": "1.2.1.3.3"
+  },
+  {
+    "field": "seller.it.regimeFiscale",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CedentePrestatore/DatiAnagrafici/RegimeFiscale",
+    "bt": null,
+    "fpa": "1.2.1.8"
+  },
+  {
+    "field": "seller.address.street",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CedentePrestatore/Sede/Indirizzo",
+    "bt": "BT-35",
+    "fpa": "1.2.2.1"
+  },
+  {
+    "field": "seller.address.number",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CedentePrestatore/Sede/NumeroCivico",
+    "bt": "BT-36",
+    "fpa": "1.2.2.2"
+  },
+  {
+    "field": "seller.address.postCode",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CedentePrestatore/Sede/CAP",
+    "bt": "BT-38",
+    "fpa": "1.2.2.3"
+  },
+  {
+    "field": "seller.address.city",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CedentePrestatore/Sede/Comune",
+    "bt": "BT-37",
+    "fpa": "1.2.2.4"
+  },
+  {
+    "field": "seller.address.region",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CedentePrestatore/Sede/Provincia",
+    "bt": "BT-39",
+    "fpa": "1.2.2.5"
+  },
+  {
+    "field": "seller.address.country",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CedentePrestatore/Sede/Nazione",
+    "bt": "BT-40",
+    "fpa": "1.2.2.6"
+  },
+  {
+    "field": "seller.it.rea.office",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CedentePrestatore/IscrizioneREA/Ufficio",
+    "bt": "BT-30",
+    "fpa": "1.2.4.1"
+  },
+  {
+    "field": "seller.it.rea.number",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CedentePrestatore/IscrizioneREA/NumeroREA",
+    "bt": "BT-30",
+    "fpa": "1.2.4.2"
+  },
+  {
+    "field": "seller.it.rea.capital",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CedentePrestatore/IscrizioneREA/CapitaleSociale",
+    "bt": "BT-33",
+    "fpa": "1.2.4.3"
+  },
+  {
+    "field": "seller.it.rea.soleShareholder",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CedentePrestatore/IscrizioneREA/SocioUnico",
+    "bt": "BT-33",
+    "fpa": "1.2.4.4"
+  },
+  {
+    "field": "seller.it.rea.liquidation",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CedentePrestatore/IscrizioneREA/StatoLiquidazione",
+    "bt": "BT-33",
+    "fpa": "1.2.4.5"
+  },
+  {
+    "field": "seller.contact.phone",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CedentePrestatore/Contatti/Telefono",
+    "bt": "BT-42",
+    "fpa": "1.2.5.1"
+  },
+  {
+    "field": "seller.contact.email",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CedentePrestatore/Contatti/Email",
+    "bt": "BT-43",
+    "fpa": "1.2.5.3"
+  },
+  {
+    "field": "buyer.vatId",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CessionarioCommittente/DatiAnagrafici/IdFiscaleIVA/IdPaese",
+    "bt": "BT-48",
+    "fpa": "1.4.1.1.1"
+  },
+  {
+    "field": "buyer.vatId",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CessionarioCommittente/DatiAnagrafici/IdFiscaleIVA/IdCodice",
+    "bt": "BT-48",
+    "fpa": "1.4.1.1.2"
+  },
+  {
+    "field": "buyer.taxId",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CessionarioCommittente/DatiAnagrafici/CodiceFiscale",
+    "bt": "BT-46",
+    "fpa": "1.4.1.2"
+  },
+  {
+    "field": "buyer.name",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CessionarioCommittente/DatiAnagrafici/Anagrafica/Denominazione",
+    "bt": "BT-44",
+    "fpa": "1.4.1.3.1"
+  },
+  {
+    "field": "buyer.person.forename",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CessionarioCommittente/DatiAnagrafici/Anagrafica/Nome",
+    "bt": null,
+    "fpa": "1.4.1.3.2"
+  },
+  {
+    "field": "buyer.person.surname",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CessionarioCommittente/DatiAnagrafici/Anagrafica/Cognome",
+    "bt": null,
+    "fpa": "1.4.1.3.3"
+  },
+  {
+    "field": "buyer.address.street",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CessionarioCommittente/Sede/Indirizzo",
+    "bt": "BT-50",
+    "fpa": "1.4.2.1"
+  },
+  {
+    "field": "buyer.address.number",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CessionarioCommittente/Sede/NumeroCivico",
+    "bt": "BT-51",
+    "fpa": "1.4.2.2"
+  },
+  {
+    "field": "buyer.address.postCode",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CessionarioCommittente/Sede/CAP",
+    "bt": "BT-53",
+    "fpa": "1.4.2.3"
+  },
+  {
+    "field": "buyer.address.city",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CessionarioCommittente/Sede/Comune",
+    "bt": "BT-52",
+    "fpa": "1.4.2.4"
+  },
+  {
+    "field": "buyer.address.region",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CessionarioCommittente/Sede/Provincia",
+    "bt": "BT-54",
+    "fpa": "1.4.2.5"
+  },
+  {
+    "field": "buyer.address.country",
+    "path": "p:FatturaElettronica/FatturaElettronicaHeader/CessionarioCommittente/Sede/Nazione",
+    "bt": "BT-55",
+    "fpa": "1.4.2.6"
+  },
+  {
+    "field": "typeCode",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiGenerali/DatiGeneraliDocumento/TipoDocumento",
+    "bt": "BT-3",
+    "fpa": "2.1.1.1"
+  },
+  {
+    "field": "currency",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiGenerali/DatiGeneraliDocumento/Divisa",
+    "bt": "BT-5",
+    "fpa": "2.1.1.2"
+  },
+  {
+    "field": "issueDate",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiGenerali/DatiGeneraliDocumento/Data",
+    "bt": "BT-2",
+    "fpa": "2.1.1.3"
+  },
+  {
+    "field": "number",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiGenerali/DatiGeneraliDocumento/Numero",
+    "bt": "BT-1",
+    "fpa": "2.1.1.4"
+  },
+  {
+    "field": "totals.taxInclusive",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiGenerali/DatiGeneraliDocumento/ImportoTotaleDocumento",
+    "bt": "BT-112",
+    "fpa": "2.1.1.9"
+  },
+  {
+    "field": "totals.rounding",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiGenerali/DatiGeneraliDocumento/Arrotondamento",
+    "bt": "BT-114",
+    "fpa": "2.1.1.10"
+  },
+  {
+    "field": "note",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiGenerali/DatiGeneraliDocumento/Causale",
+    "bt": "BT-22",
+    "fpa": "2.1.1.11"
+  },
+  {
+    "field": "references.purchaseOrder",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiGenerali/DatiOrdineAcquisto/IdDocumento",
+    "bt": "BT-13",
+    "fpa": "2.1.2.2"
+  },
+  {
+    "field": "references.contract",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiGenerali/DatiContratto/IdDocumento",
+    "bt": "BT-12",
+    "fpa": "2.1.3.2"
+  },
+  {
+    "field": "references.tenderOrLot",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiGenerali/DatiConvenzione/IdDocumento",
+    "bt": "BT-17",
+    "fpa": "2.1.4.2"
+  },
+  {
+    "field": "references.invoicedObject",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiGenerali/DatiRicezione/IdDocumento",
+    "bt": "BT-18",
+    "fpa": "2.1.5.2"
+  },
+  {
+    "field": "references.precedingInvoice.number",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiGenerali/DatiFattureCollegate/IdDocumento",
+    "bt": "BT-25",
+    "fpa": "2.1.6.2"
+  },
+  {
+    "field": "references.precedingInvoice.issueDate",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiGenerali/DatiFattureCollegate/Data",
+    "bt": "BT-26",
+    "fpa": "2.1.6.3"
+  },
+  {
+    "field": "references.despatchAdvice.number",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiGenerali/DatiDDT/NumeroDDT",
+    "bt": "BT-16",
+    "fpa": "2.1.8.1"
+  },
+  {
+    "field": "references.despatchAdvice.issueDate",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiGenerali/DatiDDT/DataDDT",
+    "bt": "BT-16",
+    "fpa": "2.1.8.2"
+  },
+  {
+    "field": "it.bollo.virtuale",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiGenerali/DatiGeneraliDocumento/DatiBollo/BolloVirtuale",
+    "bt": null,
+    "fpa": "2.1.1.6.1"
+  },
+  {
+    "field": "it.bollo.amount",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiGenerali/DatiGeneraliDocumento/DatiBollo/ImportoBollo",
+    "bt": null,
+    "fpa": "2.1.1.6.2"
+  },
+  {
+    "field": "it.cup",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiGenerali/DatiOrdineAcquisto/CodiceCUP",
+    "bt": null,
+    "fpa": "2.1.2.6"
+  },
+  {
+    "field": "it.cig",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiGenerali/DatiOrdineAcquisto/CodiceCIG",
+    "bt": null,
+    "fpa": "2.1.2.7"
+  },
+  {
+    "field": "lines.{i}.id",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiBeniServizi/DettaglioLinee[{i}]/NumeroLinea",
+    "bt": "BT-126",
+    "fpa": "2.2.1.1"
+  },
+  {
+    "field": "lines.{i}.name",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiBeniServizi/DettaglioLinee[{i}]/Descrizione",
+    "bt": "BT-153",
+    "fpa": "2.2.1.4"
+  },
+  {
+    "field": "lines.{i}.quantity",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiBeniServizi/DettaglioLinee[{i}]/Quantita",
+    "bt": "BT-129",
+    "fpa": "2.2.1.5"
+  },
+  {
+    "field": "lines.{i}.unitCode",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiBeniServizi/DettaglioLinee[{i}]/UnitaMisura",
+    "bt": "BT-130",
+    "fpa": "2.2.1.6"
+  },
+  {
+    "field": "lines.{i}.unitPriceNet",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiBeniServizi/DettaglioLinee[{i}]/PrezzoUnitario",
+    "bt": "BT-146",
+    "fpa": "2.2.1.9"
+  },
+  {
+    "field": "lines.{i}.netAmount",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiBeniServizi/DettaglioLinee[{i}]/PrezzoTotale",
+    "bt": "BT-131",
+    "fpa": "2.2.1.11"
+  },
+  {
+    "field": "lines.{i}.vat.rate",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiBeniServizi/DettaglioLinee[{i}]/AliquotaIVA",
+    "bt": "BT-152",
+    "fpa": "2.2.1.12"
+  },
+  {
+    "field": "lines.{i}.vat.natura",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiBeniServizi/DettaglioLinee[{i}]/Natura",
+    "bt": "BT-151",
+    "fpa": "2.2.1.14"
+  },
+  {
+    "field": "lines.{i}.it.altriDatiGestionali.tipoDato",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiBeniServizi/DettaglioLinee[{i}]/AltriDatiGestionali/TipoDato",
+    "bt": null,
+    "fpa": "2.2.1.16.1"
+  },
+  {
+    "field": "lines.{i}.it.altriDatiGestionali.riferimentoTesto",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiBeniServizi/DettaglioLinee[{i}]/AltriDatiGestionali/RiferimentoTesto",
+    "bt": null,
+    "fpa": "2.2.1.16.2"
+  },
+  {
+    "field": "lines.{i}.it.altriDatiGestionali.riferimentoNumero",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiBeniServizi/DettaglioLinee[{i}]/AltriDatiGestionali/RiferimentoNumero",
+    "bt": null,
+    "fpa": "2.2.1.16.3"
+  },
+  {
+    "field": "lines.{i}.it.altriDatiGestionali.riferimentoData",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiBeniServizi/DettaglioLinee[{i}]/AltriDatiGestionali/RiferimentoData",
+    "bt": null,
+    "fpa": "2.2.1.16.4"
+  },
+  {
+    "field": "vatBreakdown.{i}.rate",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiBeniServizi/DatiRiepilogo[{i}]/AliquotaIVA",
+    "bt": "BT-119",
+    "fpa": "2.2.2.1"
+  },
+  {
+    "field": "vatBreakdown.{i}.natura",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiBeniServizi/DatiRiepilogo[{i}]/Natura",
+    "bt": "BT-118",
+    "fpa": "2.2.2.2"
+  },
+  {
+    "field": "vatBreakdown.{i}.taxableAmount",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiBeniServizi/DatiRiepilogo[{i}]/ImponibileImporto",
+    "bt": "BT-116",
+    "fpa": "2.2.2.5"
+  },
+  {
+    "field": "vatBreakdown.{i}.taxAmount",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiBeniServizi/DatiRiepilogo[{i}]/Imposta",
+    "bt": "BT-117",
+    "fpa": "2.2.2.6"
+  },
+  {
+    "field": "vatBreakdown.{i}.esigibilita",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiBeniServizi/DatiRiepilogo[{i}]/EsigibilitaIVA",
+    "bt": "BT-8",
+    "fpa": "2.2.2.7"
+  },
+  {
+    "field": "vatBreakdown.{i}.reason",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiBeniServizi/DatiRiepilogo[{i}]/RiferimentoNormativo",
+    "bt": "BT-120",
+    "fpa": "2.2.2.8"
+  },
+  {
+    "field": "payment.conditions",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiPagamento/CondizioniPagamento",
+    "bt": null,
+    "fpa": "2.4.1"
+  },
+  {
+    "field": "payment.accountName",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiPagamento/DettaglioPagamento/Beneficiario",
+    "bt": "BT-85",
+    "fpa": "2.4.2.1"
+  },
+  {
+    "field": "payment.italianMeansCode",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiPagamento/DettaglioPagamento/ModalitaPagamento",
+    "bt": "BT-81",
+    "fpa": "2.4.2.2"
+  },
+  {
+    "field": "dueDate",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiPagamento/DettaglioPagamento/DataScadenzaPagamento",
+    "bt": "BT-9",
+    "fpa": "2.4.2.5"
+  },
+  {
+    "field": "totals.payable",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiPagamento/DettaglioPagamento/ImportoPagamento",
+    "bt": "BT-115",
+    "fpa": "2.4.2.6"
+  },
+  {
+    "field": "payment.iban",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiPagamento/DettaglioPagamento/IBAN",
+    "bt": "BT-84",
+    "fpa": "2.4.2.13"
+  },
+  {
+    "field": "payment.bic",
+    "path": "p:FatturaElettronica/FatturaElettronicaBody/DatiPagamento/DettaglioPagamento/BIC",
+    "bt": "BT-86",
+    "fpa": "2.4.2.16"
+  }
+]

@@ -1,0 +1,506 @@
+[
+  {
+    "field": "",
+    "path": "rsm:CrossIndustryInvoice/rsm:ExchangedDocumentContext/ram:GuidelineSpecifiedDocumentContextParameter/ram:ID",
+    "bt": "BT-24",
+    "fpa": null
+  },
+  {
+    "field": "number",
+    "path": "rsm:CrossIndustryInvoice/rsm:ExchangedDocument/ram:ID",
+    "bt": "BT-1",
+    "fpa": null
+  },
+  {
+    "field": "typeCode",
+    "path": "rsm:CrossIndustryInvoice/rsm:ExchangedDocument/ram:TypeCode",
+    "bt": "BT-3",
+    "fpa": null
+  },
+  {
+    "field": "issueDate",
+    "path": "rsm:CrossIndustryInvoice/rsm:ExchangedDocument/ram:IssueDateTime/udt:DateTimeString",
+    "bt": "BT-2",
+    "fpa": null
+  },
+  {
+    "field": "note",
+    "path": "rsm:CrossIndustryInvoice/rsm:ExchangedDocument/ram:IncludedNote/ram:Content",
+    "bt": "BT-22",
+    "fpa": null
+  },
+  {
+    "field": "references.buyerReference",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:BuyerReference",
+    "bt": "BT-10",
+    "fpa": null
+  },
+  {
+    "field": "seller.name",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:SellerTradeParty/ram:Name",
+    "bt": "BT-27",
+    "fpa": null
+  },
+  {
+    "field": "seller.legalRegId",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:SellerTradeParty/ram:SpecifiedLegalOrganization/ram:ID",
+    "bt": "BT-30",
+    "fpa": null
+  },
+  {
+    "field": "seller.legalRegScheme",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:SellerTradeParty/ram:SpecifiedLegalOrganization/ram:ID/@schemeID",
+    "bt": "BT-30-1",
+    "fpa": null
+  },
+  {
+    "field": "seller.tradeName",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:SellerTradeParty/ram:SpecifiedLegalOrganization/ram:TradingBusinessName",
+    "bt": "BT-28",
+    "fpa": null
+  },
+  {
+    "field": "seller.contact.name",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:SellerTradeParty/ram:DefinedTradeContact/ram:PersonName",
+    "bt": "BT-41",
+    "fpa": null
+  },
+  {
+    "field": "seller.contact.phone",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:SellerTradeParty/ram:DefinedTradeContact/ram:TelephoneUniversalCommunication/ram:CompleteNumber",
+    "bt": "BT-42",
+    "fpa": null
+  },
+  {
+    "field": "seller.contact.email",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:SellerTradeParty/ram:DefinedTradeContact/ram:EmailURIUniversalCommunication/ram:URIID",
+    "bt": "BT-43",
+    "fpa": null
+  },
+  {
+    "field": "seller.address.postCode",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:SellerTradeParty/ram:PostalTradeAddress/ram:PostcodeCode",
+    "bt": "BT-38",
+    "fpa": null
+  },
+  {
+    "field": "seller.address.street",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:SellerTradeParty/ram:PostalTradeAddress/ram:LineOne",
+    "bt": "BT-35",
+    "fpa": null
+  },
+  {
+    "field": "seller.address.number",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:SellerTradeParty/ram:PostalTradeAddress/ram:LineTwo",
+    "bt": "BT-36",
+    "fpa": null
+  },
+  {
+    "field": "seller.address.city",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:SellerTradeParty/ram:PostalTradeAddress/ram:CityName",
+    "bt": "BT-37",
+    "fpa": null
+  },
+  {
+    "field": "seller.address.country",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:SellerTradeParty/ram:PostalTradeAddress/ram:CountryID",
+    "bt": "BT-40",
+    "fpa": null
+  },
+  {
+    "field": "seller.address.region",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:SellerTradeParty/ram:PostalTradeAddress/ram:CountrySubDivisionName",
+    "bt": "BT-39",
+    "fpa": null
+  },
+  {
+    "field": "seller.electronicAddress.id",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:SellerTradeParty/ram:URIUniversalCommunication/ram:URIID",
+    "bt": "BT-34",
+    "fpa": null
+  },
+  {
+    "field": "seller.electronicAddress.scheme",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:SellerTradeParty/ram:URIUniversalCommunication/ram:URIID/@schemeID",
+    "bt": "BT-34-1",
+    "fpa": null
+  },
+  {
+    "field": "seller.vatId",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:SellerTradeParty/ram:SpecifiedTaxRegistration[ram:ID/@schemeID='VA']/ram:ID",
+    "bt": "BT-31",
+    "fpa": null
+  },
+  {
+    "field": "seller.taxId",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:SellerTradeParty/ram:SpecifiedTaxRegistration[ram:ID/@schemeID='FC']/ram:ID",
+    "bt": "BT-32",
+    "fpa": null
+  },
+  {
+    "field": "buyer.name",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:BuyerTradeParty/ram:Name",
+    "bt": "BT-44",
+    "fpa": null
+  },
+  {
+    "field": "buyer.legalRegId",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:BuyerTradeParty/ram:SpecifiedLegalOrganization/ram:ID",
+    "bt": "BT-47",
+    "fpa": null
+  },
+  {
+    "field": "buyer.legalRegScheme",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:BuyerTradeParty/ram:SpecifiedLegalOrganization/ram:ID/@schemeID",
+    "bt": "BT-47-1",
+    "fpa": null
+  },
+  {
+    "field": "buyer.tradeName",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:BuyerTradeParty/ram:SpecifiedLegalOrganization/ram:TradingBusinessName",
+    "bt": "BT-45",
+    "fpa": null
+  },
+  {
+    "field": "buyer.contact.name",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:BuyerTradeParty/ram:DefinedTradeContact/ram:PersonName",
+    "bt": "BT-56",
+    "fpa": null
+  },
+  {
+    "field": "buyer.contact.phone",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:BuyerTradeParty/ram:DefinedTradeContact/ram:TelephoneUniversalCommunication/ram:CompleteNumber",
+    "bt": "BT-57",
+    "fpa": null
+  },
+  {
+    "field": "buyer.contact.email",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:BuyerTradeParty/ram:DefinedTradeContact/ram:EmailURIUniversalCommunication/ram:URIID",
+    "bt": "BT-58",
+    "fpa": null
+  },
+  {
+    "field": "buyer.address.postCode",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:BuyerTradeParty/ram:PostalTradeAddress/ram:PostcodeCode",
+    "bt": "BT-53",
+    "fpa": null
+  },
+  {
+    "field": "buyer.address.street",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:BuyerTradeParty/ram:PostalTradeAddress/ram:LineOne",
+    "bt": "BT-50",
+    "fpa": null
+  },
+  {
+    "field": "buyer.address.number",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:BuyerTradeParty/ram:PostalTradeAddress/ram:LineTwo",
+    "bt": "BT-51",
+    "fpa": null
+  },
+  {
+    "field": "buyer.address.city",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:BuyerTradeParty/ram:PostalTradeAddress/ram:CityName",
+    "bt": "BT-52",
+    "fpa": null
+  },
+  {
+    "field": "buyer.address.country",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:BuyerTradeParty/ram:PostalTradeAddress/ram:CountryID",
+    "bt": "BT-55",
+    "fpa": null
+  },
+  {
+    "field": "buyer.address.region",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:BuyerTradeParty/ram:PostalTradeAddress/ram:CountrySubDivisionName",
+    "bt": "BT-54",
+    "fpa": null
+  },
+  {
+    "field": "buyer.electronicAddress.id",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:BuyerTradeParty/ram:URIUniversalCommunication/ram:URIID",
+    "bt": "BT-49",
+    "fpa": null
+  },
+  {
+    "field": "buyer.electronicAddress.scheme",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:BuyerTradeParty/ram:URIUniversalCommunication/ram:URIID/@schemeID",
+    "bt": "BT-49-1",
+    "fpa": null
+  },
+  {
+    "field": "buyer.vatId",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:BuyerTradeParty/ram:SpecifiedTaxRegistration[ram:ID/@schemeID='VA']/ram:ID",
+    "bt": "BT-48",
+    "fpa": null
+  },
+  {
+    "field": "references.salesOrder",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:SellerOrderReferencedDocument/ram:IssuerAssignedID",
+    "bt": "BT-14",
+    "fpa": null
+  },
+  {
+    "field": "references.purchaseOrder",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:BuyerOrderReferencedDocument/ram:IssuerAssignedID",
+    "bt": "BT-13",
+    "fpa": null
+  },
+  {
+    "field": "references.contract",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:ContractReferencedDocument/ram:IssuerAssignedID",
+    "bt": "BT-12",
+    "fpa": null
+  },
+  {
+    "field": "references.tenderOrLot",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:AdditionalReferencedDocument[ram:TypeCode='50']/ram:IssuerAssignedID",
+    "bt": "BT-17",
+    "fpa": null
+  },
+  {
+    "field": "",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:AdditionalReferencedDocument[ram:TypeCode='50']/ram:TypeCode",
+    "bt": "BT-17",
+    "fpa": null
+  },
+  {
+    "field": "references.invoicedObject",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:AdditionalReferencedDocument[ram:TypeCode='130']/ram:IssuerAssignedID",
+    "bt": "BT-18",
+    "fpa": null
+  },
+  {
+    "field": "",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:AdditionalReferencedDocument[ram:TypeCode='130']/ram:TypeCode",
+    "bt": "BT-18",
+    "fpa": null
+  },
+  {
+    "field": "references.project",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:SpecifiedProcuringProject/ram:ID",
+    "bt": "BT-11",
+    "fpa": null
+  },
+  {
+    "field": "",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:SpecifiedProcuringProject/ram:Name",
+    "bt": "BT-11",
+    "fpa": null
+  },
+  {
+    "field": "references.despatchAdvice.number",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeDelivery/ram:DespatchAdviceReferencedDocument/ram:IssuerAssignedID",
+    "bt": "BT-16",
+    "fpa": null
+  },
+  {
+    "field": "payment.remittanceInformation",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:PaymentReference",
+    "bt": "BT-83",
+    "fpa": null
+  },
+  {
+    "field": "currency",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:InvoiceCurrencyCode",
+    "bt": "BT-5",
+    "fpa": null
+  },
+  {
+    "field": "payment.meansCode",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:SpecifiedTradeSettlementPaymentMeans/ram:TypeCode",
+    "bt": "BT-81",
+    "fpa": null
+  },
+  {
+    "field": "payment.meansText",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:SpecifiedTradeSettlementPaymentMeans/ram:Information",
+    "bt": "BT-82",
+    "fpa": null
+  },
+  {
+    "field": "payment.iban",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:SpecifiedTradeSettlementPaymentMeans/ram:PayeePartyCreditorFinancialAccount/ram:IBANID",
+    "bt": "BT-84",
+    "fpa": null
+  },
+  {
+    "field": "payment.accountName",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:SpecifiedTradeSettlementPaymentMeans/ram:PayeePartyCreditorFinancialAccount/ram:AccountName",
+    "bt": "BT-85",
+    "fpa": null
+  },
+  {
+    "field": "payment.bic",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:SpecifiedTradeSettlementPaymentMeans/ram:PayeeSpecifiedCreditorFinancialInstitution/ram:BICID",
+    "bt": "BT-86",
+    "fpa": null
+  },
+  {
+    "field": "vatBreakdown.{i}.taxAmount",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:ApplicableTradeTax[{i}]/ram:CalculatedAmount",
+    "bt": "BT-117",
+    "fpa": null
+  },
+  {
+    "field": "vatBreakdown.{i}.reason",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:ApplicableTradeTax[{i}]/ram:ExemptionReason",
+    "bt": "BT-120",
+    "fpa": null
+  },
+  {
+    "field": "vatBreakdown.{i}.taxableAmount",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:ApplicableTradeTax[{i}]/ram:BasisAmount",
+    "bt": "BT-116",
+    "fpa": null
+  },
+  {
+    "field": "vatBreakdown.{i}.category",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:ApplicableTradeTax[{i}]/ram:CategoryCode",
+    "bt": "BT-118",
+    "fpa": null
+  },
+  {
+    "field": "vatBreakdown.{i}.vatexCode",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:ApplicableTradeTax[{i}]/ram:ExemptionReasonCode",
+    "bt": "BT-121",
+    "fpa": null
+  },
+  {
+    "field": "vatBreakdown.{i}.rate",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:ApplicableTradeTax[{i}]/ram:RateApplicablePercent",
+    "bt": "BT-119",
+    "fpa": null
+  },
+  {
+    "field": "payment.terms",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:SpecifiedTradePaymentTerms/ram:Description",
+    "bt": "BT-20",
+    "fpa": null
+  },
+  {
+    "field": "dueDate",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:SpecifiedTradePaymentTerms/ram:DueDateDateTime/udt:DateTimeString",
+    "bt": "BT-9",
+    "fpa": null
+  },
+  {
+    "field": "totals.lineExtension",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:SpecifiedTradeSettlementHeaderMonetarySummation/ram:LineTotalAmount",
+    "bt": "BT-106",
+    "fpa": null
+  },
+  {
+    "field": "totals.charge",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:SpecifiedTradeSettlementHeaderMonetarySummation/ram:ChargeTotalAmount",
+    "bt": "BT-108",
+    "fpa": null
+  },
+  {
+    "field": "totals.allowance",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:SpecifiedTradeSettlementHeaderMonetarySummation/ram:AllowanceTotalAmount",
+    "bt": "BT-107",
+    "fpa": null
+  },
+  {
+    "field": "totals.taxExclusive",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:SpecifiedTradeSettlementHeaderMonetarySummation/ram:TaxBasisTotalAmount",
+    "bt": "BT-109",
+    "fpa": null
+  },
+  {
+    "field": "totals.taxAmount",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:SpecifiedTradeSettlementHeaderMonetarySummation/ram:TaxTotalAmount",
+    "bt": "BT-110",
+    "fpa": null
+  },
+  {
+    "field": "totals.rounding",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:SpecifiedTradeSettlementHeaderMonetarySummation/ram:RoundingAmount",
+    "bt": "BT-114",
+    "fpa": null
+  },
+  {
+    "field": "totals.taxInclusive",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:SpecifiedTradeSettlementHeaderMonetarySummation/ram:GrandTotalAmount",
+    "bt": "BT-112",
+    "fpa": null
+  },
+  {
+    "field": "totals.prepaid",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:SpecifiedTradeSettlementHeaderMonetarySummation/ram:TotalPrepaidAmount",
+    "bt": "BT-113",
+    "fpa": null
+  },
+  {
+    "field": "totals.payable",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:SpecifiedTradeSettlementHeaderMonetarySummation/ram:DuePayableAmount",
+    "bt": "BT-115",
+    "fpa": null
+  },
+  {
+    "field": "references.precedingInvoice.number",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:InvoiceReferencedDocument/ram:IssuerAssignedID",
+    "bt": "BT-25",
+    "fpa": null
+  },
+  {
+    "field": "references.precedingInvoice.issueDate",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:InvoiceReferencedDocument/ram:FormattedIssueDateTime/qdt:DateTimeString",
+    "bt": "BT-26",
+    "fpa": null
+  },
+  {
+    "field": "lines.{i}.id",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:IncludedSupplyChainTradeLineItem[{i}]/ram:AssociatedDocumentLineDocument/ram:LineID",
+    "bt": "BT-126",
+    "fpa": null
+  },
+  {
+    "field": "lines.{i}.name",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:IncludedSupplyChainTradeLineItem[{i}]/ram:SpecifiedTradeProduct/ram:Name",
+    "bt": "BT-153",
+    "fpa": null
+  },
+  {
+    "field": "lines.{i}.description",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:IncludedSupplyChainTradeLineItem[{i}]/ram:SpecifiedTradeProduct/ram:Description",
+    "bt": "BT-154",
+    "fpa": null
+  },
+  {
+    "field": "lines.{i}.unitPriceNet",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:IncludedSupplyChainTradeLineItem[{i}]/ram:SpecifiedLineTradeAgreement/ram:NetPriceProductTradePrice/ram:ChargeAmount",
+    "bt": "BT-146",
+    "fpa": null
+  },
+  {
+    "field": "lines.{i}.quantity",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:IncludedSupplyChainTradeLineItem[{i}]/ram:SpecifiedLineTradeDelivery/ram:BilledQuantity",
+    "bt": "BT-129",
+    "fpa": null
+  },
+  {
+    "field": "lines.{i}.unitCode",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:IncludedSupplyChainTradeLineItem[{i}]/ram:SpecifiedLineTradeDelivery/ram:BilledQuantity/@unitCode",
+    "bt": "BT-130",
+    "fpa": null
+  },
+  {
+    "field": "lines.{i}.vat.category",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:IncludedSupplyChainTradeLineItem[{i}]/ram:SpecifiedLineTradeSettlement/ram:ApplicableTradeTax/ram:CategoryCode",
+    "bt": "BT-151",
+    "fpa": null
+  },
+  {
+    "field": "lines.{i}.vat.rate",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:IncludedSupplyChainTradeLineItem[{i}]/ram:SpecifiedLineTradeSettlement/ram:ApplicableTradeTax/ram:RateApplicablePercent",
+    "bt": "BT-152",
+    "fpa": null
+  },
+  {
+    "field": "lines.{i}.netAmount",
+    "path": "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:IncludedSupplyChainTradeLineItem[{i}]/ram:SpecifiedLineTradeSettlement/ram:SpecifiedTradeSettlementLineMonetarySummation/ram:LineTotalAmount",
+    "bt": "BT-131",
+    "fpa": null
+  }
+]
