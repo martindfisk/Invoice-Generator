@@ -39,7 +39,6 @@ class Settings(BaseSettings):
     uapi_mode: Literal["live", "mock"] = "mock"
     uapi_record: bool = False
     allow_mode_override: bool = False
-    reception_mode: Literal["live", "simulated"] = "simulated"
 
     seller_api_key: str | None = None
     seller_api_secret: str | None = None

@@ -18,7 +18,7 @@ import {
 } from "./uapi-json";
 import type { StageResult } from "./validation";
 
-export type Step = "setup" | "mapper" | "validate" | "send" | "receive";
+export type Step = "setup" | "mapper" | "validate" | "send";
 
 // "json" is the fiskaly operation the API actually accepts; "xml" is this browser's prediction
 // of the document fiskaly would generate from it. Split pairs the fields with the JSON.
@@ -178,16 +178,15 @@ export const STEPS: { id: Step; label: string; blurb: string }[] = [
   },
   { id: "validate", label: "Validate", blurb: "Run the local validation pipeline" },
   { id: "send", label: "Send", blurb: "Hand the invoice to fiskaly" },
-  { id: "receive", label: "Receive", blurb: "Follow what arrives on the buyer side" },
 ];
 
 export const WORKFLOW_KEY = "workflow";
 
 const STEP_IDS = STEPS.map((step) => step.id);
 
-// The step was called "compose" until 2026-09-02. A saved workflow still on it lands on the
-// renamed step rather than being bounced back to the start.
-const LEGACY_STEPS: Record<string, Step> = { compose: "mapper" };
+// "compose" was renamed to "mapper" on 2026-09-02; "receive" was removed on 2026-09-03. A saved
+// workflow still on either lands on the nearest live step rather than being bounced to the start.
+const LEGACY_STEPS: Record<string, Step> = { compose: "mapper", receive: "send" };
 
 export function migrateStep(saved: unknown): Step {
   if (typeof saved !== "string") return "mapper";
@@ -716,13 +715,9 @@ const CALL_STEPS: Record<string, Step> = {
   transaction: "send",
   poll: "send",
   artifact: "send",
-  inbox: "receive",
 };
 
-export function stepForCall(call: Pick<ApiCall, "step" | "persona">): Step | undefined {
-  if (call.persona === "buyer" && (call.step === "inbox" || call.step === "artifact")) {
-    return "receive";
-  }
+export function stepForCall(call: Pick<ApiCall, "step">): Step | undefined {
   return CALL_STEPS[call.step];
 }
 

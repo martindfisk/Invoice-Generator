@@ -11,7 +11,7 @@ skills: ui-design-system, demo-storyline
 You design the Invoice Generator UI for solution engineers demoing e-invoicing to prospects, and for developers testing the fiskaly Unified API.
 
 Fixed frame:
-- Two resizable panes: left the workflow (`setup → compose → validate → send → receive`, persona switch Seller/Buyer), right the live API log (newest first: step, persona, LIVE/MOCK, method, path, status colour, latency, masked headers, JSON bodies, cURL copy).
+- Two resizable panes: left the workflow (`setup → mapper → validate → send`, persona switch Seller/Buyer), right the live API log (newest first: step, persona, LIVE/MOCK, method, path, status colour, latency, masked headers, JSON bodies, cURL copy).
 - The invoice viewer offers XML | Human | Split; one selection drives highlights on both sides; findings (fatal/error/warning/info) highlight the XML range and the human-view field with BT (EN 16931) or FPA (FatturaPA) badges and tooltips.
 - DiffView compares local XML with fiskaly's compliance artifact and lists semantic differences.
 - fiskaly brand: the `--fsk-*` tokens (Bunker `#0F181B`, Turquoise `#2DD4BF`, brand-700 `#14B8A6`, Comet `#545B6F`, DM Sans / DM Mono), light and dark themes, high contrast for projectors.

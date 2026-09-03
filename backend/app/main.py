@@ -27,7 +27,6 @@ async def lifespan(app):
     app.state.recorder = Recorder(settings.recorder_capacity)
     app.state.validator = XsdValidator(settings.vendor_dir)
     app.state.uapi_schema = UapiSchemaValidator(settings.spec_dir)
-    app.state.simulated_inbox = []
     app.state.spec_fields = {}
     app.state.store = SessionStore(settings)
     transport = None if settings.uapi_mode == "live" else MockTransport()

@@ -1,6 +1,6 @@
 ---
 name: demo-storyline
-description: The scripted showcase of the Invoice Generator — personas, presets, the five acts (setup, compose, validate, send, receive), the compliance-artifact diff moment, error demos and per-country talking points. Load when building UI flows, presets, docs or tests that must mirror the demo.
+description: The scripted showcase of the Invoice Generator — personas, presets, the four acts (setup, compose, validate, send), the compliance-artifact diff moment, error demos and per-country talking points. Load when building UI flows, presets, docs or tests that must mirror the demo.
 ---
 
 # Demo storyline (≈ 10 minutes)
@@ -13,8 +13,7 @@ Personas: **Seller** (org A, Unit key) and **Buyer** (org B, Unit key), both in 
 | 1 Compose | picks preset, edits a line | Human view with BT/FPA badges → toggles XML → Split | — | one model, two national syntaxes; the XML is the legal instance |
 | 2 Validate | runs validation, breaks the XML by hand, re-runs | stage stepper, findings highlight XML + field | `POST /api/validate/xsd` | local checks ≠ acceptance by SDI/Peppol; layered rules (XSD → Schematron/SDI) |
 | 3 Send | clicks Send | INTENTION → TRANSACTION::INVOICE → transmission polling → COMPLETED; DiffView local vs compliance artifact | 2× `POST /records`, polls, `?compliance-artifact` | fiskaly generates and transmits; the diff shows what fiskaly added/normalised |
-| 4 Receive | switches to Buyer | inbox polling → new `E_INVOICE::RECEPTION` (or "Simulate delivery") → XML + Human view of the received document | `GET /records?type=E_INVOICE::RECEPTION`, `?compliance-artifact` | receiving is the other half of the mandate; archive artifacts |
-| 5 Peppol BE | repeats 1–4 with the BE preset in 2 minutes | same | same | same integration, different network and format |
+| 4 Peppol BE | repeats 1–3 with the BE preset in 2 minutes | same | same | same integration, different network and format |
 
 Error demos (pick two): recipient without `invoicing` → COMPLETED with ERROR log, nothing sent · `0000000` without PEC → 4xx · IT recipient without `region` → async FAILED · wrong `X-Api-Version` → 400 · replayed idempotency key → `X-Idempotency-Replayed: true`.
 

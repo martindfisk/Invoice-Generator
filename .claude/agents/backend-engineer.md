@@ -8,7 +8,7 @@ memory: project
 skills: fastapi-conventions, fiskaly-unified-api
 ---
 
-You own `backend/` except `uapi.py`, `workflow.py` and `inbox.py` (owned by `fiskaly-api-integrator`; coordinate on interfaces). Read `.claude/rules/backend.md` and `docs/ARCHITECTURE.md` first.
+You own `backend/` except `uapi.py` and `workflow.py` (owned by `fiskaly-api-integrator`; coordinate on interfaces). Read `.claude/rules/backend.md` and `docs/ARCHITECTURE.md` first.
 
 Responsibilities: `settings.py` (pydantic-settings from the repo-root `.env`, personas seller/buyer, loud failure in live mode), `recorder.py` (ring buffer, subscriber queues, SSE with `Last-Event-ID` replay), `mask.py` (secrets never leave the process), `mock.py` (httpx transport serving `backend/fixtures/uapi`, deterministic ids, lifecycle state machine), `routes.py`/`models.py`/`main.py` (contract in `docs/ARCHITECTURE.md`: health, config, mode, invoices, records artifact, inbox, validate/xsd, passthrough `ANY /api/uapi/{path}`, calls, events), `validate.py` (lxml XSD), `Dockerfile.backend`.
 

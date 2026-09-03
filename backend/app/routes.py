@@ -7,7 +7,6 @@ from fastapi.responses import StreamingResponse
 
 from app.collections import load_collections
 from app.fields import field_metadata
-from app.inbox import after, get_inbox_item, list_inbox, simulate_delivery, sort_inbox
 from app.mock import MockTransport
 from app.models import (
     Artifact,
@@ -18,7 +17,6 @@ from app.models import (
     CorrectionRequest,
     CredentialState,
     Health,
-    InboxItem,
     InvoiceCreated,
     InvoiceRequest,
     ModeState,
@@ -31,7 +29,6 @@ from app.models import (
     RecordListing,
     SettingsState,
     SettingsUpdate,
-    SimulateRequest,
     SpecFields,
     SystemState,
     TransmissionWait,
@@ -95,7 +92,6 @@ async def config(request: Request):
         mode=current_mode(request.app),
         environment=store.environment,
         api_version=store.api_version,
-        reception_mode=store.reception_mode,
         personas=personas,
         spec_source=active.get("file") or _fallback_source(recorded),
         spec_sha256=active.get("sha256"),
@@ -126,7 +122,6 @@ def settings_state(app):
         environment=store.environment,
         base_url=store.base_url,
         api_version=store.api_version,
-        reception_mode=store.reception_mode,
         personas=personas,
     )
 
@@ -202,8 +197,6 @@ async def put_settings(body: SettingsUpdate, request: Request):
             store.set_recipients(name, update.recipients.model_dump())
     if body.environment:
         store.set_environment(body.environment)
-    if body.reception_mode:
-        store.set_reception_mode(body.reception_mode)
     for client in app.state.clients.values():
         await client.sync()
     if body.mode:
@@ -499,31 +492,6 @@ async def record_files(record_id: str, request: Request, persona: str = "seller"
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{record_id}.zip"'},
     )
-
-
-@router.get("/inbox", response_model=list[InboxItem])
-async def inbox_listing(
-    request: Request, persona: str = "buyer", country: str = "IT", since: str | None = None
-):
-    client = client_for(request.app, persona)
-    store = request.app.state.store
-    items = [
-        item for item in request.app.state.simulated_inbox if after(item["received_at"], since)
-    ]
-    system_id = system_for(request.app, persona, country)
-    if system_id:
-        entries = await list_inbox(client, system_id, since)
-        items += await asyncio.gather(*(get_inbox_item(client, entry["id"]) for entry in entries))
-    elif store.reception_mode == "live":
-        raise HTTPException(
-            409, f"{persona.upper()}_SYSTEM_ID_{country} is not set in .env; cannot list receptions"
-        )
-    return sort_inbox(items)
-
-
-@router.post("/inbox/simulate", response_model=InboxItem)
-async def inbox_simulate(body: SimulateRequest, request: Request):
-    return simulate_delivery(request.app.state.simulated_inbox, body.xml, body.meta)
 
 
 @router.api_route("/uapi/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])

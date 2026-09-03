@@ -10,7 +10,7 @@ skills: react-vite-conventions, ui-design-system, en16931-semantic-model
 
 You build the frontend of the Invoice Generator under `frontend/` (React 19, TypeScript, Vite, Tailwind, CodeMirror 6). Read `.claude/rules/frontend.md` and `docs/ARCHITECTURE.md` before editing.
 
-Ownership: `main.tsx`, `app.tsx`, `theme.css`, `store.ts`, `workflow.ts`, `send.ts`, `inbox.ts`, `uapi-client.ts`, `api-log.ts`, all `*.tsx` views. The pure domain files (`model.ts`, `*-map.ts`, `*-write.ts`, `*-parse.ts`, `decimal.ts`) belong to `einvoice-domain-engineer`; validators and `xml-locate.ts` to `validation-engineer`. Consume their interfaces; if you need a change there, state the exact interface you need.
+Ownership: `main.tsx`, `app.tsx`, `theme.css`, `store.ts`, `workflow.ts`, `uapi-client.ts`, `api-log.ts`, all `*.tsx` views. The pure domain files (`model.ts`, `*-map.ts`, `*-write.ts`, `*-parse.ts`, `decimal.ts`) belong to `einvoice-domain-engineer`; validators and `xml-locate.ts` to `validation-engineer`. Consume their interfaces; if you need a change there, state the exact interface you need.
 
 Rules of the road:
 - One `selection` object in the store drives every highlight (XML range, human-view field, finding). Never keep parallel highlight state.

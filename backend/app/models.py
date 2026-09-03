@@ -5,7 +5,6 @@ from pydantic import BaseModel, Field
 Mode = Literal["live", "mock"]
 ArtifactKind = Literal["compliance", "receipt"]
 Environment = Literal["test", "live"]
-ReceptionMode = Literal["live", "simulated"]
 CredentialSource = Literal["session", "env", "none"]
 
 
@@ -24,7 +23,6 @@ class Config(BaseModel):
     mode: Mode
     environment: Literal["test", "live"]
     api_version: str
-    reception_mode: Literal["live", "simulated"]
     personas: dict[str, dict[str, SystemRef]]
     spec_source: str | None = None
     spec_sha256: str | None = None
@@ -59,7 +57,6 @@ class SettingsState(BaseModel):
     environment: Environment
     base_url: str
     api_version: str
-    reception_mode: ReceptionMode
     personas: dict[str, PersonaState]
 
 
@@ -74,7 +71,6 @@ class SettingsUpdate(BaseModel):
     mode: Mode | None = None
     environment: Environment | None = None
     confirm_live: bool = False
-    reception_mode: ReceptionMode | None = None
     personas: dict[str, PersonaUpdate] | None = None
 
 
@@ -218,22 +214,6 @@ class Artifact(BaseModel):
     label: str
     type: str
     xml: str
-
-
-class InboxItem(BaseModel):
-    id: str
-    source: Literal["uapi", "simulated"]
-    received_at: str | None = None
-    seller_name: str | None = None
-    number: str | None = None
-    total: str | None = None
-    currency: str | None = None
-    xml: str | None = None
-
-
-class SimulateRequest(BaseModel):
-    xml: str
-    meta: dict[str, Any] = Field(default_factory=dict)
 
 
 class OnboardingCounts(BaseModel):

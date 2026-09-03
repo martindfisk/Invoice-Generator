@@ -1,6 +1,6 @@
 # Demo Script
 
-A scripted showcase for a solutions engineer presenting the e-invoice lifecycle — create → validate → send → receive — to sales, partners, or prospects. Total runtime: `<TBD>` (target ~15 minutes for Acts 1–4, +2 minutes for Act 5).
+A scripted showcase for a solutions engineer presenting the e-invoice lifecycle — create → validate → send — to sales, partners, or prospects. Total runtime: `<TBD>` (target ~15 minutes for Acts 1–3, +2 minutes for Act 4).
 
 ## Setup checklist
 
@@ -36,17 +36,9 @@ Select preset **"Italian B2B (SDI)"**.
 
 **Talking point**: fiskaly builds this XML server-side (GOBL → Invopop → SDI) from the same structured JSON just sent — the diff proves the tool's local prediction matches what a tax authority actually receives.
 
-## Act 4 — Receive
+## Act 4 — Peppol BE preset (2 minutes)
 
-1. Switch persona to **Buyer** via the persona switch.
-2. Show the inbox polling `E_INVOICE::RECEPTION` records; the invoice just sent should appear as a new entry — or, if the TEST round trip does not surface one, use **"Simulate delivery"** to feed the Seller's artifact into the Buyer's inbox, calling out that this is the fallback path.
-3. Open the received document in Human view.
-
-**Talking point**: same UI, opposite side of the transaction — this is what the Buyer's system sees, reconstructed from the reception record.
-
-## Act 5 — Peppol BE preset (2 minutes)
-
-Repeat Acts 1–4 compressed, using preset **"Peppol BE"**: Human/XML toggle, send as `TRANSACTION::INVOICE` with `invoicing PEPPOL 0208:<buyer KBO>`, artifact diff (UBL this time, not FatturaPA), Buyer inbox.
+Repeat Acts 1–3 compressed, using preset **"Peppol BE"**: Human/XML toggle, send as `TRANSACTION::INVOICE` with `invoicing PEPPOL 0208:<buyer KBO>`, artifact diff (UBL this time, not FatturaPA).
 
 **Talking point**: same tool, same pipeline, different jurisdiction — Belgium's B2B Peppol mandate takes effect 1 January 2026, and this is the EN 16931-conformant Peppol BIS Billing 3.0 path rather than Italy's SDI path.
 

@@ -13,7 +13,6 @@ export type Config = {
   mode: BackendMode;
   environment: Environment;
   api_version: string;
-  reception_mode: "live" | "simulated";
   personas: { seller: PersonaConfig; buyer: PersonaConfig };
 };
 
@@ -47,7 +46,6 @@ export type Settings = {
   environment: Environment;
   base_url: string;
   api_version: string;
-  reception_mode: "live" | "simulated";
   personas: Record<Persona, PersonaSettings>;
 };
 

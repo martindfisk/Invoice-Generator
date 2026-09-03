@@ -415,15 +415,6 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
                 ? "Nothing has been sent yet."
                 : "")}
         </p>
-        {send.outcome === "transmitted" && (
-          <button
-            type="button"
-            onClick={() => store.dispatch({ type: "goToStep", step: "receive" })}
-            className="ml-auto rounded-m bg-brand px-3 py-1.5 text-xs font-semibold text-bunker"
-          >
-            Continue to Receive
-          </button>
-        )}
       </div>
     </section>
   );

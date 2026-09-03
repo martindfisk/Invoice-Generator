@@ -251,10 +251,7 @@ describe("workflow pane", () => {
     render(<WorkflowPane />);
     pickFirstPreset();
 
-    for (const [step, endpoint] of [
-      ["Send", "POST /api/invoices"],
-      ["Receive", "GET /api/inbox"],
-    ]) {
+    for (const [step, endpoint] of [["Send", "POST /api/invoices"]]) {
       fireEvent.click(stepButton(step));
       expect(store.getState().workflow.step).toBe(step.toLowerCase());
       expect(screen.getByRole("region", { name: step })).toBeInTheDocument();

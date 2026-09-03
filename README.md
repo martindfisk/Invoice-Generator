@@ -1,6 +1,6 @@
 # Invoice Generator
 
-A browser-based showcase of the e-invoice lifecycle — **create → validate → send → receive** — built for demos (sales, solution engineering, partners) and doubling as a test harness for the fiskaly Unified API (UAPI). The tool is dual-track: a **client-side e-invoice lab** generates and validates the XML a user expects locally, while a **UAPI harness** sends the same invoice through fiskaly, follows its lifecycle, and diffs the locally predicted XML against the XML fiskaly actually transmitted. The UI is a split screen: the workflow the user drives on the left, the live UAPI HTTP calls each step produces on the right.
+A browser-based showcase of the e-invoice lifecycle — **create → validate → send** — built for demos (sales, solution engineering, partners) and doubling as a test harness for the fiskaly Unified API (UAPI). The tool is dual-track: a **client-side e-invoice lab** generates and validates the XML a user expects locally, while a **UAPI harness** sends the same invoice through fiskaly, follows its lifecycle, and diffs the locally predicted XML against the XML fiskaly actually transmitted. The UI is a split screen: the workflow the user drives on the left, the live UAPI HTTP calls each step produces on the right.
 
 ## Prerequisites (macOS)
 
@@ -65,7 +65,6 @@ as before, so a fresh clone and the offline path are unchanged.
 3. **Validate**: model rules, well-formedness, XSD, Schematron (EN 16931 + Peppol BIS 3.0), and FatturaPA SDI rules run client-side; findings highlight the offending field and XML range.
 4. **Send**: the backend proxies the invoice to the UAPI as an `INTENTION`, then a `TRANSACTION::INVOICE`, polls it to completion, and fetches the compliance artifact — the XML fiskaly actually transmitted.
 5. **Diff**: the locally generated XML is compared against fiskaly's compliance artifact, with normalisation toggles (pretty-print, strip signature, ignore volatile fields). This is the core demo moment.
-6. **Receive**: switch persona to Buyer and watch the inbox poll for the incoming reception record (or use "Simulate delivery" as a fallback).
 
 Every UAPI call made along the way appears live in the right-hand API log pane, with request/response bodies, redacted secrets, and a copyable cURL command.
 
@@ -103,16 +102,16 @@ Invoice Generator/
 
 This repo ships a project-level agent team in `.claude/`. Ask the agent that owns the area you're touching:
 
-| Agent | Ask it for |
-|---|---|
-| `architect` | ADRs, module boundaries, cross-cutting reviews, `docs/ARCHITECTURE.md`, spike write-ups |
-| `ux-designer` | Split-screen grammar, viewer toggle, API pane anatomy, severity colours, `--fsk-*` token mapping, mockups |
-| `frontend-engineer` | `frontend/` shell, workflow steps, invoice viewer, DiffView, API pane, SSE client, store |
+| Agent                      | Ask it for                                                                                                               |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `architect`                | ADRs, module boundaries, cross-cutting reviews, `docs/ARCHITECTURE.md`, spike write-ups                                  |
+| `ux-designer`              | Split-screen grammar, viewer toggle, API pane anatomy, severity colours, `--fsk-*` token mapping, mockups                |
+| `frontend-engineer`        | `frontend/` shell, workflow steps, invoice viewer, DiffView, API pane, SSE client, store                                 |
 | `einvoice-domain-engineer` | Invoice model, decimal handling, presets, UBL/FatturaPA mapping tables + writers/parsers, `uapi-map.ts`, golden fixtures |
-| `validation-engineer` | SEF build, Schematron worker, SVRL → findings, FatturaPA rules, `validate.py`, `xml-locate.ts` |
-| `backend-engineer` | FastAPI app, settings, recorder/mask/SSE, mock transport, routes, Docker |
-| `fiskaly-api-integrator` | `uapi.py`, `workflow.py`, `inbox.py`, spec fetch + type generation, recorded fixtures, round-trip spikes |
-| `qa-engineer` | Vitest, Playwright, pytest suites, golden + Schematron fixture tests, CI |
-| `compliance-reviewer` | Read-only review of generated XML/labels vs. FatturaPA, Peppol BIS 3.0, EN 16931; legal citations |
-| `devops-engineer` | Makefile, `make doctor`, Dockerfiles/compose, `.env.example`, GitHub Actions, Node bootstrap |
-| `docs-writer` | README, `docs/DEMO-SCRIPT.md`, glossary, ADR formatting |
+| `validation-engineer`      | SEF build, Schematron worker, SVRL → findings, FatturaPA rules, `validate.py`, `xml-locate.ts`                           |
+| `backend-engineer`         | FastAPI app, settings, recorder/mask/SSE, mock transport, routes, Docker                                                 |
+| `fiskaly-api-integrator`   | `uapi.py`, `workflow.py`, spec fetch + type generation, recorded fixtures, round-trip spikes                             |
+| `qa-engineer`              | Vitest, Playwright, pytest suites, golden + Schematron fixture tests, CI                                                 |
+| `compliance-reviewer`      | Read-only review of generated XML/labels vs. FatturaPA, Peppol BIS 3.0, EN 16931; legal citations                        |
+| `devops-engineer`          | Makefile, `make doctor`, Dockerfiles/compose, `.env.example`, GitHub Actions, Node bootstrap                             |
+| `docs-writer`              | README, `docs/DEMO-SCRIPT.md`, glossary, ADR formatting                                                                  |

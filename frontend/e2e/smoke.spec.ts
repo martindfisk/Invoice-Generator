@@ -121,7 +121,7 @@ test.describe("mapper", () => {
 
     await chooseItalianPreset(page);
     await expect(stepper.getByRole("button", { name: /Mapper$/ })).toBeEnabled();
-    await expect(stepper.getByRole("button", { name: /Receive$/ })).toBeEnabled();
+    await expect(stepper.getByRole("button", { name: /Send$/ })).toBeEnabled();
   });
 
   test("keeps the JSON editor full height and puts the caveats past the payload", async ({
@@ -302,8 +302,6 @@ test.describe("mapper", () => {
 
     await stepper.getByRole("button", { name: /Send$/ }).click();
     await expect(page.getByText("POST /api/invoices")).toBeVisible();
-    await stepper.getByRole("button", { name: /Receive$/ }).click();
-    await expect(page.getByText("GET /api/inbox")).toBeVisible();
   });
 });
 

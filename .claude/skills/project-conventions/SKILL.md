@@ -5,7 +5,7 @@ description: Repo-wide working rules for every agent — simplicity, flat struct
 
 # Project conventions (apply everywhere)
 
-- Solve the problem at hand; no speculative abstractions, feature flags or "future" hooks unless the plan names them (format-plugin seam, `RECEPTION_MODE`, mock transport).
+- Solve the problem at hand; no speculative abstractions, feature flags or "future" hooks unless the plan names them (format-plugin seam, mock transport).
 - One file per concern; flat folders; split only when a file is hard to follow.
 - Dependencies: before adding one, state what it does and why ~10 lines of stdlib cannot; prefer well-maintained libraries; record licence implications.
 - Secrets: only in `.env` (git-ignored) or environment; never in code, fixtures, logs, SSE events, docs. Hooks block writes to `.env*` and key files.

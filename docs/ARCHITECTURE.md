@@ -6,7 +6,7 @@ Condensed from the approved plan (`docs/adr/` records the individual decisions i
 
 The fiskaly Unified API (UAPI) accepts a structured JSON `TRANSACTION::INVOICE`, not XML — fiskaly generates the XML server-side (GOBL → Invopop → Peppol/SDI). The tool is therefore dual-track:
 
-- **Client-side e-invoice lab** — generates the XML the user *expects* from the canonical invoice model, validates it locally, and visualises it (XML ⇄ Human).
+- **Client-side e-invoice lab** — generates the XML the user _expects_ from the canonical invoice model, validates it locally, and visualises it (XML ⇄ Human).
 - **UAPI harness** — sends the same invoice through fiskaly via the backend proxy, follows its lifecycle, and fetches the XML fiskaly actually transmitted.
 
 The two are diffed against each other: the local prediction vs. `GET /records/{transmission_id}?compliance-artifact`. **The diff is the demo moment.** See [ADR-0001](adr/0001-dual-track-architecture.md).
@@ -17,45 +17,44 @@ The two are diffed against each other: the local prediction vs. `GET /records/{t
 
 ## Frontend modules (`frontend/src/`, flat)
 
-| Area | Files | Responsibility |
-|---|---|---|
-| Shell | `main.tsx`, `app.tsx`, `theme.css` | Split shell, theming |
-| Domain (pure TS) | `model.ts`, `decimal.ts`, `presets.ts`, `model-rules.ts`, `formats.ts`, `bt-catalog.json` | Canonical `Invoice` model (decimal strings, never floats), `FieldId` addressing (`"lines.2.netAmount"`), presets, arithmetic/consistency rules, format-plugin registry |
-| Serializers | `xml-writer.ts`, `ubl-map/write/parse.ts`, `fatturapa-map/write/parse.ts`, `uapi-map.ts` | Mapping tables are data (`{field, path, bt\|fpa, label}`); writers call `el(row, value)` so serialisation and tooltips cannot drift |
-| Mapping presence | `field-presence.ts`, `PresenceStrip.tsx` | For the selected field, whether the model, the operation and the chosen syntax each carry it — quoting the reason `UAPI_LOSSY_FIELDS`, `UAPI_PARTIAL_FIELDS` and the fate evidence already declare, so a non-supported field is named rather than guessed at |
-| Locate / diff | `xml-locate.ts`, `xml-diff.ts` | Path index (from the CodeMirror Lezer tree) resolves field↔node both ways; semantic DOM diff by path |
-| Validation | `validation.ts`, `schematron.worker.ts`, `xsd-client.ts`, `fatturapa-rules.ts` | Pipeline + `Finding` model, see below |
-| Spec coverage | `uapi-fields-client.ts`, `uapi-fields.ts`, `CoveragePanel.tsx` | Reads the field catalogue from the backend, measures the composed JSON against it branch-relatively, and offers each unpopulated field for insertion — refusing any insert that would not validate |
-| Workflow | `workflow.ts`, `send.ts`, `inbox.ts`, `uapi-client.ts`, `store.ts` | Steps `setup → mapper → validate → send → receive`, persona `seller\|buyer`, persisted to `localStorage` (never tokens) |
-| Views | `WorkflowPane.tsx`, `Step{Setup,Mapper,Validate,Send,Receive}.tsx`, `InvoiceViewer.tsx`, `XmlView.tsx`, `HumanView.tsx`, `Field.tsx`, `DiffView.tsx`, `FindingsPanel.tsx`, `ApiLogPane.tsx`, `ApiCallCard.tsx`, `PersonaSwitch.tsx`, `ModeBadge.tsx`, `PresenceStrip.tsx` | See Visualisation below |
-| Build scripts | `scripts/gen-types.mjs`, `scripts/build-sef.mjs`, `scripts/build-bt-catalog.mjs` (+ `tools/fetch_assets.py` → `vendor/`) | Type generation from `spec/`, SEF compilation, BT catalog build; XSD/XSLT vendoring via `make schemas` |
+| Area             | Files                                                                                                                                                                                                                                                             | Responsibility                                                                                                                                                                                                                                               |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Shell            | `main.tsx`, `app.tsx`, `theme.css`                                                                                                                                                                                                                                | Split shell, theming                                                                                                                                                                                                                                         |
+| Domain (pure TS) | `model.ts`, `decimal.ts`, `presets.ts`, `model-rules.ts`, `formats.ts`, `bt-catalog.json`                                                                                                                                                                         | Canonical `Invoice` model (decimal strings, never floats), `FieldId` addressing (`"lines.2.netAmount"`), presets, arithmetic/consistency rules, format-plugin registry                                                                                       |
+| Serializers      | `xml-writer.ts`, `ubl-map/write/parse.ts`, `fatturapa-map/write/parse.ts`, `uapi-map.ts`                                                                                                                                                                          | Mapping tables are data (`{field, path, bt\|fpa, label}`); writers call `el(row, value)` so serialisation and tooltips cannot drift                                                                                                                          |
+| Mapping presence | `field-presence.ts`, `PresenceStrip.tsx`                                                                                                                                                                                                                          | For the selected field, whether the model, the operation and the chosen syntax each carry it — quoting the reason `UAPI_LOSSY_FIELDS`, `UAPI_PARTIAL_FIELDS` and the fate evidence already declare, so a non-supported field is named rather than guessed at |
+| Locate / diff    | `xml-locate.ts`, `xml-diff.ts`                                                                                                                                                                                                                                    | Path index (from the CodeMirror Lezer tree) resolves field↔node both ways; semantic DOM diff by path                                                                                                                                                         |
+| Validation       | `validation.ts`, `schematron.worker.ts`, `xsd-client.ts`, `fatturapa-rules.ts`                                                                                                                                                                                    | Pipeline + `Finding` model, see below                                                                                                                                                                                                                        |
+| Spec coverage    | `uapi-fields-client.ts`, `uapi-fields.ts`, `CoveragePanel.tsx`                                                                                                                                                                                                    | Reads the field catalogue from the backend, measures the composed JSON against it branch-relatively, and offers each unpopulated field for insertion — refusing any insert that would not validate                                                           |
+| Workflow         | `workflow.ts`, `uapi-client.ts`, `store.ts`                                                                                                                                                                                                                       | Steps `setup → mapper → validate → send`, persona `seller\|buyer`, persisted to `localStorage` (never tokens)                                                                                                                                                |
+| Views            | `WorkflowPane.tsx`, `Step{Setup,Mapper,Validate,Send}.tsx`, `InvoiceViewer.tsx`, `XmlView.tsx`, `HumanView.tsx`, `Field.tsx`, `DiffView.tsx`, `FindingsPanel.tsx`, `ApiLogPane.tsx`, `ApiCallCard.tsx`, `PersonaSwitch.tsx`, `ModeBadge.tsx`, `PresenceStrip.tsx` | See Visualisation below                                                                                                                                                                                                                                      |
+| Build scripts    | `scripts/gen-types.mjs`, `scripts/build-sef.mjs`, `scripts/build-bt-catalog.mjs` (+ `tools/fetch_assets.py` → `vendor/`)                                                                                                                                          | Type generation from `spec/`, SEF compilation, BT catalog build; XSD/XSLT vendoring via `make schemas`                                                                                                                                                       |
 
 ## Backend modules (`backend/app/`, flat)
 
-| File | Responsibility |
-|---|---|
-| `main.py` | App, lifespan (client + recorder), CORS from `CORS_ORIGINS`, routers |
-| `settings.py` | `pydantic-settings`; personas `seller`/`buyer`, each with API key/secret + system/taxpayer ids; fails loudly on missing secrets in LIVE mode |
-| `uapi.py` | `UapiClient` per persona on one `httpx.AsyncClient`: token cache keyed by `expires_at` (refresh 60 s early, `asyncio.Lock`), one retry on 401, injects `X-Api-Version`, `X-Idempotency-Key`, `Authorization`; every call passes the recorder. Mock mode = `httpx.MockTransport` on the same client — live and mock share the same code path |
-| `mock.py` | Fixture-driven transport (`backend/fixtures/uapi/*.json`), deterministic ids, small state machine (transaction gains `used_in` on 2nd GET; transmission `FINISHED` on 3rd; `document.number` starting `FAIL-` → `FAILED`) |
-| `recorder.py`, `mask.py` | Ring buffer of `CallRecord`, SSE with `Last-Event-ID` replay; masks secrets and long base64 payloads; builds the cURL command |
-| `workflow.py` | Typed choreography: intention → transaction → poll `used_in` → poll transmission → artifact |
-| `inbox.py` | Buyer inbox: live `E_INVOICE::RECEPTION` listing + simulated entries (`source: "uapi"\|"simulated"`) |
-| `spec.py` | Resolves the active spec through `spec/spec.json` (dropped spec first, per-country fallback second) and parses `components.schemas` once, memoised on file identity |
-| `validate.py` | lxml `XMLSchema` for UBL 2.1 Invoice/CreditNote and FatturaPA 1.2.x; `UapiSchemaValidator` compiles `InvoiceTransaction`/`CorrectionTransaction` to Draft 2020-12, keyed on the spec's content rather than on the country |
-| `fields.py` | Walks the `InvoiceTransaction` closure into a flat `{i}`-templated pointer catalogue — constraints, conditional required-ness, per-country applicability parsed from the spec's prose, and spec examples with generic base-type placeholders suppressed |
-| `routes.py`, `models.py` | Contract below; UAPI bodies are pass-through `dict`s (no model duplication) |
+| File                     | Responsibility                                                                                                                                                                                                                                                                                                                              |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `main.py`                | App, lifespan (client + recorder), CORS from `CORS_ORIGINS`, routers                                                                                                                                                                                                                                                                        |
+| `settings.py`            | `pydantic-settings`; personas `seller`/`buyer`, each with API key/secret + system/taxpayer ids; fails loudly on missing secrets in LIVE mode                                                                                                                                                                                                |
+| `uapi.py`                | `UapiClient` per persona on one `httpx.AsyncClient`: token cache keyed by `expires_at` (refresh 60 s early, `asyncio.Lock`), one retry on 401, injects `X-Api-Version`, `X-Idempotency-Key`, `Authorization`; every call passes the recorder. Mock mode = `httpx.MockTransport` on the same client — live and mock share the same code path |
+| `mock.py`                | Fixture-driven transport (`backend/fixtures/uapi/*.json`), deterministic ids, small state machine (transaction gains `used_in` on 2nd GET; transmission `FINISHED` on 3rd; `document.number` starting `FAIL-` → `FAILED`)                                                                                                                   |
+| `recorder.py`, `mask.py` | Ring buffer of `CallRecord`, SSE with `Last-Event-ID` replay; masks secrets and long base64 payloads; builds the cURL command                                                                                                                                                                                                               |
+| `workflow.py`            | Typed choreography: intention → transaction → poll `used_in` → poll transmission → artifact                                                                                                                                                                                                                                                 |
+| `spec.py`                | Resolves the active spec through `spec/spec.json` (dropped spec first, per-country fallback second) and parses `components.schemas` once, memoised on file identity                                                                                                                                                                         |
+| `validate.py`            | lxml `XMLSchema` for UBL 2.1 Invoice/CreditNote and FatturaPA 1.2.x; `UapiSchemaValidator` compiles `InvoiceTransaction`/`CorrectionTransaction` to Draft 2020-12, keyed on the spec's content rather than on the country                                                                                                                   |
+| `fields.py`              | Walks the `InvoiceTransaction` closure into a flat `{i}`-templated pointer catalogue — constraints, conditional required-ness, per-country applicability parsed from the spec's prose, and spec examples with generic base-type placeholders suppressed                                                                                     |
+| `routes.py`, `models.py` | Contract below; UAPI bodies are pass-through `dict`s (no model duplication)                                                                                                                                                                                                                                                                 |
 
 ## Validation pipeline
 
-| Stage | Runs | Engine | Notes |
-|---|---|---|---|
-| Model rules | browser, sync | `model-rules.ts` | Σ lines = BT-106, breakdown vs. lines, tax = taxable × rate ± 0.01, channel constraints |
-| Well-formed | browser | `DOMParser` | |
-| XSD | proxy `POST /api/validate/xsd` | lxml | Chosen over `libxml2-wasm`; `xsd-client.ts` keeps the seam for a WASM swap |
-| Schematron (UBL) | browser Web Worker | SaxonJS 2 + build-time SEF of EN 16931 UBL XSLT and Peppol BIS 3.0 XSLT | Never compile `.sch` at runtime; fallback Saxon-HE Docker sidecar behind `/api/validate/schematron` |
-| SDI rules (FatturaPA) | browser | `fatturapa-rules.ts` | Curated 004xx set (00400/00401 Natura↔Aliquota, 00403, 00417, 00419, 00421–00425, 00426/00427) |
-| fiskaly | after send | record `state`, `logs[]` | ERROR/WARNING logs become findings; SDI codes regex-linked to the rule catalog |
+| Stage                 | Runs                           | Engine                                                                  | Notes                                                                                               |
+| --------------------- | ------------------------------ | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Model rules           | browser, sync                  | `model-rules.ts`                                                        | Σ lines = BT-106, breakdown vs. lines, tax = taxable × rate ± 0.01, channel constraints             |
+| Well-formed           | browser                        | `DOMParser`                                                             |                                                                                                     |
+| XSD                   | proxy `POST /api/validate/xsd` | lxml                                                                    | Chosen over `libxml2-wasm`; `xsd-client.ts` keeps the seam for a WASM swap                          |
+| Schematron (UBL)      | browser Web Worker             | SaxonJS 2 + build-time SEF of EN 16931 UBL XSLT and Peppol BIS 3.0 XSLT | Never compile `.sch` at runtime; fallback Saxon-HE Docker sidecar behind `/api/validate/schematron` |
+| SDI rules (FatturaPA) | browser                        | `fatturapa-rules.ts`                                                    | Curated 004xx set (00400/00401 Natura↔Aliquota, 00403, 00417, 00419, 00421–00425, 00426/00427)      |
+| fiskaly               | after send                     | record `state`, `logs[]`                                                | ERROR/WARNING logs become findings; SDI codes regex-linked to the rule catalog                      |
 
 `Finding = {source, ruleId, severity fatal|error|warning|info, message, xpath?, range?, bt?, fpa?, field?, test?}`.
 
@@ -78,13 +77,6 @@ The two are diffed against each other: the local prediction vs. `GET /records/{t
 4. Poll `GET /records/{transmission_id}` until `mode = FINISHED`.
 5. `GET /records/{transmission_id}?compliance-artifact` → DiffView.
 
-**Receive**:
-
-1. Switch persona to Buyer; snapshot inbox baseline before sending.
-2. Poll `GET /records?type=E_INVOICE::RECEPTION&system_id=…` every 5 s.
-3. New ids → `?compliance-artifact` (+ `?operation`) → parse → HumanView.
-4. Fallback: "Simulate delivery" feeds the seller's artifact into the inbox.
-
 **Error demos**: recipient without `invoicing`; `0000000` without PEC (sync 4xx); IT recipient without `address.region` (async `FAILED`); wrong `X-Api-Version`; missing idempotency key; bad token.
 
 ## Frontend ↔ backend contract
@@ -96,8 +88,6 @@ The two are diffed against each other: the local prediction vs. `GET /records/{t
 - `POST /api/invoices {persona, country, operation, idempotency_key?}` → `{intention_id, transaction_id, state, mode, logs}`
 - `GET /api/invoices/{transaction_id}/wait?timeout=60`
 - `GET /api/records/{id}/artifact?kind=compliance|archive` → `{type, xml}`
-- `GET /api/inbox?persona=buyer&country=IT`
-- `POST /api/inbox/simulate`
 - `POST /api/validate/xsd {schema, xml}` → `{valid, findings[]}`
 - `ANY /api/uapi/{path}` passthrough (header `X-Persona`, caller may set `X-Idempotency-Key`)
 - `GET /api/calls`, `GET /api/events` (SSE events: `call`, `step`, `ping`)
@@ -105,7 +95,7 @@ The two are diffed against each other: the local prediction vs. `GET /records/{t
 ```
 CallRecord = {
   id, ts,
-  step: token|setup|intention|transaction|poll|artifact|list|inbox|passthrough,
+  step: token|setup|intention|transaction|poll|artifact|list|passthrough,
   persona, mode, method, url,
   request: {headers, body},
   response: {status, headers, body},

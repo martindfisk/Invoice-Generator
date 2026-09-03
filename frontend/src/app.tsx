@@ -78,7 +78,7 @@ export function App() {
   const nextTheme = theme === "dark" ? "light" : "dark";
   // The pane only ever has something to say once we start talking to fiskaly. The runner
   // talks to fiskaly with every step, so it always keeps the log beside it.
-  const showApiLog = section === "runner" || step === "send" || step === "receive";
+  const showApiLog = section === "runner" || step === "send";
   const main = section === "runner" ? <RunnerPane /> : <WorkflowPane />;
 
   return (

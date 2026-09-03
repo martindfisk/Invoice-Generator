@@ -62,7 +62,6 @@ async def test_get_settings_reports_env_credentials_without_secrets(api):
     assert body["environment"] == "test"
     assert body["base_url"] == BASE_URL
     assert body["api_version"] == "2026-06-01"
-    assert body["reception_mode"] == "simulated"
     assert body["personas"]["seller"]["credentials"] == {
         "configured": True,
         "source": "env",
@@ -115,7 +114,6 @@ async def test_put_then_get_round_trip(api):
         "environment": "test",
         "base_url": BASE_URL,
         "api_version": "2026-06-01",
-        "reception_mode": "simulated",
         "personas": {
             "seller": {
                 "credentials": {
@@ -354,7 +352,6 @@ async def test_config_and_mode_still_reflect_the_session_store():
                         "api_secret": BUYER_SESSION_SECRET,
                     },
                 },
-                "reception_mode": "live",
             },
         )
         assert (await client.get("/api/mode")).json() == {"mode": "mock", "live_available": True}
@@ -363,8 +360,6 @@ async def test_config_and_mode_still_reflect_the_session_store():
             "system_id": "sess-sys-it",
             "taxpayer_id": "sess-tax",
         }
-        assert config["reception_mode"] == "live"
-        assert (await client.get("/api/settings")).json()["reception_mode"] == "live"
         assert (await client.put("/api/mode", json={"mode": "live"})).json()["mode"] == "live"
 
 

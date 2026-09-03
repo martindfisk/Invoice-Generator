@@ -32,7 +32,6 @@ vi.mock("../src/uapi-client", async (importOriginal) => {
         mode: "mock",
         environment: "test",
         api_version: "2026-06-01",
-        reception_mode: "simulated",
         personas: { seller: { IT: { system_id: "sys-it", taxpayer_id: "tax-it" } }, buyer: {} },
       }),
     sendInvoice: mocks.sendInvoice,

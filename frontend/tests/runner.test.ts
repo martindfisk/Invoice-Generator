@@ -379,7 +379,6 @@ describe("seeding and analysis", () => {
     environment: "test",
     base_url: "https://test.api.fiskaly.com",
     api_version: "2026-06-01",
-    reception_mode: "simulated",
     personas: {
       seller: {
         credentials: { configured: true, source: "env" },

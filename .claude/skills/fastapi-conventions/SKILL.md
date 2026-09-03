@@ -5,7 +5,7 @@ description: Backend conventions for this repo — FastAPI + asyncio + httpx, py
 
 # Backend conventions (`backend/`)
 
-- **Layout**: flat `app/` — `main.py` (app + lifespan), `settings.py`, `uapi.py`, `workflow.py`, `inbox.py`, `mock.py`, `recorder.py`, `mask.py`, `validate.py`, `routes.py`, `models.py`. Tests in `tests/`, fixtures in `fixtures/uapi/`; XSD/XSLT live in the repo-root `vendor/` (produced by `make schemas`, path from `Settings.vendor_dir` / `VENDOR_DIR`).
+- **Layout**: flat `app/` — `main.py` (app + lifespan), `settings.py`, `uapi.py`, `workflow.py`, `mock.py`, `recorder.py`, `mask.py`, `validate.py`, `routes.py`, `models.py`. Tests in `tests/`, fixtures in `fixtures/uapi/`; XSD/XSLT live in the repo-root `vendor/` (produced by `make schemas`, path from `Settings.vendor_dir` / `VENDOR_DIR`).
 - **Runtime**: Python 3.13, venv at `backend/.venv` (`python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'`), run `uvicorn app.main:app --reload --port 8000`. `asyncio` only — no `anyio`-specific APIs, no threads for I/O.
 - **Settings**: `pydantic-settings` reading the repo-root `.env` (`extra="ignore"`); `personas` (`seller`, `buyer`) with key/secret/system ids; `UAPI_API_VERSION` defaults to `spec/version.txt`; `validate_live()` raises at startup in live mode when credentials are missing.
 - **HTTP client**: one `httpx.AsyncClient` per persona created in lifespan; live vs mock = transport (`httpx.MockTransport` from `mock.py`) — no `if mode` in business code. `UapiClient.request()` is the only place headers (`Authorization`, `X-Api-Version`, `X-Idempotency-Key`) are set and the only place calls are recorded.
