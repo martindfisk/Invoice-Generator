@@ -84,7 +84,9 @@ lint:
 	cd "$(ROOT)/backend" && .venv/bin/ruff check . && .venv/bin/ruff format --check .
 	cd "$(ROOT)/frontend" && npm run lint && npm run typecheck && npx prettier --check "src/**/*.{ts,tsx,css}" "tests/**/*.ts" "scripts/*.mjs"
 
-docker:
+# vendor/ and frontend/public/{sef,saxon} are git-ignored build outputs the Dockerfiles COPY;
+# building them first keeps a clean clone from producing an image with no validation assets.
+docker: schemas sef
 	docker compose up --build
 
 clean:

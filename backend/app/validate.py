@@ -1,4 +1,5 @@
 import re
+import threading
 from pathlib import Path
 
 from jsonschema import Draft202012Validator, FormatChecker
@@ -29,15 +30,20 @@ class XsdValidator:
     def __init__(self, vendor_dir):
         self.vendor_dir = Path(vendor_dir)
         self._schemas = {}
+        # validate() runs in a threadpool (asyncio.to_thread) and an XMLSchema's error_log is
+        # instance state — two concurrent validations against the same schema would read each
+        # other's findings without this.
+        self._lock = threading.Lock()
 
     def validate(self, schema_key, xml):
-        schema = self._schema(schema_key)
         parser = etree.XMLParser(no_network=True, resolve_entities=False)
         try:
             document = etree.fromstring(xml, parser)
         except etree.XMLSyntaxError:
             return {"valid": False, "findings": _findings(parser.error_log)}
-        return {"valid": schema.validate(document), "findings": _findings(schema.error_log)}
+        with self._lock:
+            schema = self._schema(schema_key)
+            return {"valid": schema.validate(document), "findings": _findings(schema.error_log)}
 
     def _schema(self, schema_key):
         pattern = SCHEMAS[schema_key]

@@ -31,6 +31,7 @@ function FilterChip({
 export function ApiLogPane() {
   const calls = useStore((state) => state.calls);
   const focus = useStore((state) => state.focus);
+  const eventsDown = useStore((state) => state.eventsDown);
   const [steps, setSteps] = useState<string[]>([]);
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [open, setOpen] = useState<Record<string, boolean>>({});
@@ -95,6 +96,15 @@ export function ApiLogPane() {
 
   return (
     <section aria-label="API log" className="flex h-full flex-col bg-surface">
+      {eventsDown && (
+        <p
+          role="status"
+          className="shrink-0 bg-warning-soft px-3 py-1 text-[11px] text-warning-ink"
+        >
+          Live stream disconnected — reconnecting; calls made in the meantime are replayed once it
+          is back.
+        </p>
+      )}
       <header className="flex shrink-0 flex-col gap-1.5 border-b border-line px-3 py-2">
         <div className="flex items-center gap-2">
           <h2 className="text-xs font-semibold tracking-wide text-muted uppercase">UAPI calls</h2>

@@ -97,7 +97,9 @@
     {
       "id": "xrechnung",
       "version": "2.5.0",
-      "vars": { "cius": "3.0.2" },
+      "vars": {
+        "cius": "3.0.2"
+      },
       "tag": "v{version}",
       "licence": "Apache-2.0 (KoSIT / Koordinierungsstelle fuer IT-Standards, xrechnung-schematron {version})",
       "distribution": "zip",
@@ -179,21 +181,13 @@
   ],
   "ruleSets": [
     {
-      "id": "en16931-ubl",
-      "source": "cen",
-      "file": "EN16931-UBL-validation.xslt",
-      "compile": "none",
-      "formats": [],
-      "order": 0,
-      "title": "CEN/TC 434 EN 16931 UBL",
-      "licence": "EUPL-1.2 (CEN/TC 434 validation artefacts)"
-    },
-    {
       "id": "en16931-cii",
       "source": "cen",
       "file": "EN16931-CII-validation.xslt",
       "compile": "none",
-      "formats": ["cii"],
+      "formats": [
+        "cii"
+      ],
       "order": 0,
       "title": "CEN/TC 434 EN 16931 CII",
       "licence": "EUPL-1.2 (CEN/TC 434 validation artefacts)"
@@ -203,7 +197,9 @@
       "source": "peppol",
       "file": "PEPPOL-EN16931-UBL.sch",
       "compile": "sch",
-      "formats": ["ubl"],
+      "formats": [
+        "ubl"
+      ],
       "order": 1,
       "title": "Peppol BIS Billing",
       "licence": "OpenPeppol AISBL (redistribution with attribution)"
@@ -213,7 +209,10 @@
       "source": "peppol",
       "file": "CEN-EN16931-UBL.sch",
       "compile": "sch",
-      "formats": ["ubl", "xrechnung"],
+      "formats": [
+        "ubl",
+        "xrechnung"
+      ],
       "order": 0,
       "title": "CEN/TC 434 EN 16931 UBL",
       "licence": "EUPL-1.2 (CEN/TC 434), redistributed by OpenPeppol"
@@ -223,19 +222,11 @@
       "source": "xrechnung",
       "file": "XRechnung-UBL-validation.xsl",
       "compile": "none",
-      "formats": ["xrechnung"],
+      "formats": [
+        "xrechnung"
+      ],
       "order": 1,
       "title": "KoSIT XRechnung {cius} UBL Schematron",
-      "licence": "Apache-2.0 (KoSIT xrechnung-schematron)"
-    },
-    {
-      "id": "xrechnung-cii",
-      "source": "xrechnung",
-      "file": "XRechnung-CII-validation.xsl",
-      "compile": "none",
-      "formats": [],
-      "order": 1,
-      "title": "KoSIT XRechnung {cius} CII Schematron",
       "licence": "Apache-2.0 (KoSIT xrechnung-schematron)"
     }
   ]

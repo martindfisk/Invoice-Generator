@@ -51,15 +51,22 @@ describe("store", () => {
     expect(listener).toHaveBeenCalledTimes(2);
   });
 
-  it("dispatch runs the workflow reducer, persists it and notifies once", () => {
-    const store = createStore();
-    const listener = vi.fn();
-    store.subscribe(listener);
-    const presetId = listPresets()[0].id;
-    store.dispatch({ type: "choosePreset", presetId });
-    expect(store.getState().workflow).toMatchObject({ presetId, step: "mapper" });
-    expect(JSON.parse(localStorage.getItem(WORKFLOW_KEY) ?? "{}")).toMatchObject({ presetId });
-    expect(listener).toHaveBeenCalledTimes(1);
+  it("dispatch runs the workflow reducer, persists it after the debounce and notifies once", () => {
+    vi.useFakeTimers();
+    try {
+      const store = createStore();
+      const listener = vi.fn();
+      store.subscribe(listener);
+      const presetId = listPresets()[0].id;
+      store.dispatch({ type: "choosePreset", presetId, fresh: true });
+      expect(store.getState().workflow).toMatchObject({ presetId, step: "mapper" });
+      expect(localStorage.getItem(WORKFLOW_KEY)).toBeNull();
+      vi.runAllTimers();
+      expect(JSON.parse(localStorage.getItem(WORKFLOW_KEY) ?? "{}")).toMatchObject({ presetId });
+      expect(listener).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("dispatch keeps the state and stays quiet when the reducer changes nothing", () => {
@@ -73,9 +80,15 @@ describe("store", () => {
   });
 
   it("rehydrates the persisted workflow", () => {
-    const presetId = listPresets()[0].id;
-    createStore().dispatch({ type: "choosePreset", presetId });
-    expect(createStore().getState().workflow).toMatchObject({ presetId, step: "mapper" });
+    vi.useFakeTimers();
+    try {
+      const presetId = listPresets()[0].id;
+      createStore().dispatch({ type: "choosePreset", presetId, fresh: true });
+      vi.runAllTimers();
+      expect(createStore().getState().workflow).toMatchObject({ presetId, step: "mapper" });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("addCall orders newest first and replaces an existing id in place", () => {

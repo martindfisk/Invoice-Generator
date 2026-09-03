@@ -4,8 +4,9 @@ import { store } from "./store";
 import { ApiError, getCollection, getCollections, type CollectionSummary } from "./uapi-client";
 
 export const NO_COLLECTIONS_API =
-  "The backend is not serving /api/collections yet, so there is nothing to run. Once the " +
-  "backend milestone lands, the published fiskaly Postman collections (IT, BE, DE) appear here.";
+  "The backend answered, but /api/collections is not available — usually the backend is not " +
+  "running or spec/ holds no Postman collections. Start it with `make dev` (and run `make spec` " +
+  "if spec/ is empty), then retry.";
 
 export const COUNTRY_LOCKED_WHILE_RUNNING =
   "Stop the run first — the step results describe the collection that is running.";

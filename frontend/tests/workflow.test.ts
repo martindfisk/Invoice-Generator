@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { FORMATS, getFormat } from "../src/formats";
 import type { FormatId } from "../src/model";
-import { listPresets } from "../src/presets";
+import { listPresets, preset } from "../src/presets";
 import { emptyRun, stagesFor, type StageResult } from "../src/validation";
 import {
   defaultPanes,
@@ -23,7 +23,11 @@ import {
 const first = listPresets()[0];
 
 function chosen(): WorkflowState {
-  return workflowReducer(freshWorkflow(), { type: "choosePreset", presetId: first.id });
+  return workflowReducer(freshWorkflow(), {
+    type: "choosePreset",
+    presetId: first.id,
+    fresh: true,
+  });
 }
 
 function otherFormat(formatId: FormatId): FormatId | undefined {
@@ -70,13 +74,29 @@ describe("workflow reducer", () => {
     expect(workflowReducer(chosen(), { type: "goToStep", step: "send" }).step).toBe("send");
   });
 
+  it("re-picking the active preset keeps the work and just returns to the Mapper", () => {
+    const edited = workflowReducer(chosen(), { type: "editField", field: "number", value: "KEEP" });
+    const elsewhere = workflowReducer(edited, { type: "goToStep", step: "send" });
+    const repicked = workflowReducer(elsewhere, { type: "choosePreset", presetId: first.id });
+    expect(repicked.invoice?.number).toBe("KEEP");
+    expect(repicked.step).toBe("mapper");
+
+    const reset = workflowReducer(elsewhere, {
+      type: "choosePreset",
+      presetId: first.id,
+      fresh: true,
+    });
+    expect(reset.invoice?.number).toBe(preset(first.id).number);
+  });
+
   it("choosePreset clears a selection carried over from the previous invoice", () => {
     const selected = workflowReducer(chosen(), {
       type: "select",
       selection: { field: "number", path: "Invoice/cbc:ID", source: "human" },
     });
     expect(
-      workflowReducer(selected, { type: "choosePreset", presetId: first.id }).selection,
+      workflowReducer(selected, { type: "choosePreset", presetId: first.id, fresh: true })
+        .selection,
     ).toBeNull();
   });
 
@@ -137,7 +157,11 @@ describe("workflow reducer", () => {
       opened.groups,
     );
 
-    const reloaded = workflowReducer(opened, { type: "choosePreset", presetId: first.id });
+    const reloaded = workflowReducer(opened, {
+      type: "choosePreset",
+      presetId: first.id,
+      fresh: true,
+    });
     expect(reloaded.groups.open).toEqual({});
   });
 
@@ -145,7 +169,8 @@ describe("workflow reducer", () => {
     const hidden = workflowReducer(chosen(), { type: "showUncarried", show: false });
     expect(hidden.groups.showUncarried).toBe(false);
     expect(
-      workflowReducer(hidden, { type: "choosePreset", presetId: first.id }).groups.showUncarried,
+      workflowReducer(hidden, { type: "choosePreset", presetId: first.id, fresh: true }).groups
+        .showUncarried,
     ).toBe(false);
   });
 
@@ -187,20 +212,82 @@ describe("workflow persistence", () => {
     expect(restored.invoice).toEqual(state.invoice);
   });
 
-  it("persists no invoice payload and no api-log data", () => {
+  it("persists the work — invoice, edits, send ids — but never tokens or call-log data", () => {
     const state = chosen();
     persistWorkflow(state);
     const raw = localStorage.getItem(WORKFLOW_KEY) ?? "";
     expect(Object.keys(JSON.parse(raw)).sort()).toEqual([
+      "correctionTarget",
+      "edit",
       "formatId",
+      "invoice",
       "panes",
       "persona",
       "presetId",
+      "send",
       "step",
       "viewVersion",
     ]);
-    expect(raw).not.toContain(state.invoice?.seller.name ?? "seller name");
-    expect(raw).not.toContain(state.invoice?.number ?? "invoice number");
+    expect(raw).toContain(state.invoice?.number ?? "invoice number");
+    expect(raw).not.toMatch(/bearer|api_key|secret/i);
+  });
+
+  it("a transmitted invoice becomes the correction target; a transmitted correction does not", () => {
+    const transmitted = (label: string, txn: string) =>
+      [
+        { type: "sendStarted", at: 1, localXml: "", label } as const,
+        {
+          type: "sendCreated",
+          at: 2,
+          created: { intention_id: `int-${txn}`, transaction_id: txn },
+          transport: "backend",
+        } as const,
+        {
+          type: "sendPolled",
+          at: 3,
+          wait: {
+            transaction_id: txn,
+            finished: true,
+            transmission_id: `trn-${txn}`,
+            transmission: { id: `trn-${txn}`, state: "COMPLETED", mode: "FINISHED", logs: [] },
+          },
+        } as const,
+      ] as WorkflowAction[];
+
+    const invoiceSent = transmitted("TRANSACTION::INVOICE", "txn-1").reduce(
+      workflowReducer,
+      chosen(),
+    );
+    expect(invoiceSent.correctionTarget).toBe("txn-1");
+
+    const correctionSent = transmitted("TRANSACTION::CORRECTION", "txn-2").reduce(
+      workflowReducer,
+      invoiceSent,
+    );
+    expect(correctionSent.correctionTarget).toBe("txn-1");
+  });
+
+  it("restores the edited invoice and the send's record ids after a reload", () => {
+    const state = chosen();
+    const edited = workflowReducer(state, { type: "editField", field: "number", value: "KEEP-42" });
+    const sent = [
+      { type: "sendStarted", at: 1, localXml: "<xml/>" } as const,
+      {
+        type: "sendCreated",
+        at: 2,
+        created: { intention_id: "int-9", transaction_id: "txn-9" },
+        transport: "backend",
+      } as const,
+    ].reduce(workflowReducer, edited);
+    persistWorkflow(sent);
+
+    const restored = initialWorkflow();
+    expect(restored.invoice?.number).toBe("KEEP-42");
+    expect(restored.send.transactionId).toBe("txn-9");
+    // The poll loop died with the page: an in-flight send comes back settled as "stopped",
+    // resumable via Keep polling.
+    expect(restored.send.phase).toBe("settled");
+    expect(restored.send.outcome).toBe("stopped");
   });
 
   it("falls back to a fresh workflow when the stored preset no longer exists", () => {
@@ -354,15 +441,18 @@ describe("compose edits", () => {
       expect(workflowReducer(drafted, { type: "setFormat", formatId: target }).edit.xml).toBeNull();
     }
     expect(
-      workflowReducer(drafted, { type: "choosePreset", presetId: first.id }).edit,
+      workflowReducer(drafted, { type: "choosePreset", presetId: first.id, fresh: true }).edit,
     ).toMatchObject({ source: "human", xml: null, notice: null });
   });
 
-  it("persists no draft XML", () => {
+  it("persists a draft XML edit so a reload keeps it", () => {
     const state = loaded();
     const drafted = workflowReducer(state, { type: "editXml", text: xmlOf(state) });
     persistWorkflow(drafted);
-    expect(localStorage.getItem(WORKFLOW_KEY) ?? "").not.toContain("<");
+    const raw = JSON.parse(localStorage.getItem(WORKFLOW_KEY) ?? "{}") as {
+      edit?: { xml?: string | null };
+    };
+    expect(raw.edit?.xml).toBe(xmlOf(state));
   });
 });
 
@@ -432,7 +522,7 @@ describe("validation state", () => {
     const actions: WorkflowAction[] = [
       { type: "editField", field: "number", value: "STALE-1" },
       { type: "editXml", text: "<not-a-fattura/>" },
-      { type: "choosePreset", presetId: first.id },
+      { type: "choosePreset", presetId: first.id, fresh: true },
       ...(other ? [{ type: "setFormat", formatId: other } as WorkflowAction] : []),
     ];
     for (const action of actions) {

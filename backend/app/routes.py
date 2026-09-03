@@ -1,7 +1,6 @@
 import asyncio
 import json
 
-import httpx
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 from fastapi.responses import StreamingResponse
 
@@ -219,7 +218,7 @@ async def delete_settings_credentials(request: Request, persona: str = "all"):
 
 
 def live_available(app):
-    return not any(client.persona.missing_credentials for client in app.state.clients.values())
+    return not app.state.clients["seller"].persona.missing_credentials
 
 
 @router.get("/mode", response_model=ModeState)
@@ -231,11 +230,7 @@ async def get_mode(request: Request):
 async def put_mode(body: ModeUpdate, request: Request):
     app = request.app
     if body.mode != current_mode(app):
-        missing = [
-            name
-            for client in app.state.clients.values()
-            for name in client.persona.missing_credentials
-        ]
+        missing = app.state.clients["seller"].persona.missing_credentials
         if body.mode == "live" and missing:
             raise HTTPException(409, f"cannot switch to live: {', '.join(missing)} missing in .env")
         await apply_mode(app, body.mode)
@@ -283,8 +278,8 @@ async def calls(request: Request, since: int | None = None):
 
 
 @router.get("/events")
-async def events(request: Request):
-    last_event_id = request.headers.get("Last-Event-ID")
+async def events(request: Request, last_event_id: str | None = None):
+    last_event_id = request.headers.get("Last-Event-ID") or last_event_id
     if last_event_id is not None and not last_event_id.isdigit():
         raise HTTPException(400, "Last-Event-ID must be a numeric call id")
     stream = request.app.state.recorder.sse(request, last_event_id)
@@ -457,10 +452,18 @@ async def list_invoices(
 
 @router.get("/invoices/{transaction_id}/wait", response_model=TransmissionWait)
 async def wait_invoice(
-    transaction_id: str, request: Request, persona: str = "seller", timeout: float | None = None
+    transaction_id: str,
+    request: Request,
+    persona: str = "seller",
+    timeout: float | None = None,
+    transmission_id: str | None = None,
 ):
     client = client_for(request.app, persona)
-    return await wait_for_transmission(client, transaction_id, timeout)
+    limit = client.settings.poll_timeout_s
+    timeout = limit if timeout is None else min(max(timeout, 0.0), limit)
+    return await wait_for_transmission(
+        client, transaction_id, timeout, transmission_id=transmission_id, request=request
+    )
 
 
 @router.post("/invoices/{transaction_id}/correction", response_model=CorrectionCreated)
@@ -506,20 +509,15 @@ async def passthrough(path: str, request: Request):
         raise HTTPException(400, f"request body is not valid JSON: {exc}") from exc
     url = f"/{path}?{request.url.query}" if request.url.query else f"/{path}"
     client = request.app.state.clients[persona]
-    try:
-        upstream = await client.request(
-            request.method,
-            url,
-            json=body,
-            step="passthrough",
-            idempotency_key=request.headers.get("X-Idempotency-Key"),
-            step_name=request.headers.get("X-Step"),
-            run_id=request.headers.get("X-Run-Id"),
-        )
-    except httpx.HTTPStatusError as exc:
-        upstream = exc.response
-    except httpx.TransportError as exc:
-        raise HTTPException(502, f"fiskaly API unreachable: {exc}") from exc
+    upstream = await client.request(
+        request.method,
+        url,
+        json=body,
+        step="passthrough",
+        idempotency_key=request.headers.get("X-Idempotency-Key"),
+        step_name=request.headers.get("X-Step"),
+        run_id=request.headers.get("X-Run-Id"),
+    )
     headers = {
         name: upstream.headers[name] for name in UPSTREAM_HEADERS if name in upstream.headers
     }

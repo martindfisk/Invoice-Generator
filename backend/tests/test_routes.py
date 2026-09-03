@@ -36,17 +36,18 @@ async def test_config_exposes_systems_but_no_secrets(api):
         assert secret not in response.text
 
 
-async def test_mode_switch_to_live_refused_without_credentials():
-    settings = make_settings(buyer_api_key=None, buyer_api_secret=None)
+async def test_mode_switch_to_live_refused_without_seller_credentials():
+    settings = make_settings(seller_api_key=None, seller_api_secret=None)
     async with api_for(settings) as (_, client):
         response = await client.put("/api/mode", json={"mode": "live"})
         assert response.status_code == 409
-        assert "BUYER_API_KEY" in response.json()["detail"]
+        assert "SELLER_API_KEY" in response.json()["detail"]
         assert (await client.get("/api/mode")).json() == {"mode": "mock", "live_available": False}
 
 
-async def test_mode_switch_does_not_depend_on_override_flag():
-    async with api_for(make_settings(allow_mode_override=False)) as (_, client):
+async def test_mode_switch_to_live_needs_no_buyer_credentials():
+    settings = make_settings(buyer_api_key=None, buyer_api_secret=None)
+    async with api_for(settings) as (_, client):
         assert (await client.get("/api/mode")).json() == {"mode": "mock", "live_available": True}
         response = await client.put("/api/mode", json={"mode": "live"})
         assert response.status_code == 200
@@ -122,7 +123,9 @@ async def test_passthrough_surfaces_token_failure(api, tmp_path):
         await uapi.use(MockTransport(tmp_path))
     response = await client.get("/api/uapi/systems/x")
     assert response.status_code == 404
-    assert "POST_tokens.json" in response.json()["content"]["message"]
+    body = response.json()
+    assert "POST /tokens" in body["detail"]
+    assert "POST_tokens.json" in body["upstream"]["message"]
 
 
 async def test_spec_fields_describes_the_payload_surface(api):

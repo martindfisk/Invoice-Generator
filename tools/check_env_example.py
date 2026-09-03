@@ -23,7 +23,7 @@ missing = sorted(
     for u in used
     if u not in example
     and u.startswith(
-        ("UAPI_", "SELLER_", "BUYER_", "CORS_", "RECORDER_", "POLL_", "LOG_", "ALLOW_")
+        ("UAPI_", "SELLER_", "BUYER_", "CORS_", "RECORDER_", "POLL_", "LOG_")
     )
 )
 if missing:

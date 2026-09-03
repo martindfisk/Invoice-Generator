@@ -344,9 +344,26 @@ def extract(schemas, operation):
     return rows, deduped
 
 
+# The walk itself does not depend on the country — only the profile applied afterwards does —
+# so one extraction per (spec content, operation) serves every country's request.
+_EXTRACT_CACHE_MAX = 8
+_extract_cache = {}
+
+
+def _extract_cached(schemas, digest, operation):
+    key = (digest, operation)
+    if key not in _extract_cache:
+        if len(_extract_cache) >= _EXTRACT_CACHE_MAX:
+            _extract_cache.clear()
+        _extract_cache[key] = extract(schemas, operation)
+    return _extract_cache[key]
+
+
 def field_metadata(spec_dir, country, operation):
     schemas, digest, source = load_schemas(spec_dir, country)
-    rows, unions = extract(schemas, operation)
+    shared_rows, unions = _extract_cached(schemas, digest, operation)
+    # The per-country verdict is written onto the rows, so the shared extraction stays pristine.
+    rows = [dict(row) for row in shared_rows]
     profile = COUNTRY_PROFILES.get(country.upper())
     annotated = any(row["applicability"] for row in rows)
     warnings = []

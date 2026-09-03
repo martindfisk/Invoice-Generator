@@ -79,7 +79,7 @@ export type SendNode = {
 };
 
 export type SendOutcome =
-  "transmitted" | "rejected" | "failed" | "not-transmitted" | "timeout" | "error";
+  "transmitted" | "rejected" | "failed" | "not-transmitted" | "timeout" | "stopped" | "error";
 
 export type SendPhase = "idle" | "creating" | "polling" | "artifacts" | "settled";
 
@@ -89,6 +89,9 @@ export type SendState = {
   phase: SendPhase;
   outcome: SendOutcome | null;
   transport: Transport | null;
+  // What was posted: "TRANSACTION::INVOICE" or "TRANSACTION::CORRECTION". Only a transmitted
+  // invoice becomes the correction target a later credit note may reference.
+  operationLabel: string | null;
   note: string | null;
   error: string | null;
   nodes: SendNode[];
@@ -117,10 +120,14 @@ export type WorkflowState = {
   edit: EditState;
   validation: ValidationState;
   send: SendState;
+  // The record id of the last invoice this browser transmitted — what a credit note's
+  // TRANSACTION::CORRECTION references. Survives preset changes: the credit-note preset differs
+  // from the invoice it corrects.
+  correctionTarget: string | null;
 };
 
 export type WorkflowAction =
-  | { type: "choosePreset"; presetId: PresetId }
+  | { type: "choosePreset"; presetId: PresetId; fresh?: boolean }
   | { type: "goToStep"; step: Step }
   | { type: "setFormat"; formatId: FormatId }
   | { type: "select"; selection: Selection }
@@ -139,7 +146,7 @@ export type WorkflowAction =
 
 export type SendAction =
   | { type: "sendReset" }
-  | { type: "sendStarted"; at: number; localXml: string }
+  | { type: "sendStarted"; at: number; localXml: string; label?: string }
   | {
       type: "sendCreated";
       at: number;
@@ -149,7 +156,7 @@ export type SendAction =
     }
   | { type: "sendPolled"; at: number; wait: TransmissionWait }
   | { type: "sendResumed"; at: number }
-  | { type: "sendStopped"; at: number }
+  | { type: "sendStopped"; at: number; manual?: boolean }
   | { type: "sendFailed"; at: number; error: string }
   | {
       type: "sendArtifact";
@@ -196,7 +203,9 @@ export function migrateStep(saved: unknown): Step {
 
 export const PANE_IDS: PaneId[] = ["human", "xml"];
 
-export const VIEW_VERSION = 3;
+// v4 (2026-09-03) added invoice, edit, send and correctionTarget to the persisted state, so a
+// reload keeps the user's work and the send's record ids instead of only the cosmetics.
+export const VIEW_VERSION = 4;
 
 // Until 2026-09-02 this was a single mode: "human", "json", "xml" or "split". Each maps onto the
 // pane set that showed the same thing, so a saved layout survives the change.
@@ -214,6 +223,10 @@ type Persisted = {
   persona: Persona;
   panes: Panes;
   viewVersion: number;
+  invoice: Invoice | null;
+  edit: EditState;
+  send: SendState | null;
+  correctionTarget: string | null;
 };
 
 function firstFormatId(): FormatId {
@@ -243,7 +256,10 @@ export function migratePanes(saved: {
   view?: unknown;
   viewVersion?: unknown;
 }): Panes {
-  if (saved.viewVersion === VIEW_VERSION) return readPanes(saved.panes) ?? defaultPanes();
+  // The pane shape has been stable since v3; v4 only added fields elsewhere.
+  if (typeof saved.viewVersion === "number" && saved.viewVersion >= 3) {
+    return readPanes(saved.panes) ?? defaultPanes();
+  }
   if (typeof saved.view === "string") return LEGACY_PANES[saved.view] ?? defaultPanes();
   return defaultPanes();
 }
@@ -288,6 +304,7 @@ export function freshSend(): SendState {
     phase: "idle",
     outcome: null,
     transport: null,
+    operationLabel: null,
     note: null,
     error: null,
     nodes: SEND_NODES.map((node): SendNode => ({ ...node, status: "pending", logs: [] })),
@@ -440,6 +457,7 @@ export function sendReducer(state: SendState, action: SendAction): SendState {
         phase: "creating",
         startedAt: action.at,
         localXml: action.localXml,
+        operationLabel: action.label ?? null,
         nodes: withNode(fresh.nodes, "intention", { status: "active" }, action.at),
       };
     }
@@ -477,11 +495,16 @@ export function sendReducer(state: SendState, action: SendAction): SendState {
     case "sendPolled":
       return polled(state, action);
     case "sendResumed":
-      return state.outcome === "timeout"
+      return state.outcome === "timeout" || state.outcome === "stopped"
         ? { ...state, phase: "polling", outcome: null, endedAt: null }
         : state;
     case "sendStopped":
-      return { ...state, phase: "settled", outcome: "timeout", endedAt: action.at };
+      return {
+        ...state,
+        phase: "settled",
+        outcome: action.manual ? "stopped" : "timeout",
+        endedAt: action.at,
+      };
     case "sendFailed": {
       const active = state.nodes.find((node) => node.status === "active");
       const nodes = active
@@ -528,6 +551,7 @@ export function freshWorkflow(): WorkflowState {
     edit: freshEdit(),
     validation: freshValidation(),
     send: freshSend(),
+    correctionTarget: null,
   };
 }
 
@@ -539,6 +563,12 @@ export function stepLock(state: WorkflowState, step: Step): string | undefined {
 export function workflowReducer(state: WorkflowState, action: WorkflowAction): WorkflowState {
   switch (action.type) {
     case "choosePreset": {
+      // Re-clicking the already-active preset must not silently wipe edits, validation and send
+      // state — the card looks selected, so the click reads as "continue", not "start over".
+      // "Reset preset" in Setup passes fresh: true for the deliberate start-over.
+      if (!action.fresh && action.presetId === state.presetId && state.invoice) {
+        return state.step === "mapper" ? state : { ...state, step: "mapper" };
+      }
       const invoice = preset(action.presetId);
       return {
         ...state,
@@ -648,7 +678,7 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
           validation: freshValidation(),
         };
       }
-      const prefix = buildOperation(state.invoice, state.send.transactionId).prefix;
+      const prefix = buildOperation(state.invoice, state.correctionTarget).prefix;
       let invoice: Invoice;
       try {
         invoice = applyOperation(parsed, state.invoice);
@@ -700,7 +730,16 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
     case "sendFailed":
     case "sendArtifact": {
       const send = sendReducer(state.send, action);
-      return send === state.send ? state : { ...state, send };
+      if (send === state.send) return state;
+      // Only a transmitted invoice becomes the target a credit note corrects — a transmitted
+      // correction must never become its own target, or "Send again" would reference itself.
+      const correctionTarget =
+        send.outcome === "transmitted" &&
+        send.operationLabel === "TRANSACTION::INVOICE" &&
+        send.transactionId !== null
+          ? send.transactionId
+          : state.correctionTarget;
+      return { ...state, send, correctionTarget };
     }
   }
 }
@@ -729,14 +768,22 @@ export function persistWorkflow(state: WorkflowState): void {
     persona: state.persona,
     panes: state.panes,
     viewVersion: VIEW_VERSION,
+    invoice: state.invoice,
+    edit: state.edit,
+    send: state.send.phase === "idle" ? null : state.send,
+    correctionTarget: state.correctionTarget,
   };
-  localStorage.setItem(WORKFLOW_KEY, JSON.stringify(persisted));
+  try {
+    localStorage.setItem(WORKFLOW_KEY, JSON.stringify(persisted));
+  } catch {
+    // Site data disabled or quota exceeded: the workflow is not remembered across reloads.
+  }
 }
 
 function readPersisted(): Partial<Persisted> | undefined {
-  const raw = localStorage.getItem(WORKFLOW_KEY);
-  if (!raw) return undefined;
   try {
+    const raw = localStorage.getItem(WORKFLOW_KEY);
+    if (!raw) return undefined;
     const parsed: unknown = JSON.parse(raw);
     return typeof parsed === "object" && parsed !== null
       ? (parsed as Partial<Persisted>)
@@ -744,6 +791,40 @@ function readPersisted(): Partial<Persisted> | undefined {
   } catch {
     return undefined;
   }
+}
+
+export const RESTORED_SEND_NOTE =
+  "Restored from this browser after a reload while polling was still under way — the record ids " +
+  "are kept, and Keep polling resumes watching the same record.";
+
+function restoreEdit(saved: unknown): EditState {
+  if (saved === null || typeof saved !== "object") return freshEdit();
+  const value = saved as Partial<EditState>;
+  if (value.xml === undefined || value.json === undefined || typeof value.source !== "string") {
+    return freshEdit();
+  }
+  return { ...freshEdit(), ...value };
+}
+
+function restoreSend(saved: unknown): SendState {
+  if (saved === null || typeof saved !== "object") return freshSend();
+  const value = saved as Partial<SendState>;
+  if (typeof value.phase !== "string" || !Array.isArray(value.nodes)) return freshSend();
+  const send: SendState = { ...freshSend(), ...value };
+  // A reload killed the poll loop; an in-flight phase becomes a settled "stopped" the user can
+  // resume with Keep polling — the record ids are all it needs.
+  if (send.phase === "creating" && send.transactionId === null) return freshSend();
+  if (send.phase !== "idle" && send.phase !== "settled") {
+    return { ...send, phase: "settled", outcome: "stopped", note: RESTORED_SEND_NOTE };
+  }
+  return send;
+}
+
+function restoreInvoice(saved: unknown, fallback: Invoice): Invoice {
+  if (saved === null || typeof saved !== "object") return fallback;
+  const value = saved as Partial<Invoice>;
+  if (!knownFormat(value.format) || !Array.isArray(value.lines)) return fallback;
+  return value as Invoice;
 }
 
 export function initialWorkflow(): WorkflowState {
@@ -755,29 +836,68 @@ export function initialWorkflow(): WorkflowState {
     ...fresh,
     persona: saved.persona === "buyer" ? "buyer" : "seller",
     panes: migratePanes(saved),
+    correctionTarget: typeof saved.correctionTarget === "string" ? saved.correctionTarget : null,
   };
   if (!saved.presetId) return shell;
 
-  let invoice: Invoice;
+  let fallback: Invoice;
   try {
-    invoice = preset(saved.presetId);
+    fallback = preset(saved.presetId);
   } catch {
     return shell;
   }
+  const restored = saved.viewVersion === VIEW_VERSION;
   return {
     ...shell,
     presetId: saved.presetId,
-    invoice,
-    formatId: knownFormat(saved.formatId) ? saved.formatId : invoice.format,
+    invoice: restored ? restoreInvoice(saved.invoice, fallback) : fallback,
+    edit: restored ? restoreEdit(saved.edit) : freshEdit(),
+    send: restored ? restoreSend(saved.send) : freshSend(),
+    formatId: knownFormat(saved.formatId) ? saved.formatId : fallback.format,
     step: migrateStep(saved.step),
   };
 }
 
 export type OperationView = Operation & { text: string };
 
-// The one place Compose and Send agree on what gets posted: the derived operation unless the
+// composeOperation is called from render paths on every store change, and the full UAPI mapping
+// plus stringify is the most expensive derived value in the app — one memo slot covers it,
+// because the inputs only change on actual edits, never on selection clicks.
+let composeMemo: {
+  invoice: Invoice;
+  json: string | null;
+  jsonError: string | null;
+  target: string | null;
+  result: OperationView;
+} | null = null;
+
+// The one place the Mapper and Send agree on what gets posted: the derived operation unless the
 // user hand-edited the JSON, in which case exactly what the JSON pane holds.
 export function composeOperation(state: WorkflowState): OperationView {
+  if (
+    state.invoice &&
+    composeMemo &&
+    composeMemo.invoice === state.invoice &&
+    composeMemo.json === state.edit.json &&
+    composeMemo.jsonError === state.edit.jsonError &&
+    composeMemo.target === state.correctionTarget
+  ) {
+    return composeMemo.result;
+  }
+  const result = composeOperationUncached(state);
+  if (state.invoice) {
+    composeMemo = {
+      invoice: state.invoice,
+      json: state.edit.json,
+      jsonError: state.edit.jsonError,
+      target: state.correctionTarget,
+      result,
+    };
+  }
+  return result;
+}
+
+function composeOperationUncached(state: WorkflowState): OperationView {
   if (!state.invoice) {
     return {
       value: null,
@@ -788,7 +908,7 @@ export function composeOperation(state: WorkflowState): OperationView {
       text: "",
     };
   }
-  const derived = buildOperation(state.invoice, state.send.transactionId);
+  const derived = buildOperation(state.invoice, state.correctionTarget);
   const edited = state.edit.json;
   if (edited === null) {
     return { ...derived, text: derived.error ? "" : stringifyOperation(derived.value) };

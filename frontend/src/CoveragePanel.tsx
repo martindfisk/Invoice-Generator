@@ -41,6 +41,7 @@ export function CoveragePanel({
     spec: SpecFields | null;
     unavailable: string | null;
   }>({ country: undefined, spec: null, unavailable: null });
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -58,7 +59,7 @@ export function CoveragePanel({
       () => undefined,
     );
     return () => controller.abort();
-  }, [country]);
+  }, [country, attempt]);
 
   const spec = loaded.country === country ? loaded.spec : null;
   const unavailable = loaded.country === country ? loaded.unavailable : null;
@@ -75,16 +76,30 @@ export function CoveragePanel({
       <p
         data-spec-coverage="unavailable"
         title={unavailable}
-        className="mt-0.5 truncate text-[11px] text-muted"
+        className="mt-0.5 flex items-baseline gap-1.5 text-[11px] text-muted"
       >
-        Spec field coverage unavailable — {unavailable}
+        <span className="truncate">Spec field coverage unavailable — {unavailable}</span>
+        <button
+          type="button"
+          onClick={() => setAttempt((current) => current + 1)}
+          className="shrink-0 rounded-m border border-line px-1.5 font-medium hover:border-brand hover:text-ink"
+        >
+          Retry
+        </button>
       </p>
     );
   }
-  if (!spec || !derived || derived.total === 0) {
+  if (!spec || !derived) {
     return (
       <p data-spec-coverage="pending" className="mt-0.5 truncate text-[11px] text-muted">
         Measuring the payload against the fiskaly spec…
+      </p>
+    );
+  }
+  if (derived.total === 0) {
+    return (
+      <p data-spec-coverage="empty" className="mt-0.5 truncate text-[11px] text-muted">
+        The spec catalogue lists no fields for this operation.
       </p>
     );
   }

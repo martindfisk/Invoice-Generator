@@ -152,8 +152,8 @@ export function SendPreflight({
             {operation.label} — the operation posted as the request body
           </h4>
           <p className="mb-1 text-[11px] text-muted">
-            This is the JSON you composed, posted unchanged. There is no mapping step between
-            Compose and Send — the Unified API accepts this structure, and fiskaly generates the
+            This is the JSON you composed, posted unchanged. There is no transformation between the
+            Mapper and Send — the Unified API accepts this structure, and fiskaly generates the
             transmitted XML from it server-side.
           </p>
           {operation.correctionPending && (

@@ -1,6 +1,6 @@
 # Invoice Generator — e-invoice flow showcase & fiskaly Unified API harness
 
-Browser tool: **create → validate → send** e-invoices (FatturaPA via SDI, Peppol BIS 3.0 via Belgium) with a split screen — workflow left, live fiskaly UAPI calls right. Dual track: the browser generates the _expected_ XML; fiskaly generates and transmits the real one (`?compliance-artifact`); the DiffView compares both.
+Browser tool: **create → validate → send** e-invoices (FatturaPA via SDI; Peppol BIS 3.0, XRechnung and CII via Peppol/email) with a split screen — workflow left, live fiskaly UAPI calls right. Dual track: the browser generates the _expected_ XML; fiskaly generates and transmits the real one (`?compliance-artifact`); the DiffView compares both.
 
 ## Commands
 

@@ -69,25 +69,35 @@ async def fetch_files(client, record_id):
     return response.content
 
 
-async def wait_for_transmission(client, transaction_id, timeout=None):
+async def wait_for_transmission(
+    client, transaction_id, timeout=None, transmission_id=None, request=None
+):
     interval = client.settings.poll_interval_s
     limit = client.settings.poll_timeout_s if timeout is None else timeout
     deadline = time.monotonic() + limit
-    while True:
-        invoice = await _read_record(client, transaction_id)
-        transmission_id = (invoice.get("used_in") or {}).get("id")
-        if transmission_id:
-            break
-        if _untransmitted(invoice):
-            return _waited(transaction_id, invoice, None, finished=True)
-        if time.monotonic() >= deadline:
-            return _waited(transaction_id, invoice, None, finished=False)
-        await asyncio.sleep(interval)
+
+    async def gone():
+        return request is not None and await request.is_disconnected()
+
+    # A caller that already knows the transmission id skips the transaction read entirely —
+    # on an IT send that keeps polling for minutes, that is half of all upstream traffic.
+    invoice = {}
+    if not transmission_id:
+        while True:
+            invoice = await _read_record(client, transaction_id)
+            transmission_id = (invoice.get("used_in") or {}).get("id")
+            if transmission_id:
+                break
+            if _untransmitted(invoice):
+                return _waited(transaction_id, invoice, None, finished=True)
+            if time.monotonic() >= deadline or await gone():
+                return _waited(transaction_id, invoice, None, finished=False)
+            await asyncio.sleep(interval)
     while True:
         transmission = await _read_record(client, transmission_id)
         if transmission.get("mode") == "FINISHED":
             return _waited(transaction_id, invoice, transmission, finished=True)
-        if time.monotonic() >= deadline:
+        if time.monotonic() >= deadline or await gone():
             return _waited(transaction_id, invoice, transmission, finished=False)
         await asyncio.sleep(interval)
 

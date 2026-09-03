@@ -62,7 +62,7 @@ describe("human view groups", () => {
   beforeEach(() => {
     localStorage.clear();
     store.dispatch({ type: "goToStep", step: "setup" });
-    store.dispatch({ type: "choosePreset", presetId: first.id });
+    store.dispatch({ type: "choosePreset", presetId: first.id, fresh: true });
     store.dispatch({ type: "setPane", pane: "human", show: true });
     store.dispatch({ type: "setPane", pane: "xml", show: false });
     render(<WorkflowPane />);
@@ -207,7 +207,7 @@ describe("human view with an empty preset", () => {
 
   it("counts the totals of a preset that fills them", () => {
     localStorage.clear();
-    store.dispatch({ type: "choosePreset", presetId: first.id });
+    store.dispatch({ type: "choosePreset", presetId: first.id, fresh: true });
     render(<WorkflowPane />);
     const totals = preset(first.id).totals;
     const set = Object.values(totals).filter((value) => value !== undefined).length;

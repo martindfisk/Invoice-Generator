@@ -65,6 +65,29 @@ async def test_sse_replays_after_last_event_id_then_pings(monkeypatch):
     assert events[2] == "event: ping\ndata: {}\n\n"
 
 
+async def test_sse_survives_a_stale_last_event_id_from_before_a_restart(monkeypatch):
+    monkeypatch.setattr(recorder_module, "PING_INTERVAL_S", 0.01)
+    recorder = Recorder()
+    recorder.add(make_record())
+    request = FakeRequest(disconnect_after=1)
+    events = [chunk async for chunk in recorder.sse(request, last_event_id="437")]
+    assert any(chunk.startswith("id: 1\nevent: call\n") for chunk in events)
+
+    async def consume(stream):
+        collected = []
+        async for chunk in stream:
+            collected.append(chunk)
+        return collected
+
+    task = asyncio.create_task(
+        consume(recorder.sse(FakeRequest(disconnect_after=2), last_event_id="437"))
+    )
+    await asyncio.sleep(0.005)
+    recorder.add(make_record(step="poll"))
+    live = await task
+    assert any('"step":"poll"' in chunk for chunk in live)
+
+
 async def test_sse_streams_live_records_without_replay(monkeypatch):
     monkeypatch.setattr(recorder_module, "PING_INTERVAL_S", 0.2)
     recorder = Recorder()

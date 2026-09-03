@@ -29,6 +29,14 @@ def test_mask_json_masks_secret_keys_recursively_without_mutating():
     assert mask_json(None) is None
 
 
+def test_mask_json_masks_the_taxpayer_fiscal_credential():
+    payload = {
+        "fiscalization": {"credentials": [{"type": "CF", "tax_id_number": "RSSMRA80A01H501U"}]}
+    }
+    masked = mask_json(payload)
+    assert masked["fiscalization"]["credentials"][0]["tax_id_number"] == "***"
+
+
 def test_mask_json_shortens_large_base64_only():
     data = "QUJD" * 1024
     masked = mask_json({"artifact": {"type": "application/xml", "data": data}, "small": "QUJD"})

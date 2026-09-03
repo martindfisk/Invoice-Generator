@@ -10,7 +10,6 @@ import type { PresetId } from "./presets";
 import { VALIDATION_RULES_SECTION_ID } from "./SettingsDialog";
 import { store, useStore } from "./store";
 import {
-  CONTRACT_MISSING_NOTE,
   CONTRACT_TIER_NOTE,
   DOCUMENT_TIER_NOTE,
   fieldForPointer,
@@ -185,13 +184,7 @@ export function StageList({ stages, formatId }: { stages: StageResult[]; formatI
           <p className="border-b border-line px-3 py-1 text-[10px] leading-snug text-muted">
             {CONTRACT_TIER_NOTE}
           </p>
-          {contract.length > 0 ? (
-            <StageRows stages={contract} />
-          ) : (
-            <p className="border-b border-line bg-warning-soft px-3 py-2 text-[11px] text-warning-ink">
-              {CONTRACT_MISSING_NOTE}
-            </p>
-          )}
+          <StageRows stages={contract} />
         </div>
         <div data-tier="document">
           <h4 className="border-b border-line bg-surface-raised px-3 py-1.5 text-[11px] font-semibold text-muted">
@@ -351,6 +344,7 @@ function Validating({ invoice, presetId }: { invoice: Invoice; presetId: PresetI
   const [nonce, setNonce] = useState(0);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const run = useRef(0);
+  const controller = useRef<AbortController | null>(null);
 
   const { xml, error } = source;
   const value = operation.value ?? undefined;
@@ -359,21 +353,34 @@ function Validating({ invoice, presetId }: { invoice: Invoice; presetId: PresetI
   const stored = validation.key;
 
   useEffect(() => {
-    if (xml === "" || stored === key) return;
+    // Before the workbench delivers its first render there is nothing to validate; but a writer
+    // failure (xml empty, error set) still runs the pipeline — the contract stage checks the
+    // JSON, not the XML, and must not be silenced by an unrelated writer limitation.
+    if ((xml === "" && error === null) || stored === key) return;
     const timer = setTimeout(() => {
+      // A superseded run is not just ignored — its remaining stages and in-flight backend
+      // calls are cancelled before the replacement starts.
+      controller.current?.abort();
+      const aborter = new AbortController();
+      controller.current = aborter;
       const id = run.current + 1;
       run.current = id;
       store.dispatch({ type: "validationStarted", key, stages: emptyRun(formatId) });
       // The contract stage checks the JSON Send will post, hand edits and all — not a payload
       // re-derived from the model behind the user's back.
-      void runValidation({ invoice, formatId, xml, operation: value }, (stage) => {
-        if (run.current === id) store.dispatch({ type: "validationStage", key, stage });
-      }).then((stages) => {
+      void runValidation(
+        { invoice, formatId, xml, xmlError: error, operation: value, signal: aborter.signal },
+        (stage) => {
+          if (run.current === id) store.dispatch({ type: "validationStage", key, stage });
+        },
+      ).then((stages) => {
         if (run.current === id) store.dispatch({ type: "validationFinished", key, stages });
       });
     }, RUN_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [invoice, formatId, xml, key, stored, value]);
+  }, [invoice, formatId, xml, error, key, stored, value]);
+
+  useEffect(() => () => controller.current?.abort(), []);
 
   const stages = useMemo(
     () => (validation.stages.length > 0 ? validation.stages : emptyRun(formatId)),
@@ -479,7 +486,7 @@ function Validating({ invoice, presetId }: { invoice: Invoice; presetId: PresetI
           onClick={() => store.dispatch({ type: "goToStep", step: "mapper" })}
           className="rounded-m border border-line px-3 py-1.5 text-xs font-medium text-muted hover:border-brand hover:text-ink"
         >
-          Back to Compose
+          Back to Mapper
         </button>
         <p
           role="status"

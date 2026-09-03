@@ -1,9 +1,12 @@
+import asyncio
+
 import httpx
 
 from app.settings import COUNTRIES
 from app.workflow import UpstreamError
 
 LIST_LIMIT = 100
+MAX_LIST_PAGES = 10
 OPERATIVE_SYSTEM = ("COMMISSIONED", "OPERATIVE")
 DEGRADED_SYSTEM = ("COMMISSIONED", "DEGRADED")
 PEPPOL_BLOCKER = "peppol-proof-of-ownership"
@@ -122,10 +125,16 @@ async def onboarding_status(client, store):
     }
     if client.mode == "live" and client.persona.missing_credentials:
         return payload
-    organizations = [_entity_entry(content) for content in await _list(client, "/organizations")]
-    subjects = [_entity_entry(content) for content in await _list(client, "/subjects")]
-    taxpayers = [_taxpayer_entry(content) for content in await _list(client, "/taxpayers")]
-    systems = [_system_entry(content) for content in await _list(client, "/systems")]
+    org_rows, subject_rows, taxpayer_rows, system_rows = await asyncio.gather(
+        _list(client, "/organizations"),
+        _list(client, "/subjects"),
+        _list(client, "/taxpayers"),
+        _list(client, "/systems"),
+    )
+    organizations = [_entity_entry(content) for content in org_rows]
+    subjects = [_entity_entry(content) for content in subject_rows]
+    taxpayers = [_taxpayer_entry(content) for content in taxpayer_rows]
+    systems = [_system_entry(content) for content in system_rows]
     counts = {
         "organizations": len(organizations),
         "subjects": len(subjects),
@@ -243,14 +252,23 @@ class _Chain:
 
 
 async def _list(client, path):
+    # Readiness must see every resource, not the first page — on an account with more than
+    # LIST_LIMIT taxpayers or systems a truncated listing reports a system as missing (or lets
+    # provision create a duplicate). Follow pagination, capped so a runaway account cannot spin.
     separator = "&" if "?" in path else "?"
-    response = await client.request(
-        "GET", f"{path}{separator}limit={LIST_LIMIT}", step="onboarding"
-    )
-    if response.status_code >= 400:
-        raise UpstreamError(response)
-    results = response.json().get("results") or []
-    return [result.get("content") or {} for result in results]
+    url = f"{path}{separator}limit={LIST_LIMIT}"
+    contents = []
+    for _ in range(MAX_LIST_PAGES):
+        response = await client.request("GET", url, step="onboarding")
+        if response.status_code >= 400:
+            raise UpstreamError(response)
+        body = response.json()
+        contents += [result.get("content") or {} for result in body.get("results") or []]
+        token = (body.get("pagination") or {}).get("token")
+        if not token:
+            return contents
+        url = f"{path}{separator}limit={LIST_LIMIT}&token={token}"
+    return contents
 
 
 def _entity_entry(content):

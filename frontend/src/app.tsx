@@ -67,7 +67,9 @@ export function App() {
     };
 
     void loadConfig();
-    const unsubscribe = subscribeApiLog(store.addCall);
+    const unsubscribe = subscribeApiLog(store.addCall, (connected) =>
+      store.setEventsDown(!connected),
+    );
     return () => {
       cancelled = true;
       clearTimeout(retry);
@@ -99,7 +101,9 @@ export function App() {
                 backend offline
               </span>
             )}
-            <PersonaSwitch />
+            {/* The flow always sends as the seller since the Receive step went away; the persona
+                switch only matters where both credentials are exercised — the test runner. */}
+            {section === "runner" && <PersonaSwitch />}
             <EnvironmentBadge />
             <ModeBadge />
             <button

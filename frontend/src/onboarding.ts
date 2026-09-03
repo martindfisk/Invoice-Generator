@@ -128,7 +128,7 @@ export const DEGRADED_NO_CAUSE =
 
 export const COMPLIANCE_WORDS: Record<string, string> = {
   TRANSMISSION_RECEPTION: "sends and receives",
-  TRANSMISSION_ONLY: "sends only — receiving will not work",
+  TRANSMISSION_ONLY: "sends only — the account cannot receive inbound documents",
 };
 
 export function complianceGloss(compliance: string): string {
@@ -136,8 +136,8 @@ export function complianceGloss(compliance: string): string {
   return words ? `${compliance} — ${words}` : `${compliance} — capability not recognised`;
 }
 
-// Everything healthy about a system goes into the tooltip; only what blocks a send or a
-// reception earns its own visible line.
+// Everything healthy about a system goes into the tooltip; only what blocks a send earns its
+// own visible line.
 export function systemHint(system: OnboardingSystem): string {
   const parts: string[] = [];
   for (const registration of system.registrations ?? []) parts.push(registration.type);

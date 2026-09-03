@@ -129,23 +129,35 @@ export function groupCalls(calls: ApiCall[]): CallGroup[] {
   return groups;
 }
 
-export function subscribeApiLog(onCall: (call: ApiCall) => void): () => void {
+export function subscribeApiLog(
+  onCall: (call: ApiCall) => void,
+  onState?: (connected: boolean) => void,
+): () => void {
   let source: EventSource | undefined;
   let retry: ReturnType<typeof setTimeout> | undefined;
   let delay = INITIAL_RETRY_MS;
   let closed = false;
+  // A manually rebuilt EventSource does not carry Last-Event-ID (only the browser's own
+  // auto-reconnect does), so the last seen id travels as a query parameter instead — otherwise
+  // every hard reconnect is a guaranteed gap.
+  let lastId: string | undefined;
 
   const connect = () => {
-    const current = new EventSource("/api/events");
+    const query = lastId ? `?last_event_id=${encodeURIComponent(lastId)}` : "";
+    const current = new EventSource(`/api/events${query}`);
     source = current;
     current.addEventListener("open", () => {
       delay = INITIAL_RETRY_MS;
+      onState?.(true);
     });
     current.addEventListener("call", (event) => {
-      onCall(parseCall((event as MessageEvent<string>).data));
+      const message = event as MessageEvent<string>;
+      if (message.lastEventId) lastId = message.lastEventId;
+      onCall(parseCall(message.data));
     });
     current.addEventListener("error", () => {
       if (closed || current.readyState !== EventSource.CLOSED) return;
+      onState?.(false);
       retry = setTimeout(connect, delay);
       delay = Math.min(delay * 2, MAX_RETRY_MS);
     });

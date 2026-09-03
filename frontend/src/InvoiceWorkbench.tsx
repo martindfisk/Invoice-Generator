@@ -59,25 +59,49 @@ export function InvoiceWorkbench({ invoice, presetId, findings, onXml }: Invoice
   const workflow = useStore((state) => state.workflow);
   const { formatId, edit } = workflow;
   const renders = useMemo(() => renderAll(invoice), [invoice]);
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // One timer and one pending text per editor: a field edit must not silently discard XML or
+  // JSON typed moments earlier in another pane — it flushes them first, so both edits land.
+  const xmlTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const jsonTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const pending = useRef<{ xml?: string; json?: string }>({});
   const report = useRef(onXml);
 
-  useEffect(() => () => clearTimeout(timer.current), []);
+  const flushEdits = useCallback(() => {
+    clearTimeout(xmlTimer.current);
+    clearTimeout(jsonTimer.current);
+    const { xml, json } = pending.current;
+    pending.current = {};
+    if (xml !== undefined) store.dispatch({ type: "editXml", text: xml });
+    if (json !== undefined) store.dispatch({ type: "editJson", text: json });
+  }, []);
+
+  useEffect(() => () => flushEdits(), [flushEdits]);
 
   const onEditXml = useCallback((text: string) => {
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => store.dispatch({ type: "editXml", text }), XML_DEBOUNCE_MS);
+    pending.current.xml = text;
+    clearTimeout(xmlTimer.current);
+    xmlTimer.current = setTimeout(() => {
+      pending.current.xml = undefined;
+      store.dispatch({ type: "editXml", text });
+    }, XML_DEBOUNCE_MS);
   }, []);
 
   const onEditJson = useCallback((text: string) => {
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => store.dispatch({ type: "editJson", text }), JSON_DEBOUNCE_MS);
+    pending.current.json = text;
+    clearTimeout(jsonTimer.current);
+    jsonTimer.current = setTimeout(() => {
+      pending.current.json = undefined;
+      store.dispatch({ type: "editJson", text });
+    }, JSON_DEBOUNCE_MS);
   }, []);
 
-  const onEditField = useCallback((field: FieldId, value: string) => {
-    clearTimeout(timer.current);
-    store.dispatch({ type: "editField", field, value });
-  }, []);
+  const onEditField = useCallback(
+    (field: FieldId, value: string) => {
+      flushEdits();
+      store.dispatch({ type: "editField", field, value });
+    },
+    [flushEdits],
+  );
 
   const operation = composeOperation(workflow);
 

@@ -21,7 +21,7 @@ make sef        # compile Schematron XSLT to SEF for the browser validator
 make dev        # run frontend + backend
 ```
 
-Other targets: `make test` (Vitest + pytest), `make e2e` (Playwright against MOCK), `make lint`, `make docker` (compose build).
+Other targets: `make test` (Vitest + pytest), `make e2e` (Playwright against MOCK), `make lint`, `make gap-report` / `make gap-check` (field-coverage gap report + CI gate), `make sef-check` / `make spec-check` (asset freshness), `make docker` (builds `vendor/` and the SEFs first, then compose build).
 
 ## Updating the OpenAPI spec
 
@@ -49,7 +49,7 @@ as before, so a fresh clone and the offline path are unchanged.
 ## `.env` setup
 
 1. Copy `.env.example` to `.env`.
-2. Fill in Unit-level TEST API keys for the **Seller** and **Buyer** organisations (two existing fiskaly test orgs with commissioned `E_INVOICE_SERVICE` systems).
+2. Fill in a Unit-level TEST API key for the **Seller** organisation (the **Buyer** key is optional — it only serves the test runner's buyer persona). Credentials can also be entered at runtime in the Settings dialog; they are held in backend memory only (ADR-0005).
 3. Never commit `.env` — it is git-ignored and holds real credentials.
 
 ## LIVE vs MOCK
@@ -60,11 +60,14 @@ as before, so a fresh clone and the offline path are unchanged.
 
 ## How the demo works
 
-1. Pick a preset — **"Italian B2B (SDI)"** or **"Peppol BE"** — or start from a blank invoice.
+1. Pick one of the eleven presets — reference scenarios (IT/BE), a German hotel group (XRechnung/ZUGFeRD-CII) and Roman restaurant scenarios (FatturaPA, including a TD04 credit note). Deliberately broken presets are labelled.
 2. **Create**: edit the invoice in the Human view or the generated XML view side by side.
 3. **Validate**: model rules, well-formedness, XSD, Schematron (EN 16931 + Peppol BIS 3.0), and FatturaPA SDI rules run client-side; findings highlight the offending field and XML range.
 4. **Send**: the backend proxies the invoice to the UAPI as an `INTENTION`, then a `TRANSACTION::INVOICE`, polls it to completion, and fetches the compliance artifact — the XML fiskaly actually transmitted.
-5. **Diff**: the locally generated XML is compared against fiskaly's compliance artifact, with normalisation toggles (pretty-print, strip signature, ignore volatile fields). This is the core demo moment.
+5. **Diff**: the locally generated XML is compared against fiskaly's compliance artifact, with normalisation toggles (pretty-print, ignore volatile fields — signature stripping is part of the volatile set). This is the core demo moment.
+6. **Correction**: after an invoice has been transmitted, the TD04 credit-note preset composes a `TRANSACTION::CORRECTION` referencing it and sends through `POST /api/invoices/{id}/correction`.
+
+A second section, the **Test runner**, replays the published fiskaly Postman collections (IT, BE, DE) step by step through the same proxy, with captures, waits and per-step cURL.
 
 Every UAPI call made along the way appears live in the right-hand API log pane, with request/response bodies, redacted secrets, and a copyable cURL command.
 

@@ -26,6 +26,11 @@ export const CORRECTION_PENDING_NOTE =
   "Until then this pane shows the TRANSACTION::INVOICE body the correction will carry as its " +
   "`data` block.";
 
+export const CORRECTION_BLOCKED_NOTE =
+  "This credit note needs the record id of the invoice it corrects, and no invoice has been " +
+  "transmitted from this browser yet. Send the original invoice first — the credit note can " +
+  "then reference that record.";
+
 export const CONTRACT_STAGE = "uapi-schema";
 
 export function isContractStage(id: string): boolean {
@@ -39,10 +44,6 @@ export const CONTRACT_TIER_NOTE =
 export const DOCUMENT_TIER_NOTE =
   "What the resulting XML would look like — this browser's predicted document checked against " +
   "the format's own rules. A pass here is not fiskaly accepting anything.";
-
-export const CONTRACT_MISSING_NOTE =
-  "The fiskaly API contract check is not wired up in this build, so nothing here has been " +
-  "checked against what the Unified API will accept.";
 
 export type JsonRange = { pointer: string; from: number; to: number };
 
@@ -347,13 +348,23 @@ export function operationIsLossy(invoice: Invoice, operation: unknown, prefix: s
 // has to go back through the same text the editor holds: write the value, re-stringify, and let
 // the existing editJson path parse it. Anything written anywhere else would be dropped on the
 // next render. A `{i}` segment resolves to the first existing member; the pointer is left alone
-// when that member does not exist, so an insert never grows an array.
-export function insertAtPointer(text: string, pointer: string, value: unknown): string {
+// when that member does not exist, so an insert never grows an array. A refused insert returns
+// the text unchanged and names why through onFail, so the button never appears to do nothing.
+export function insertAtPointer(
+  text: string,
+  pointer: string,
+  value: unknown,
+  onFail?: (reason: string) => void,
+): string {
+  const refuse = (reason: string) => {
+    onFail?.(reason);
+    return text;
+  };
   let root: unknown;
   try {
     root = JSON.parse(text);
   } catch {
-    return text;
+    return refuse("the JSON pane does not parse — fix it before inserting");
   }
   const segments = pointer.split("/").slice(1);
   let node = root;
@@ -363,7 +374,11 @@ export function insertAtPointer(text: string, pointer: string, value: unknown): 
     const key = raw === "{i}" ? "0" : raw;
     if (Array.isArray(node)) {
       const position = Number(key);
-      if (!Number.isInteger(position) || node[position] === undefined) return text;
+      if (!Number.isInteger(position) || node[position] === undefined) {
+        return refuse(
+          `${pointer} points into an array member that does not exist — an insert never grows an array`,
+        );
+      }
       if (last) {
         node[position] = value;
         return stringifyOperation(root);
@@ -371,8 +386,12 @@ export function insertAtPointer(text: string, pointer: string, value: unknown): 
       node = node[position];
       continue;
     }
-    if (raw === "{i}") return text;
-    if (node === null || typeof node !== "object") return text;
+    if (raw === "{i}") {
+      return refuse(`${pointer} expects an array at /${segments.slice(0, index).join("/")}`);
+    }
+    if (node === null || typeof node !== "object") {
+      return refuse(`${pointer} points below a value that is not an object`);
+    }
     const holder = node as Record<string, unknown>;
     if (last) {
       holder[key] = value;

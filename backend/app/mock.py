@@ -11,7 +11,6 @@ import httpx
 from lxml import etree
 
 FIXTURES_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "uapi"
-RECEPTION_TYPE = "E_INVOICE::RECEPTION"
 TRANSMISSION_TYPE = "E_INVOICE::TRANSMISSION"
 INVOICE_TYPE = "TRANSACTION::INVOICE"
 CORRECTION_TYPE = "TRANSACTION::CORRECTION"
@@ -57,7 +56,6 @@ class MockTransport(httpx.MockTransport):
         self.records = {}
         self.plans = {}
         self.reads = {}
-        self.receptions = []
         self.replays = {}
         self.resources = {kind: {} for kind in RESOURCE_KINDS}
         self.ids = 0
@@ -143,15 +141,12 @@ class MockTransport(httpx.MockTransport):
         params = request.url.params
         types = [value for value in (params.get("type") or "").split(",") if value]
         system_id = params.get("system_id")
-        if RECEPTION_TYPE in types:
-            results = self._inbox(system_id)
-        else:
-            results = [
-                record
-                for record in reversed(self.records.values())
-                if (not types or record["type"] in types)
-                and (system_id is None or record["system"]["id"] == system_id)
-            ]
+        results = [
+            record
+            for record in reversed(self.records.values())
+            if (not types or record["type"] in types)
+            and (system_id is None or record["system"]["id"] == system_id)
+        ]
         limit = _limit(params.get("limit"))
         if limit is None:
             message = f"limit must be an integer between 1 and {MAX_LIMIT}"
@@ -384,18 +379,6 @@ class MockTransport(httpx.MockTransport):
         self.plans[record_id] = dict(plan)
         return record_id
 
-    def _reception(self, transmission_id):
-        plan = self.plans[transmission_id]
-        record_id = self.next_id()
-        record = self._record(record_id, RECEPTION_TYPE, plan["system_id"], "COMPLETED", "FINISHED")
-        self.records[record_id] = record
-        self.plans[record_id] = {
-            **plan,
-            "operation": plan.get("invoice") or plan.get("operation"),
-            "sender_system": plan["system_id"],
-        }
-        self.receptions.append(record_id)
-
     def _advance(self, record_id):
         reads = self.reads[record_id] = self.reads.get(record_id, 0) + 1
         record = self.records[record_id]
@@ -415,18 +398,6 @@ class MockTransport(httpx.MockTransport):
                     record["logs"] = [{"severity": "ERROR", "message": SDI_REJECTION}]
                 else:
                     record["state"] = "COMPLETED"
-                    self._reception(record_id)
-
-    def _inbox(self, system_id):
-        results = []
-        for record_id in reversed(self.receptions):
-            if system_id and self.plans[record_id]["sender_system"] == system_id:
-                continue
-            record = self.records[record_id]
-            if system_id:
-                record["system"] = {"id": system_id}
-            results.append(record)
-        return results
 
     def _record(self, record_id, record_type, system_id, state, mode):
         return {

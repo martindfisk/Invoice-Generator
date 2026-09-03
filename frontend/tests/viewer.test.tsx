@@ -37,6 +37,9 @@ function paneToggle(name: string) {
 describe("workflow pane", () => {
   beforeEach(() => {
     store.dispatch({ type: "goToStep", step: "setup" });
+    // Re-picking a preset via the card keeps state by design now, so leftovers from earlier
+    // tests (a selection, edits) are cleared explicitly.
+    store.dispatch({ type: "select", selection: null });
   });
   afterEach(cleanup);
 

@@ -1,4 +1,5 @@
 import type { FormatId } from "./model";
+import { fateFor } from "./uapi-field-fate";
 
 export type FieldFate = "mapped" | "not-rendered" | "discarded" | "platform";
 
@@ -6,14 +7,8 @@ export type FateEntry = { pointer: string; fate: FieldFate; element?: string; no
 
 type FateLookup = (formatId: FormatId, pointer: string) => FateEntry | undefined;
 
-// uapi-field-fate.ts is the evidence table distilled from docs/reference/fatturapa/. The glob
-// keeps this module loadable while that file does not exist yet; "no table" and "no entry"
-// both mean: annotate nothing.
-const modules = import.meta.glob<{ fateFor?: FateLookup }>("./uapi-field-fate.ts", {
-  eager: true,
-});
-
-const lookup: FateLookup | undefined = modules["./uapi-field-fate.ts"]?.fateFor;
+// uapi-field-fate.ts is the evidence table distilled from docs/reference/fatturapa/.
+const lookup: FateLookup = fateFor;
 
 export function fateEntry(formatId: FormatId, pointer: string): FateEntry | undefined {
   if (!lookup) return undefined;
@@ -85,7 +80,7 @@ export function documentTierFateNote(formatId?: FormatId): string | null {
 }
 
 export const FIELD_FATE_PROVENANCE =
-  "The field-fate annotations in Compose and the FatturaPA recomputation note in Validate come " +
+  "The field-fate annotations in the Mapper and the FatturaPA recomputation note in Validate come " +
   "from one real TRANSACTION::INVOICE and the FatturaPA XML fiskaly's gateway generated from " +
   "it, captured 2026-08-25. The capture is kept verbatim in docs/reference/fatturapa/ in this " +
   "repository.";
