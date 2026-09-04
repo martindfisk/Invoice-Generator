@@ -43,3 +43,18 @@ if (!("ResizeObserver" in globalThis)) {
   }
   (globalThis as { ResizeObserver?: unknown }).ResizeObserver = StubResizeObserver;
 }
+
+// CodeMirror schedules a measure cycle via requestAnimationFrame that jsdom fires after the
+// test that mounted the editor has finished. jsdom's Range lacks getClientRects, so that late
+// callback throws an unhandled TypeError — every test passes but Vitest exits 1 (exactly the
+// CI "Unit tests" failure). Geometry is meaningless in jsdom; empty rects satisfy the measure.
+if (typeof Range !== "undefined" && !Range.prototype.getClientRects) {
+  const emptyRects = () => {
+    const list = [] as unknown as DOMRectList;
+    (list as unknown as { item: (i: number) => DOMRect | null }).item = () => null;
+    return list;
+  };
+  Range.prototype.getClientRects = emptyRects;
+  Range.prototype.getBoundingClientRect = () =>
+    ({ x: 0, y: 0, top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0 }) as DOMRect;
+}
