@@ -55,6 +55,12 @@ gap-check:
 	cd "$(ROOT)/frontend" && node scripts/gap-report.mjs --check
 	cd "$(ROOT)/backend" && .venv/bin/python -m pytest -q tests/test_gap_report.py tests/test_gap_remediation.py
 
+handbook:
+	cd "$(ROOT)/frontend" && node scripts/handbook-reference.mjs
+
+handbook-check:
+	cd "$(ROOT)/frontend" && node scripts/handbook-reference.mjs --check
+
 gen-types: spec-integrity
 	cd "$(ROOT)/frontend" && npm run gen-types
 

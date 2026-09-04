@@ -128,7 +128,8 @@ Invoice Generator/
 
 ## Further reading
 
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — dual-track design, module tables, UAPI choreography, frontend↔backend contract.
+- [`docs/handbook/`](docs/handbook/README.md) — **the handbook**: how the invoices, mappings, app mechanics, validation, send lifecycle and infrastructure work, with a generated field-mapping reference and a screen-by-screen tour.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — the terse map: dual-track design, module tables, UAPI choreography, frontend↔backend contract.
 - [`docs/DEMO-SCRIPT.md`](docs/DEMO-SCRIPT.md) — the scripted showcase for a solutions engineer.
 - [`docs/adr/`](docs/adr/) — architecture decision records.
 
