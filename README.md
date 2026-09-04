@@ -2,14 +2,45 @@
 
 A browser-based showcase of the e-invoice lifecycle — **create → validate → send** — built for demos (sales, solution engineering, partners) and doubling as a test harness for the fiskaly Unified API (UAPI). The tool is dual-track: a **client-side e-invoice lab** generates and validates the XML a user expects locally, while a **UAPI harness** sends the same invoice through fiskaly, follows its lifecycle, and diffs the locally predicted XML against the XML fiskaly actually transmitted. The UI is a split screen: the workflow the user drives on the left, the live UAPI HTTP calls each step produces on the right.
 
-## Prerequisites (macOS)
+## Run it
 
-- [Homebrew](https://brew.sh)
-- Python 3.13
-- Node LTS via `brew install node` (one-time)
-- Docker — optional, only needed for `make docker`
+The only prerequisite is [Docker Desktop](https://www.docker.com/products/docker-desktop/) (macOS, Windows with the WSL2 backend, or Linux) and Git:
 
-## Quickstart
+```bash
+git clone <repo-url>
+cd "Invoice Generator"
+docker compose up --build
+```
+
+Then open **http://localhost:8080**.
+
+- The first build takes a few minutes: it downloads the npm/pip packages and the sha256-pinned
+  validation standards (XSDs, Schematron rules, the SaxonJS runtime) and compiles the Schematron
+  rule sets — all inside the image build, so no Node, Python, or `make` is needed on your machine.
+  After that, everything runs **offline in MOCK mode** with zero configuration: every fiskaly
+  response is replayed from committed fixtures through the same client code as a live call.
+- **Talking to the real TEST API** (`test.api.fiskaly.com`): open **Settings** in the app and paste
+  your fiskaly TEST API key — it is held in backend memory only, never persisted. Alternatively,
+  copy `.env.example` to `.env` and fill in the seller key before `docker compose up`.
+- **Windows**: same two commands from PowerShell.
+
+**Troubleshooting**
+
+- _Port already in use_ — the app takes **8080**, the backend **8000**. Find the blocker with
+  `lsof -i :8080` (macOS/Linux) or `netstat -ano | findstr :8080` (Windows), or edit the `ports:`
+  mappings in `docker-compose.yml`.
+- _`docker: command not found` / cannot connect to the daemon_ — Docker Desktop is not installed
+  or not running.
+- _Build fails downloading standards_ — a corporate proxy may block the pinned sources listed in
+  `tools/rulesets.json`. `tools/fetch_assets.py` supports offline bundles via a `STANDARDS_DIRS`
+  environment variable if you have local copies.
+- _White page / 502 right after start_ — the frontend waits for the backend healthcheck; give it a
+  few seconds and reload.
+
+## Develop it (macOS/Linux)
+
+Prerequisites: Python 3.13, Node ≥ 20 (macOS: [Homebrew](https://brew.sh) — `make setup`
+bootstraps Node via brew if missing).
 
 ```bash
 make setup      # install frontend + backend dependencies
@@ -18,10 +49,10 @@ make spec       # ingest spec/drop/*.yaml, else fetch the latest into spec/ (com
 make gen-types  # generate TypeScript types from whichever spec is active
 make schemas    # vendor XSD/XSLT validation assets into vendor/
 make sef        # compile Schematron XSLT to SEF for the browser validator
-make dev        # run frontend + backend
+make dev        # run frontend (:5173) + backend (:8000) natively, with hot reload
 ```
 
-Other targets: `make test` (Vitest + pytest), `make e2e` (Playwright against MOCK), `make lint`, `make gap-report` / `make gap-check` (field-coverage gap report + CI gate), `make sef-check` / `make spec-check` (asset freshness), `make docker` (builds `vendor/` and the SEFs first, then compose build).
+Other targets: `make test` (Vitest + pytest), `make e2e` (Playwright against MOCK), `make lint`, `make gap-report` / `make gap-check` (field-coverage gap report + CI gate), `make sef-check` / `make spec-check` (asset freshness), `make docker` (same as `docker compose up --build`).
 
 ## Updating the OpenAPI spec
 

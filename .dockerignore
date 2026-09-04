@@ -8,9 +8,15 @@ frontend/src/gen
 frontend/playwright-report
 frontend/test-results
 backend/.venv
+backend/tests
 **/__pycache__
 .pytest_cache
 .ruff_cache
 docs
 .claude
 spec/drop
+# Host-built copies of the assets the Dockerfiles build for themselves — a stale local
+# build must never shadow the in-image fetch/compile.
+vendor
+frontend/public/sef
+frontend/public/saxon

@@ -1,10 +1,17 @@
+# Validation assets (XSDs, Schematron sources) are git-ignored and licence-constrained
+# (see vendor/SOURCES.md): they are fetched sha256-pinned inside the build, on the machine
+# that builds the image, never shipped through git.
+FROM python:3.13-slim AS assets
+COPY tools/ /tools/
+RUN VENDOR_DIR=/vendor python /tools/fetch_assets.py
+
 FROM python:3.13-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 RUN useradd --create-home app
 WORKDIR /srv
 COPY backend/ /srv/backend/
 COPY spec/ /srv/spec/
-COPY vendor/ /srv/vendor/
+COPY --from=assets /vendor /srv/vendor
 ENV VENDOR_DIR=/srv/vendor
 RUN pip install --no-cache-dir /srv/backend
 USER app
