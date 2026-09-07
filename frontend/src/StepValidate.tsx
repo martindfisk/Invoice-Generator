@@ -349,7 +349,12 @@ function Validating({ invoice, presetId }: { invoice: Invoice; presetId: PresetI
   const { xml, error } = source;
   const value = operation.value ?? undefined;
   const stamp = useMemo(() => JSON.stringify(invoice), [invoice]);
-  const key = `${nonce} ${formatId} ${digest(`${stamp} ${xml} ${operation.text}`)}`;
+  // The digest hashes the whole XML + operation text on every render otherwise — cheap FNV,
+  // but the inputs run to hundreds of KB and this component re-renders on every selection.
+  const key = useMemo(
+    () => `${nonce} ${formatId} ${digest(`${stamp} ${xml} ${operation.text}`)}`,
+    [nonce, formatId, stamp, xml, operation.text],
+  );
   const stored = validation.key;
 
   useEffect(() => {

@@ -1,9 +1,9 @@
 import { xml as xmlLanguage } from "@codemirror/lang-xml";
 import { MergeView, presentableDiff } from "@codemirror/merge";
-import { EditorState } from "@codemirror/state";
+import { Compartment, EditorState } from "@codemirror/state";
 import { EditorView, lineNumbers } from "@codemirror/view";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useStore } from "./store";
+import { store, useStore } from "./store";
 
 const INDENT = "  ";
 
@@ -165,7 +165,7 @@ function changeRows(a: string, b: string): ChangeRow[] {
   return rows;
 }
 
-function paneState(doc: string, theme: "light" | "dark"): EditorState {
+function paneState(doc: string, theme: "light" | "dark", themeSlot: Compartment): EditorState {
   return EditorState.create({
     doc,
     extensions: [
@@ -173,7 +173,7 @@ function paneState(doc: string, theme: "light" | "dark"): EditorState {
       xmlLanguage(),
       EditorState.readOnly.of(true),
       EditorView.editable.of(false),
-      THEMES[theme],
+      themeSlot.of(THEMES[theme]),
     ],
   });
 }
@@ -204,13 +204,20 @@ export function DiffView({ localXml, localLabel, remoteXml, remoteLabel, caveat 
   const rows = useMemo(() => changeRows(left, right), [left, right]);
   const identical = left === right;
 
+  // A theme flip reconfigures the panes' theme compartment in place instead of rebuilding the
+  // whole MergeView (a rebuild re-diffs both documents and loses the scroll position).
+  const themeSlot = useMemo(() => new Compartment(), []);
+
   useEffect(() => {
     const parent = host.current;
     if (!parent) return;
+    // The theme is read non-reactively: creation must not depend on it (that would rebuild the
+    // view on a flip), and the reconfigure effect below keeps a live view in sync.
+    const initialTheme = store.getState().theme;
     const view = new MergeView({
       parent,
-      a: paneState(left, theme),
-      b: paneState(right, theme),
+      a: paneState(left, initialTheme, themeSlot),
+      b: paneState(right, initialTheme, themeSlot),
       highlightChanges: true,
       gutter: true,
       collapseUnchanged: { margin: 3, minSize: 6 },
@@ -220,7 +227,14 @@ export function DiffView({ localXml, localLabel, remoteXml, remoteLabel, caveat 
       view.destroy();
       merge.current = null;
     };
-  }, [left, right, theme]);
+  }, [left, right, themeSlot]);
+
+  useEffect(() => {
+    const view = merge.current;
+    if (!view) return;
+    view.a.dispatch({ effects: themeSlot.reconfigure(THEMES[theme]) });
+    view.b.dispatch({ effects: themeSlot.reconfigure(THEMES[theme]) });
+  }, [theme, themeSlot]);
 
   const reveal = (row: ChangeRow) => {
     const view = merge.current;

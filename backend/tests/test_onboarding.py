@@ -157,6 +157,36 @@ async def test_status_lists_entities_and_flags_blocked_peppol_systems():
     assert systems["sys-de"]["blocked_by"] == "peppol-proof-of-ownership"
     assert systems["sys-it"]["blocked_by"] is None
     assert any("sys-de is COMMISSIONED/DEGRADED" in message for message in body["missing"])
+    assert body["errors"] == {}
+    await client.aclose()
+
+
+async def test_status_names_a_failed_listing_instead_of_blanking_the_tree():
+    store = SessionStore(make_settings())
+    client = UapiClient("seller", store, Recorder(50), None)
+
+    def listing(*contents):
+        return httpx.Response(200, json={"results": [{"content": c} for c in contents]})
+
+    with respx.mock(base_url=BASE_URL, assert_all_called=False) as router:
+        router.post("/tokens").mock(return_value=httpx.Response(200, json=token_json()))
+        router.get("/organizations").mock(
+            return_value=httpx.Response(
+                403, json={"status": 403, "code": "E_FORBIDDEN", "message": "no access"}
+            )
+        )
+        router.get("/subjects").mock(return_value=listing({"id": "sub-1", "state": "ENABLED"}))
+        router.get("/taxpayers").mock(return_value=listing())
+        router.get("/systems").mock(return_value=listing())
+        body = await onboarding_status(client, store)
+    # The failed resource is named; the ones that answered still render.
+    assert list(body["errors"]) == ["organizations"]
+    assert body["organizations"] == []
+    assert body["subjects"] == [{"id": "sub-1", "type": None, "state": "ENABLED", "name": None}]
+    assert any(
+        message.startswith("organizations could not be listed") for message in body["missing"]
+    )
+    assert body["ready"] == {"IT": False, "BE": False, "DE": False}
     await client.aclose()
 
 

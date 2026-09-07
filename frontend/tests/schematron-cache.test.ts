@@ -63,27 +63,33 @@ describe("the SEF cache is keyed by content hash, not by URL", () => {
     expect(fetchMock).toHaveBeenCalledWith("/sef/busted.sef.json?v=sha-busted");
   });
 
-  it("evicts the least recently used SEF beyond three entries", async () => {
+  it("evicts the least recently used SEF beyond four entries", async () => {
     served = {
       "/sef/lru-a.sef.json?v=ka": { sef: "a" },
       "/sef/lru-b.sef.json?v=kb": { sef: "b" },
       "/sef/lru-c.sef.json?v=kc": { sef: "c" },
       "/sef/lru-d.sef.json?v=kd": { sef: "d" },
+      "/sef/lru-e.sef.json?v=ke": { sef: "e" },
     };
-    await runSchematron("<x/>", [ref("lru-a", "ka"), ref("lru-b", "kb"), ref("lru-c", "kc")]);
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-
-    await runSchematron("<x/>", [ref("lru-a", "ka")]);
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-
-    await runSchematron("<x/>", [ref("lru-d", "kd")]);
+    await runSchematron("<x/>", [
+      ref("lru-a", "ka"),
+      ref("lru-b", "kb"),
+      ref("lru-c", "kc"),
+      ref("lru-d", "kd"),
+    ]);
     expect(fetchMock).toHaveBeenCalledTimes(4);
 
     await runSchematron("<x/>", [ref("lru-a", "ka")]);
     expect(fetchMock).toHaveBeenCalledTimes(4);
+
+    await runSchematron("<x/>", [ref("lru-e", "ke")]);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+
+    await runSchematron("<x/>", [ref("lru-a", "ka")]);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
 
     await runSchematron("<x/>", [ref("lru-b", "kb")]);
-    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(fetchMock).toHaveBeenCalledTimes(6);
   });
 
   it("still accepts a plain rule-set name and keys it by URL", async () => {

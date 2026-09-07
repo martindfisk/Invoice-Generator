@@ -237,11 +237,15 @@ async def put_mode(body: ModeUpdate, request: Request):
     return ModeState(mode=body.mode, live_available=live_available(app))
 
 
-def collections_for(app):
+async def collections_for(app):
     settings = app.state.store.settings
     collections = getattr(app.state, "collections", None)
     if collections is None:
-        collections = load_collections(settings.spec_dir, settings.poll_timeout_s)
+        # Parsing the Postman JSON reads files and walks every step — synchronous work that
+        # would stall the event loop on the first request after boot.
+        collections = await asyncio.to_thread(
+            load_collections, settings.spec_dir, settings.poll_timeout_s
+        )
         app.state.collections = collections
     if not collections:
         raise HTTPException(503, f"no Postman collections in {settings.spec_dir}; run: make spec")
@@ -258,13 +262,13 @@ async def list_collections(request: Request):
             steps=len(collection["steps"]),
             notes=len(collection["notes"]),
         )
-        for collection in collections_for(request.app).values()
+        for collection in (await collections_for(request.app)).values()
     ]
 
 
 @router.get("/collections/{collection_id}", response_model=Collection)
 async def get_collection(collection_id: str, request: Request):
-    collections = collections_for(request.app)
+    collections = await collections_for(request.app)
     if collection_id not in collections:
         raise HTTPException(
             404, f"unknown collection {collection_id!r}; expected one of {sorted(collections)}"

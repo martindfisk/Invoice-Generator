@@ -4,7 +4,7 @@ import { annotateKnownDefects } from "./known-defects";
 import type { FormatId, Invoice } from "./model";
 import { checkModel, type Severity } from "./model-rules";
 import { loadSefManifest, resolveRuleSets } from "./schematron-sets";
-import { runSchematron, type SchematronRun } from "./schematron.worker";
+import { prewarmSchematron, runSchematron, type SchematronRun } from "./schematron.worker";
 import { parseSvrl, type SvrlFinding } from "./svrl";
 import { buildFieldIndex, type FieldIndex } from "./xml-locate";
 import { fieldForPointer, toInvoiceTransaction, type UapiContext } from "./uapi-map";
@@ -302,6 +302,19 @@ function schematronFinding(svrl: SvrlFinding, fields: FieldIndex): Finding {
 function nameRun(run: SchematronRun, versions: Map<string, string | undefined>): string {
   const version = versions.get(run.ruleSet);
   return `${run.ruleSet}${version ? ` ${version}` : ""} (${run.loadMs + run.runMs} ms)`;
+}
+
+// Fetch and parse the active format's SEFs (and the SaxonJS runtime) ahead of the first run,
+// so the Mapper can hide the 400–700 ms Schematron cold start behind idle time. Best-effort:
+// any failure is left for the real validation run to report with context.
+export async function prewarmValidation(formatId: FormatId): Promise<void> {
+  try {
+    const ruleSets = resolveRuleSets(formatId, await loadSefManifest());
+    if (ruleSets.length === 0) return;
+    await prewarmSchematron(ruleSets);
+  } catch {
+    // Swallowed by design — see above.
+  }
 }
 
 registerStage("schematron", async (input) => {
