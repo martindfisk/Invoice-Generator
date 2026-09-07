@@ -95,7 +95,7 @@ The proxy exists because the browser must never hold credentials (and because
   dicts; the proxy never re-models fiskaly's schemas.
 - **`onboarding.py`** — the per-persona account tree (organizations → subjects → taxpayers →
   systems, fetched in parallel, pagination followed) and guided provisioning behind an explicit
-  confirmation, feeding the EntityTree in Setup.
+  confirmation, feeding the EntityTree in the Test runner section.
 - **`collections.py`** — parses the published fiskaly Postman collections into runnable steps for
   the Test runner: transmission folders run, account-mutating and reception steps are skipped with
   a stated reason, and known defects in the published collections are surfaced as notes rather

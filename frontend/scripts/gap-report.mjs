@@ -132,10 +132,14 @@ home, and whether \`blocking\` is the right call — is settled by the \`/gap-au
 runs a reviewer over each cause against the standards and then adversarially tries to refute it.
 Save its output as \`docs/gaps/verdicts.json\`; \`backend/tests/test_gap_verdicts.py\` then keeps it
 honest, failing when a verdict outlives its row or the reason it judged is re-worded.
-
+${
+  (summary.bySeverity.blocking ?? 0) > 0
+    ? `
 Note that the blocking rows apply EN 16931 cardinality to FatturaPA, which is **not** a CIUS of
 EN 16931. Whether that is a gap or a category error is exactly what the research run should decide.
-
+`
+    : ""
+}
 ## Jira mapping
 
 \`gap-report.csv\` is importable as-is. \`summary\` is the issue Summary, \`id\` the External issue ID

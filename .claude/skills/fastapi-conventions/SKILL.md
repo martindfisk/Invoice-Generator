@@ -13,5 +13,5 @@ description: Backend conventions for this repo — FastAPI + asyncio + httpx, py
 - **Masking**: everything recorded passes `mask.py` first; cURL is derived from masked data. Add new secret keys there, nowhere else.
 - **Errors**: upstream status + body pass through (`JSONResponse(status_code=r.status_code, content=r.json())`); configuration errors raise; use `HTTPException` only at the API boundary (bad persona, mode refused). No blanket `try/except`.
 - **Polling**: `asyncio.sleep(POLL_INTERVAL_S)` loops bounded by `POLL_TIMEOUT_S`; each poll is a recorded call with `step="poll"`.
-- **Tests**: `pytest -q` (`asyncio_mode=auto`), `respx` for upstream mocking (assert headers, call counts), `httpx.AsyncClient(transport=ASGITransport(app=app))` for routes, `jsonschema` for fixture-vs-spec contract, live smoke gated by `UAPI_SMOKE=1` and read-only.
+- **Tests**: `pytest -q` (`asyncio_mode=auto`), `respx` for upstream mocking (assert headers, call counts), `httpx.AsyncClient(transport=ASGITransport(app=app))` for routes, `jsonschema` for fixture-vs-spec contract.
 - **Style**: `ruff format` + `ruff check` (E, F, I, UP, B), line length 100, no comments/docstrings, small functions, explicit names.
