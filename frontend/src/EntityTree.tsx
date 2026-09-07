@@ -360,6 +360,19 @@ export function PersonaTree({
             {noCredentialsHint(persona)}
           </p>
         )}
+        {status && !withheld && Object.entries(status.errors ?? {}).length > 0 && (
+          <div data-listing-errors={persona} className="mx-2 my-1 flex flex-col gap-1">
+            {Object.entries(status.errors ?? {}).map(([resource, message]) => (
+              <p
+                key={resource}
+                className="rounded-m bg-warning-soft px-2 py-1.5 text-[11px] text-warning-ink"
+              >
+                {resource} could not be listed — shown as empty below, but actually unknown:{" "}
+                <span className="font-mono break-all">{message}</span>
+              </p>
+            ))}
+          </div>
+        )}
         {status && !withheld && (
           <ul aria-label={`${label} entity tree`}>
             <AccountRows

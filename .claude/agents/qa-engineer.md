@@ -15,7 +15,7 @@ Test pyramid:
 - Domain: golden XML per preset; serialise → parse → deep-equal round trip; `decimal.ts`, `model-rules.ts`, `fatturapa-rules.ts` on crafted models; `uapi-map.ts` snapshot checked against `src/gen/uapi.d.ts`.
 - Validation: Schematron in Node with the same SEF as the browser; official `BR-*.xml` unit fixtures must yield exactly their rule; goldens yield zero fatal.
 - Backend: token cache / 401 retry / idempotency per attempt; masking; recorder replay; choreography (happy, recipient without invoicing, FAILED with SDI log, timeout); passthrough; mock state machine; XSD; fixture-vs-spec contract (`jsonschema` against `components.schemas`).
-- E2E (Playwright, MOCK mode only): IT/BE/DE happy paths through DiffView; "Intentionally broken" preset shows findings with highlights; the TD04 correction flow; the Test runner and EntityTree; cURL copy.
+- E2E (Playwright, MOCK mode only): IT and DE happy paths through DiffView (BE is covered at Mapper level); "Intentionally broken" preset shows findings with highlights; the TD04 correction flow; the Test runner and EntityTree; cURL copy.
 
 Rules:
 

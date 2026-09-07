@@ -264,6 +264,9 @@ class OnboardingStatus(BaseModel):
     systems: list[OnboardingSystem]
     ready: dict[str, bool]
     missing: list[str]
+    # Resource name -> upstream failure, for listings that could not be fetched; those resources
+    # are unknown, not absent, and the UI must say so per resource.
+    errors: dict[str, str] = Field(default_factory=dict)
 
 
 class ProvisionRequest(BaseModel):

@@ -187,6 +187,11 @@ async def test_status_names_a_failed_listing_instead_of_blanking_the_tree():
         message.startswith("organizations could not be listed") for message in body["missing"]
     )
     assert body["ready"] == {"IT": False, "BE": False, "DE": False}
+    # The response model must carry the errors dict, or the route strips it and the UI never
+    # learns a resource is unknown rather than absent.
+    from app.models import OnboardingStatus
+
+    assert OnboardingStatus(**body).model_dump()["errors"] == body["errors"]
     await client.aclose()
 
 

@@ -11,6 +11,7 @@ import {
   LOSS_NOTICE,
   migratePanes,
   persistWorkflow,
+  RESTORED_ARTIFACTS_NOTE,
   stepLock,
   STEPS,
   VIEW_VERSION,
@@ -335,6 +336,9 @@ describe("workflow persistence", () => {
     const restored = initialWorkflow();
     expect(restored.send.outcome).toBe("transmitted");
     expect(restored.send.phase).toBe("settled");
+    // Artifacts are stripped from persistence, so the restored send says they are refetched
+    // instead of presenting an unexplained empty diff.
+    expect(restored.send.note).toBe(RESTORED_ARTIFACTS_NOTE);
   });
 
   it("a transmission-id poll slice with unknown logs keeps the transaction node's entries", () => {

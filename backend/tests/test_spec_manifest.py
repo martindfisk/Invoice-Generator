@@ -191,3 +191,19 @@ def test_a_run_that_changes_nothing_keeps_the_previous_timestamp():
     moved = {**unchanged, "spec": {"file": "a.yaml", "sha256": "y"}}
     assert not fetch_spec._same(previous, moved)
     assert not fetch_spec._same(previous, {**unchanged, "apiVersion": "2027-03-01"})
+
+
+def test_verify_frozen_flags_missing_and_tampered_entries(tmp_path, monkeypatch):
+    monkeypatch.setattr(fetch_spec, "SPEC_DIR", tmp_path)
+    good = tmp_path / "kept.json"
+    good.write_bytes(b'{"ok": true}')
+    changed = tmp_path / "changed.json"
+    changed.write_bytes(b'{"ok": false}')
+    entries = [
+        {"file": "kept.json", "sha256": hashlib.sha256(b'{"ok": true}').hexdigest()},
+        {"file": "changed.json", "sha256": hashlib.sha256(b"what was ingested").hexdigest()},
+        {"file": "gone.json", "sha256": "irrelevant"},
+    ]
+    absent, tampered = fetch_spec.verify_frozen(entries)
+    assert absent == ["gone.json"]
+    assert tampered == ["changed.json"]

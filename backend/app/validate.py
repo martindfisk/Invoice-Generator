@@ -57,7 +57,9 @@ class XsdValidator:
             try:
                 with self._registry_lock:
                     self._schema(schema_key)
-            except (FileNotFoundError, etree.XMLSchemaParseError):
+            except (FileNotFoundError, etree.XMLSyntaxError, etree.XMLSchemaParseError):
+                # XMLSyntaxError covers a malformed vendored file; anything escaping here would
+                # kill the whole warm_spec task and silently skip the spec warmups after it.
                 continue
 
     def _schema(self, schema_key):

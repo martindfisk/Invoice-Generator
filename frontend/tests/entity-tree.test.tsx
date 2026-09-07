@@ -159,6 +159,20 @@ describe("PersonaTree", () => {
     expect(document.querySelector("[data-missing='DE']")).toBeNull();
   });
 
+  it("names a listing the backend could not fetch instead of showing it as empty", () => {
+    renderTree(
+      status({
+        organizations: [],
+        counts: { organizations: 0, subjects: 1, taxpayers: 1, systems: 1 },
+        errors: { organizations: "403 E_FORBIDDEN: no access" },
+      }),
+    );
+    const block = document.querySelector("[data-listing-errors='seller']") as HTMLElement;
+    expect(block).not.toBeNull();
+    expect(within(block).getByText(/organizations could not be listed/)).toBeInTheDocument();
+    expect(within(block).getByText(/403 E_FORBIDDEN: no access/)).toBeInTheDocument();
+  });
+
   it("reduces Organization and Subject to one quiet line each", () => {
     renderTree(
       status({

@@ -438,11 +438,6 @@ export function RunnerPane() {
                 type="button"
                 className={SECONDARY}
                 disabled={runner.running || nextIndex === null}
-                title={
-                  nextIndex === null && !runner.running
-                    ? "Run finished — every runnable step has a result. Clear results to step through again."
-                    : undefined
-                }
                 onClick={() => {
                   if (nextIndex !== null) requestRun(nextIndex, nextIndex);
                 }}
@@ -453,6 +448,14 @@ export function RunnerPane() {
                 <button type="button" className={SECONDARY} onClick={clearRun}>
                   Clear results
                 </button>
+              )}
+              {nextIndex === null && !runner.running && hasRunState && (
+                // Rendered text, not a title on a disabled control: a tooltip there is
+                // unreliable for mouse users and invisible to assistive tech.
+                <span className="text-[11px] text-muted">
+                  Run finished — every runnable step has a result; Clear results to step through
+                  again.
+                </span>
               )}
               {runner.running && (
                 <button type="button" className={SECONDARY} onClick={stopRun}>
@@ -470,10 +473,12 @@ export function RunnerPane() {
               )}
               {!runner.running &&
                 runner.haltedAt !== null &&
-                // No-op past the last step: the halted step was the final one, so there is
-                // nothing to continue into.
                 runner.collection !== null &&
-                runner.haltedAt + 1 < runner.collection.steps.length && (
+                // Only when something runnable remains: a tail of skipped steps is nothing to
+                // continue into, exactly like the halted step being the last one.
+                runner.collection.steps
+                  .slice(runner.haltedAt + 1)
+                  .some((step) => step.runnable) && (
                   <button
                     type="button"
                     className={SECONDARY}

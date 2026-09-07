@@ -52,12 +52,15 @@ def test_all_three_collections_parse(collections):
 
 
 def test_de_runnable_steps_in_order(collections):
-    # Deliberately exact against the committed collections — CI fetches --frozen, so this can
-    # only change when a new collection version is ingested on purpose (and then this list is
-    # part of reviewing what changed upstream).
+    # Deliberately exact against the committed collections — CI fetches --frozen (hash-verified),
+    # so this can only change when a new collection version is ingested on purpose, and then this
+    # list is part of reviewing what changed upstream. The remediation plan offered loosening to
+    # invariants instead; the exact list was kept because it doubles as the runner's contract.
+    # Only the raw step count is an invariant: skipped steps come and go with upstream edits
+    # without changing what the runner executes.
     steps = collections["de"]["steps"]
     assert [step["name"] for step in steps if step["runnable"]] == DE_RUNNABLE
-    assert len(steps) == 28
+    assert len(steps) >= len(DE_RUNNABLE)
 
 
 def test_excluded_steps_carry_skip_reason(collections):

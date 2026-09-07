@@ -46,14 +46,18 @@ export function ApiLogPane() {
     [calls],
   );
 
+  // The persona filter only applies while its chips are rendered (>1 persona in the log): a
+  // selection left over from a runner session must not silently hide a later single-persona
+  // log with no visible control to undo it.
+  const activePersonas = knownPersonas.length > 1 ? personas : [];
   const filtered = useMemo(
     () =>
       calls.filter(
         (call) =>
           (steps.length === 0 || steps.includes(stepLabel(call))) &&
-          (personas.length === 0 || personas.includes(call.persona)),
+          (activePersonas.length === 0 || activePersonas.includes(call.persona)),
       ),
-    [calls, steps, personas],
+    [calls, steps, activePersonas],
   );
 
   const groups = useMemo(() => groupCalls(filtered), [filtered]);

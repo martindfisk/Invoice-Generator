@@ -829,6 +829,10 @@ export const RESTORED_SEND_NOTE =
   "Restored from this browser after a reload while polling was still under way — the record ids " +
   "are kept, and Keep polling resumes watching the same record.";
 
+export const RESTORED_ARTIFACTS_NOTE =
+  "Restored from this browser — artifacts are not persisted, so the transmitted XML is being " +
+  "refetched from fiskaly.";
+
 function restoreEdit(saved: unknown): EditState {
   if (saved === null || typeof saved !== "object") return freshEdit();
   const value = saved as Partial<EditState>;
@@ -856,11 +860,23 @@ function restoreSend(saved: unknown): SendState {
   if (send.phase === "creating" && send.transactionId === null) return freshSend();
   if (send.phase !== "idle" && send.phase !== "settled") {
     if (send.outcome !== null && TERMINAL_OUTCOMES.includes(send.outcome)) {
-      return { ...send, phase: "settled" };
+      return { ...send, phase: "settled", note: send.note ?? restoredArtifactsNote(send) };
     }
     return { ...send, phase: "settled", outcome: "stopped", note: RESTORED_SEND_NOTE };
   }
+  if (send.phase === "settled") {
+    return { ...send, note: send.note ?? restoredArtifactsNote(send) };
+  }
   return send;
+}
+
+// Persist strips the artifacts (quota); a restored transmitted send says so instead of showing
+// an empty diff with no explanation while the mount refetch runs. A saved note (e.g. the
+// passthrough caveat) is more specific and wins.
+function restoredArtifactsNote(send: SendState): string | null {
+  return send.outcome === "transmitted" && send.compliance === null
+    ? RESTORED_ARTIFACTS_NOTE
+    : null;
 }
 
 function readCorrectionTarget(saved: unknown): CorrectionTarget | null {

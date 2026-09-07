@@ -242,6 +242,20 @@ def _same(left, right):
     return all(left.get(key) == right.get(key) for key in keys)
 
 
+def verify_frozen(entries):
+    """Freeze means the manifest's bytes, not just its filenames: every recorded entry must
+    still hash to what was ingested, or the "frozen" build silently uses different content."""
+    absent = []
+    tampered = []
+    for entry in entries:
+        path = SPEC_DIR / entry["file"]
+        if not path.exists():
+            absent.append(entry["file"])
+        elif entry.get("sha256") and sha256(path.read_bytes()) != entry["sha256"]:
+            tampered.append(entry["file"])
+    return absent, tampered
+
+
 def main():
     ap = argparse.ArgumentParser(
         description="Ingest a dropped OpenAPI spec and fetch the public fiskaly UAPI specs into spec/"
@@ -279,13 +293,16 @@ def main():
         fallback = previous.get("fallback", [])
         collections = previous.get("collections", [])
         blobs = {}
-        absent = [
-            entry["file"]
-            for entry in fallback + collections
-            if not (SPEC_DIR / entry["file"]).exists()
-        ]
+        absent, tampered = verify_frozen(fallback + collections)
         if absent:
             print(f"ERROR: --frozen but spec/ is incomplete: {absent}", file=sys.stderr)
+            return 1
+        if tampered:
+            print(
+                f"ERROR: --frozen but these files changed since they were recorded: {tampered}; "
+                "run make spec (or re-drop) so spec.json records the new bytes",
+                file=sys.stderr,
+            )
             return 1
         print("frozen: using the committed spec/ as recorded; nothing fetched")
         return finish(previous, spec, fallback, collections, blobs)

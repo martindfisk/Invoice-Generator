@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   sendInvoice: vi.fn(),
   waitForTransmission: vi.fn(),
   fetchArtifact: vi.fn(),
+  getOnboardingStatus: vi.fn(),
 }));
 
 vi.mock("../src/uapi-client", async (importOriginal) => {
@@ -37,6 +38,7 @@ vi.mock("../src/uapi-client", async (importOriginal) => {
     sendInvoice: mocks.sendInvoice,
     waitForTransmission: mocks.waitForTransmission,
     fetchArtifact: mocks.fetchArtifact,
+    getOnboardingStatus: mocks.getOnboardingStatus,
   };
 });
 
@@ -76,6 +78,7 @@ beforeEach(() => {
   sendInvoice.mockReset();
   waitForTransmission.mockReset();
   fetchArtifact.mockReset();
+  mocks.getOnboardingStatus.mockReset();
 });
 
 afterEach(() => {
@@ -385,5 +388,73 @@ describe("API log correlation", () => {
     fireEvent.click(within(filters).getByRole("button", { name: "intention" }));
     expect(document.querySelectorAll("[data-group]")).toHaveLength(1);
     expect(screen.getByText("1 / 2")).toBeInTheDocument();
+  });
+});
+
+describe("correction target guards", () => {
+  it("blocks a MOCK-captured target once the app is in LIVE, with the explanation", () => {
+    // Transmit the original invoice in MOCK so the reducer records the typed target.
+    store.dispatch({ type: "sendStarted", at: 1, localXml: "", callMode: "MOCK" });
+    store.dispatch({
+      type: "sendCreated",
+      at: 2,
+      created: { intention_id: "int-1", transaction_id: "txn-1" },
+      transport: "backend",
+    });
+    store.dispatch({
+      type: "sendPolled",
+      at: 3,
+      wait: {
+        transaction_id: "txn-1",
+        finished: true,
+        transmission_id: "trn-1",
+        transmission: { id: "trn-1", state: "COMPLETED", mode: "FINISHED", logs: [] },
+      },
+    });
+    store.dispatch({ type: "choosePreset", presetId: "it-restaurant-td04-credit", fresh: true });
+    store.setMode("LIVE");
+    render(<StepSend />);
+    expect(screen.getByText(/exists only in MOCK mode — the app is now in LIVE/)).toBeVisible();
+    expect(screen.getByRole("button", { name: /Send/ })).toBeDisabled();
+  });
+});
+
+describe("DEGRADED system warning", () => {
+  it("warns before a LIVE send when the selected system is DEGRADED", async () => {
+    mocks.getOnboardingStatus.mockResolvedValue({
+      persona: "seller",
+      environment: "test",
+      credentials: { configured: true, source: "env", fingerprint: "x" },
+      counts: { organizations: 1, subjects: 1, taxpayers: 1, systems: 1 },
+      organizations: [],
+      subjects: [],
+      taxpayers: [],
+      systems: [
+        {
+          id: "sys-it",
+          type: "E_INVOICE_SERVICE",
+          state: "COMMISSIONED",
+          mode: "DEGRADED",
+          blocked_by: "peppol-proof-of-ownership",
+          registrations: [],
+        },
+      ],
+      ready: { IT: true },
+      missing: [],
+    });
+    await store.refreshConfig();
+    store.setMode("LIVE");
+    render(<StepSend />);
+    expect(await screen.findByText(/is DEGRADED —/)).toBeVisible();
+    expect(
+      screen.getByText(/Peppol proof of ownership of the taxpayer is still outstanding/),
+    ).toBeVisible();
+  });
+
+  it("stays quiet in MOCK even when the account would report DEGRADED", () => {
+    mocks.getOnboardingStatus.mockResolvedValue({ systems: [] });
+    render(<StepSend />);
+    expect(mocks.getOnboardingStatus).not.toHaveBeenCalled();
+    expect(screen.queryByText(/is DEGRADED/)).not.toBeInTheDocument();
   });
 });
