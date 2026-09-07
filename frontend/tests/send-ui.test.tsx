@@ -32,7 +32,6 @@ vi.mock("../src/uapi-client", async (importOriginal) => {
         mode: "mock",
         environment: "test",
         api_version: "2026-06-01",
-        reception_mode: "simulated",
         personas: { seller: { IT: { system_id: "sys-it", taxpayer_id: "tax-it" } }, buyer: {} },
       }),
     sendInvoice: mocks.sendInvoice,
@@ -69,7 +68,7 @@ beforeEach(() => {
   localStorage.clear();
   store.clearCalls();
   store.dispatch({ type: "sendReset" });
-  store.dispatch({ type: "choosePreset", presetId: "it-b2b-sdi" });
+  store.dispatch({ type: "choosePreset", presetId: "it-b2b-sdi", fresh: true });
   sendInvoice.mockReset();
   waitForTransmission.mockReset();
   fetchArtifact.mockReset();
@@ -306,9 +305,9 @@ describe("Send step", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Stop polling" }));
     await waitFor(() => {
-      expect(document.querySelector('[data-outcome="timeout"]')).toBeInTheDocument();
+      expect(document.querySelector('[data-outcome="stopped"]')).toBeInTheDocument();
     });
-    expect(screen.getByText(/SDI routinely takes minutes/)).toBeInTheDocument();
+    expect(screen.getByText(/You stopped the polling/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Keep polling" })).toBeInTheDocument();
   });
 });

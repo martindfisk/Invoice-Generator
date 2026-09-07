@@ -57,7 +57,7 @@ function edited(change: (operation: Record<string, unknown>) => void): string {
 describe("compose — the fiskaly JSON pane", () => {
   beforeEach(() => {
     localStorage.clear();
-    store.dispatch({ type: "choosePreset", presetId: first.id });
+    store.dispatch({ type: "choosePreset", presetId: first.id, fresh: true });
     store.dispatch({ type: "setPane", pane: "human", show: true });
     store.dispatch({ type: "setPane", pane: "xml", show: false });
   });
@@ -266,7 +266,7 @@ const CONTRACT_STAGE_RESULT: StageResult = {
 describe("validate — a contract finding lands in the JSON", () => {
   beforeEach(() => {
     localStorage.clear();
-    store.dispatch({ type: "choosePreset", presetId: "it-b2b-sdi" });
+    store.dispatch({ type: "choosePreset", presetId: "it-b2b-sdi", fresh: true });
     store.dispatch({ type: "setPane", pane: "human", show: true });
     store.dispatch({ type: "setPane", pane: "xml", show: false });
     store.dispatch({ type: "goToStep", step: "validate" });

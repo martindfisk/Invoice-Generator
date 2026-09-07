@@ -37,6 +37,9 @@ function paneToggle(name: string) {
 describe("workflow pane", () => {
   beforeEach(() => {
     store.dispatch({ type: "goToStep", step: "setup" });
+    // Re-picking a preset via the card keeps state by design now, so leftovers from earlier
+    // tests (a selection, edits) are cleared explicitly.
+    store.dispatch({ type: "select", selection: null });
   });
   afterEach(cleanup);
 
@@ -251,10 +254,7 @@ describe("workflow pane", () => {
     render(<WorkflowPane />);
     pickFirstPreset();
 
-    for (const [step, endpoint] of [
-      ["Send", "POST /api/invoices"],
-      ["Receive", "GET /api/inbox"],
-    ]) {
+    for (const [step, endpoint] of [["Send", "POST /api/invoices"]]) {
       fireEvent.click(stepButton(step));
       expect(store.getState().workflow.step).toBe(step.toLowerCase());
       expect(screen.getByRole("region", { name: step })).toBeInTheDocument();

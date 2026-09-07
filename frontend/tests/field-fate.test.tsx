@@ -54,7 +54,7 @@ function markCount(): number {
 describe("field-fate annotations in the JSON pane", () => {
   beforeEach(() => {
     localStorage.clear();
-    store.dispatch({ type: "choosePreset", presetId: "it-b2b-sdi" });
+    store.dispatch({ type: "choosePreset", presetId: "it-b2b-sdi", fresh: true });
     store.dispatch({ type: "setPane", pane: "human", show: false });
     store.dispatch({ type: "setPane", pane: "human", show: true });
     store.dispatch({ type: "setPane", pane: "xml", show: false });

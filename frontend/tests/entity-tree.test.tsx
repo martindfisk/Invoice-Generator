@@ -205,7 +205,7 @@ describe("PersonaTree", () => {
       }),
     );
     const gloss = document.querySelector("[data-compliance='TRANSMISSION_ONLY']") as HTMLElement;
-    expect(gloss).toHaveTextContent("sends only — receiving will not work");
+    expect(gloss).toHaveTextContent("sends only — the account cannot receive inbound documents");
   });
 
   it("states DEGRADED without inventing a cause when blocked_by is null", () => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DiffView } from "./DiffView";
 import { getFormat } from "./formats";
 import type { Invoice } from "./model";
@@ -10,13 +10,16 @@ import {
   fetchArtifact,
   fetchRecordFiles,
   POLL_DELAY_MS,
+  sendCorrection,
   sendInvoice,
   SEND_COUNTRIES,
   waitForTransmission,
   type ArtifactKind,
+  type SettingsCountry,
   type TransmissionWait,
   type Transport,
 } from "./uapi-client";
+import { CORRECTION_BLOCKED_NOTE } from "./uapi-json";
 import { composeOperation, type SendOutcome } from "./workflow";
 import { XmlView } from "./XmlView";
 
@@ -57,6 +60,13 @@ const OUTCOME: Record<SendOutcome, { tone: string; headline: string; body: strin
     tone: "bg-warning-soft text-warning-ink",
     headline: "Still processing",
     body: TIMEOUT_NOTE,
+  },
+  stopped: {
+    tone: "bg-warning-soft text-warning-ink",
+    headline: "Polling paused",
+    body:
+      "You stopped the polling — the record keeps processing at fiskaly regardless. " +
+      "Keep polling to carry on watching the same record.",
   },
   error: {
     tone: "bg-error-soft text-error-ink",
@@ -121,7 +131,10 @@ export function StepSend() {
 function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }) {
   const mode = useStore((state) => state.mode);
   const workflow = useStore((state) => state.workflow);
-  const { persona, formatId, send } = workflow;
+  const { formatId, send } = workflow;
+  // The flow sends as the seller, always: with no Receive step the buyer persona exists only for
+  // the test-runner section, and sending with buyer credentials is never what the flow means.
+  const persona = "seller" as const;
   const editXml = workflow.edit.xml;
   const stages = workflow.validation.stages;
   const focus = useStore((state) => state.focus);
@@ -138,11 +151,12 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
   const settings = useStore((state) => state.settings);
   const [filesError, setFilesError] = useState<string | null>(null);
   const [showReceipt, setShowReceipt] = useState(false);
+  const attemptKey = useRef<string | null>(null);
 
   const meta = listPresets().find((candidate) => candidate.id === presetId);
   const country = meta?.country ?? "";
   const format = getFormat(formatId);
-  const systemId = config?.personas?.[persona]?.[country as "IT" | "BE"]?.system_id;
+  const systemId = config?.personas?.[persona]?.[country as SettingsCountry]?.system_id;
 
   const operation = composeOperation(workflow);
 
@@ -157,7 +171,13 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
 
   const supported = SEND_COUNTRIES.includes(country);
   const busy = send.phase === "creating" || send.phase === "polling" || send.phase === "artifacts";
-  const blocked = operation.error ?? (supported ? null : unsupportedCountry(country));
+  const blocked =
+    operation.error ??
+    (operation.correctionPending
+      ? CORRECTION_BLOCKED_NOTE
+      : supported
+        ? null
+        : unsupportedCountry(country));
 
   const loadArtifact = async (
     kind: ArtifactKind,
@@ -191,11 +211,42 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
       if (resume) {
         store.dispatch({ type: "sendResumed", at: Date.now() });
       } else {
-        store.dispatch({ type: "sendStarted", at: Date.now(), localXml });
-        const started = await sendInvoice(
-          { persona, country, operation: operation.value, systemId },
-          mode === "MOCK" ? "MOCK" : "LIVE",
-        );
+        // A retry after a failed call reuses the attempt's idempotency key, so a response lost in
+        // transit replays the same records instead of creating a second invoice.
+        const idempotencyKey =
+          send.outcome === "error" && attemptKey.current !== null
+            ? attemptKey.current
+            : crypto.randomUUID();
+        attemptKey.current = idempotencyKey;
+        store.dispatch({ type: "sendStarted", at: Date.now(), localXml, label: operation.label });
+        const callMode = mode === "MOCK" ? "MOCK" : "LIVE";
+        const correction =
+          operation.label === "TRANSACTION::CORRECTION"
+            ? (operation.value as {
+                record?: { id?: string };
+                data?: unknown;
+                reason?: string;
+              } | null)
+            : null;
+        const started =
+          correction?.record?.id !== undefined
+            ? await sendCorrection(
+                {
+                  persona,
+                  country,
+                  correctedRecordId: correction.record.id,
+                  operation: correction.data,
+                  correctionValue: operation.value,
+                  reason: correction.reason,
+                  systemId,
+                  idempotencyKey,
+                },
+                callMode,
+              )
+            : await sendInvoice(
+                { persona, country, operation: operation.value, systemId, idempotencyKey },
+                callMode,
+              );
         if (!alive()) return;
         store.dispatch({
           type: "sendCreated",
@@ -235,7 +286,7 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
 
   const stop = () => {
     activeRun += 1;
-    store.dispatch({ type: "sendStopped", at: Date.now() });
+    store.dispatch({ type: "sendStopped", at: Date.now(), manual: true });
   };
 
   const reset = () => {
@@ -377,12 +428,18 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
           <button
             type="button"
             onClick={stop}
-            className="rounded-m border border-line px-3 py-1.5 text-xs font-medium text-muted hover:border-brand hover:text-ink"
+            disabled={send.phase === "creating"}
+            title={
+              send.phase === "creating"
+                ? "The create call is still in flight — the record ids it returns arrive in a moment."
+                : undefined
+            }
+            className="rounded-m border border-line px-3 py-1.5 text-xs font-medium text-muted hover:border-brand hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
           >
             Stop polling
           </button>
         )}
-        {send.outcome === "timeout" && !busy && (
+        {(send.outcome === "timeout" || send.outcome === "stopped") && !busy && (
           <button
             type="button"
             onClick={() => void run(true)}
@@ -418,10 +475,10 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
         {send.outcome === "transmitted" && (
           <button
             type="button"
-            onClick={() => store.dispatch({ type: "goToStep", step: "receive" })}
+            onClick={() => store.dispatch({ type: "goToStep", step: "setup" })}
             className="ml-auto rounded-m bg-brand px-3 py-1.5 text-xs font-semibold text-bunker"
           >
-            Continue to Receive
+            Done — start a new invoice
           </button>
         )}
       </div>
@@ -430,5 +487,5 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
 }
 
 function unsupportedCountry(country: string): string {
-  return `This preset targets ${country || "an unknown country"}; the backend has e-invoicing systems for ${SEND_COUNTRIES.join(" and ")} only.`;
+  return `This preset targets ${country || "an unknown country"}; the backend has e-invoicing systems for ${SEND_COUNTRIES.join(", ")} only.`;
 }

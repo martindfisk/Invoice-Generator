@@ -31,9 +31,11 @@ export type State = {
   settingsError: string | null;
   settingsRequest: SettingsRequest;
   layoutNonce: number;
+  eventsDown: boolean;
 };
 
 const MAX_CALLS = 1000;
+const PERSIST_DEBOUNCE_MS = 300;
 const THEME_KEY = "theme";
 const SECTION_KEY = "section";
 const SPLIT_PREFIX = "split:";
@@ -55,6 +57,14 @@ function readSection(): Section {
     return localStorage.getItem(SECTION_KEY) === "runner" ? "runner" : "flow";
   } catch {
     return "flow";
+  }
+}
+
+function readTheme(): Theme {
+  try {
+    return localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light";
+  } catch {
+    return "light";
   }
 }
 
@@ -88,13 +98,14 @@ export function createStore(initial: Partial<State> = {}) {
     runner: initialRunnerUi(savedCollectionId()),
     mode: "unknown",
     calls: [],
-    theme: localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light",
+    theme: readTheme(),
     focus: null,
     config: null,
     settings: null,
     settingsError: null,
     settingsRequest: null,
     layoutNonce: 0,
+    eventsDown: false,
     ...initial,
   };
   const listeners = new Set<() => void>();
@@ -104,11 +115,24 @@ export function createStore(initial: Partial<State> = {}) {
     for (const listener of listeners) listener();
   };
 
+  // Persisting serialises the whole workflow (invoice, edits, send state) — too much for every
+  // selection click, so it trails the burst of dispatches and flushes when the page hides.
+  let persistTimer: ReturnType<typeof setTimeout> | undefined;
+  const flushPersist = () => {
+    clearTimeout(persistTimer);
+    persistTimer = undefined;
+    persistWorkflow(state.workflow);
+  };
+  if (typeof window !== "undefined") {
+    window.addEventListener("pagehide", flushPersist);
+  }
+
   const dispatch = (action: WorkflowAction) => {
     const workflow = workflowReducer(state.workflow, action);
     if (workflow === state.workflow) return;
-    persistWorkflow(workflow);
     update({ workflow });
+    clearTimeout(persistTimer);
+    persistTimer = setTimeout(flushPersist, PERSIST_DEBOUNCE_MS);
   };
 
   return {
@@ -133,8 +157,20 @@ export function createStore(initial: Partial<State> = {}) {
       update({ runner: { ...state.runner, ...patch } });
     },
     setMode: (mode: Mode) => update({ mode }),
+    setEventsDown(down: boolean) {
+      if (state.eventsDown !== down) update({ eventsDown: down });
+    },
     addCall(call: ApiCall) {
-      const others = state.calls.filter((c) => c.id !== call.id);
+      // Calls almost always arrive in order; the common case is a prepend, and only an
+      // out-of-order or replayed id pays for a scan — not a full filter+sort per SSE event.
+      const calls = state.calls;
+      if (calls.length === 0 || byNewest(call, calls[0]) <= 0) {
+        const replay = calls.some((c) => c.id === call.id);
+        const rest = replay ? calls.filter((c) => c.id !== call.id) : calls;
+        update({ calls: [call, ...rest].slice(0, MAX_CALLS) });
+        return;
+      }
+      const others = calls.filter((c) => c.id !== call.id);
       update({ calls: [call, ...others].sort(byNewest).slice(0, MAX_CALLS) });
     },
     clearCalls() {
@@ -149,7 +185,11 @@ export function createStore(initial: Partial<State> = {}) {
       update({ settingsRequest: { section, nonce: (state.settingsRequest?.nonce ?? 0) + 1 } });
     },
     setTheme(theme: Theme) {
-      localStorage.setItem(THEME_KEY, theme);
+      try {
+        localStorage.setItem(THEME_KEY, theme);
+      } catch {
+        // Site data disabled: the theme simply is not remembered.
+      }
       document.documentElement.dataset.theme = theme;
       update({ theme });
     },

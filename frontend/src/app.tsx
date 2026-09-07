@@ -67,7 +67,9 @@ export function App() {
     };
 
     void loadConfig();
-    const unsubscribe = subscribeApiLog(store.addCall);
+    const unsubscribe = subscribeApiLog(store.addCall, (connected) =>
+      store.setEventsDown(!connected),
+    );
     return () => {
       cancelled = true;
       clearTimeout(retry);
@@ -78,7 +80,7 @@ export function App() {
   const nextTheme = theme === "dark" ? "light" : "dark";
   // The pane only ever has something to say once we start talking to fiskaly. The runner
   // talks to fiskaly with every step, so it always keeps the log beside it.
-  const showApiLog = section === "runner" || step === "send" || step === "receive";
+  const showApiLog = section === "runner" || step === "send";
   const main = section === "runner" ? <RunnerPane /> : <WorkflowPane />;
 
   return (
@@ -99,7 +101,9 @@ export function App() {
                 backend offline
               </span>
             )}
-            <PersonaSwitch />
+            {/* The flow always sends as the seller since the Receive step went away; the persona
+                switch only matters where both credentials are exercised — the test runner. */}
+            {section === "runner" && <PersonaSwitch />}
             <EnvironmentBadge />
             <ModeBadge />
             <button

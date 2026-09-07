@@ -7,6 +7,7 @@ import httpx
 
 from app.mask import mask_headers, mask_json, to_curl
 from app.recorder import CallRecord, CallRequest, CallResponse
+from app.workflow import UpstreamError
 
 REFRESH_MARGIN_S = 60
 REQUEST_TIMEOUT_S = 30.0
@@ -76,7 +77,14 @@ class UapiClient:
                 "X-Idempotency-Key": str(uuid.uuid4()),
             }
             response = await self._send("POST", "/tokens", json=body, headers=headers, step="token")
-            response.raise_for_status()
+            if response.status_code >= 400:
+                error = UpstreamError(response)
+                error.body = {
+                    "detail": f"fiskaly rejected the credentials for persona {self.name!r} "
+                    f"(POST /tokens returned {response.status_code})",
+                    "upstream": error.body,
+                }
+                raise error
             authentication = response.json()["content"]["authentication"]
             self._bearer = authentication["bearer"]
             self._expires_at = datetime.fromisoformat(authentication["expires_at"]).timestamp()

@@ -357,8 +357,6 @@ async def test_de_is_accepted_everywhere_it_and_be_are(api):
         "system_id": "sess-sys-de",
         "taxpayer_id": "sess-tax-de",
     }
-    inbox = await client.get("/api/inbox?persona=buyer&country=DE")
-    assert inbox.status_code == 200
     validated = await client.post(
         "/api/validate/uapi",
         json={"country": "DE", "operation": invoice_operation(invoicing=PEPPOL_INVOICING)},

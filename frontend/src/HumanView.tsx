@@ -448,10 +448,14 @@ const GroupSection = memo(function GroupSection(props: GroupSectionProps) {
   const owns = (field: FieldId | null | undefined) => field != null && ownIds.includes(field);
 
   // A selection made in the other pane (XML, findings) reveals its group; a click in this
-  // pane must not, or the user could never collapse the group they are working in.
+  // pane must not, or the user could never collapse the group they are working in. A group the
+  // user collapses while a selection sits inside stays collapsed for that selection — otherwise
+  // the chevron would be inert until the selection moves — and a new selection reveals it again.
+  const [revealDismissedFor, setRevealDismissedFor] = useState<FieldId | null>(null);
   const revealed =
     shared.followSelection &&
     selection?.field !== undefined &&
+    selection.field !== revealDismissedFor &&
     holdsField(invoice, group, index, !asRow, selection.field);
   const fallback = repeats ? rows > 0 && counts.set > 0 : counts.set > 0;
   const isOpen = (open[keyPath] ?? fallback) || revealed;
@@ -485,7 +489,10 @@ const GroupSection = memo(function GroupSection(props: GroupSectionProps) {
           aria-expanded={isOpen}
           aria-controls={panelId}
           aria-label={spoken}
-          onClick={() => onToggle(keyPath, !isOpen)}
+          onClick={() => {
+            if (isOpen && revealed) setRevealDismissedFor(selection?.field ?? null);
+            onToggle(keyPath, !isOpen);
+          }}
           className="flex w-full items-center gap-1.5 px-3 text-left hover:text-ink"
         >
           <span aria-hidden="true" className="w-2 shrink-0">

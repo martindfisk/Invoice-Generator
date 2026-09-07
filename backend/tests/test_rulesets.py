@@ -6,13 +6,13 @@ import json
 import fetch_assets as fa
 import pytest
 
+# en16931-ubl and xrechnung-cii were dropped 2026-09-03: no format plugin resolved them
+# (empty `formats`), so they were ~8.5 MB of shipped SEF that nothing could ever load.
 RULE_SET_IDS = {
-    "en16931-ubl",
     "en16931-cii",
     "peppol-ubl",
     "cen-ubl",
     "xrechnung-ubl",
-    "xrechnung-cii",
 }
 
 

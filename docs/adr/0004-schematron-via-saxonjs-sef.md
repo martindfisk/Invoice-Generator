@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — outcome of M1 spike (b), 2026-08-26.
+Accepted — outcome of M1 spike (b), 2026-08-26. **Amended by [ADR-0007](0007-schematron-on-the-main-thread.md)** (2026-09-03): SaxonJS runs on the main thread, not in a Web Worker; four SEFs ship, not three; the SaxonJS runtime licence question is resolved.
 
 ## Context
 

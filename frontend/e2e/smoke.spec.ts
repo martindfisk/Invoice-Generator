@@ -57,7 +57,11 @@ test.describe("shell", () => {
     await expect(page.getByRole("status")).toHaveCount(0);
   });
 
-  test("switches persona", async ({ page }) => {
+  test("offers the persona switch only in the runner — the flow always sends as the seller", async ({
+    page,
+  }) => {
+    await expect(page.getByRole("group", { name: "Persona" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Test runner" }).click();
     const group = page.getByRole("group", { name: "Persona" });
     const buyer = group.getByRole("button", { name: "Buyer" });
     await expect(group.getByRole("button", { name: "Seller" })).toHaveAttribute(
@@ -121,7 +125,7 @@ test.describe("mapper", () => {
 
     await chooseItalianPreset(page);
     await expect(stepper.getByRole("button", { name: /Mapper$/ })).toBeEnabled();
-    await expect(stepper.getByRole("button", { name: /Receive$/ })).toBeEnabled();
+    await expect(stepper.getByRole("button", { name: /Send$/ })).toBeEnabled();
   });
 
   test("keeps the JSON editor full height and puts the caveats past the payload", async ({
@@ -302,8 +306,6 @@ test.describe("mapper", () => {
 
     await stepper.getByRole("button", { name: /Send$/ }).click();
     await expect(page.getByText("POST /api/invoices")).toBeVisible();
-    await stepper.getByRole("button", { name: /Receive$/ }).click();
-    await expect(page.getByText("GET /api/inbox")).toBeVisible();
   });
 });
 
@@ -622,6 +624,67 @@ test.describe("send", () => {
         .getByRole("button", { name: /records/ })
         .first(),
     ).toHaveAttribute("aria-expanded", "true");
+  });
+});
+
+test.describe("send · Germany", () => {
+  test("a German preset reaches a terminal state and the artifact diff", async ({ page }) => {
+    await page.goto("/");
+    await picker(page).locator("[data-preset='de-hotel-b2g-xrechnung']").click();
+    await expect(page.getByRole("region", { name: "Invoice viewer" })).toBeVisible();
+
+    await stepper(page).getByRole("button", { name: /Send$/ }).click();
+    await expect(page.getByRole("region", { name: "Send" })).toBeVisible();
+
+    const send = page.getByRole("button", { name: /Send to fiskaly|Send again/ });
+    await expect(send).toBeEnabled();
+    await send.click();
+
+    const timeline = page.getByRole("region", { name: "Transmission lifecycle" });
+    await expect(timeline.locator('[data-stage="transmission"]')).toHaveAttribute(
+      "data-status",
+      "done",
+      { timeout: 90_000 },
+    );
+    await expect(page.locator('[data-outcome="transmitted"]')).toBeVisible();
+    await expect(page.getByRole("region", { name: "Compliance artifact diff" })).toBeVisible({
+      timeout: 30_000,
+    });
+  });
+});
+
+test.describe("send · correction", () => {
+  test("a credit note is blocked until an invoice was sent, then posts a TRANSACTION::CORRECTION", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await picker(page).locator("[data-preset='it-restaurant-td04-credit']").click();
+    await expect(page.getByRole("region", { name: "Invoice viewer" })).toBeVisible();
+    await stepper(page).getByRole("button", { name: /Send$/ }).click();
+
+    const send = page.getByRole("button", { name: /Send to fiskaly|Send again/ });
+    await expect(send).toBeDisabled();
+    await expect(page.getByText(/Send the original invoice first/)).toBeVisible();
+
+    // Send the original invoice, whose record id the credit note will reference.
+    await stepper(page)
+      .getByRole("button", { name: /Setup$/ })
+      .click();
+    await picker(page).locator("[data-preset='it-restaurant-b2b-fattura']").click();
+    await stepper(page).getByRole("button", { name: /Send$/ }).click();
+    await page.getByRole("button", { name: "Send to fiskaly" }).click();
+    await expect(page.locator('[data-outcome="transmitted"]')).toBeVisible({ timeout: 90_000 });
+
+    // Back to the credit note: it now composes a CORRECTION and can be sent.
+    await stepper(page)
+      .getByRole("button", { name: /Setup$/ })
+      .click();
+    await picker(page).locator("[data-preset='it-restaurant-td04-credit']").click();
+    await stepper(page).getByRole("button", { name: /Send$/ }).click();
+    await expect(page.getByText(/TRANSACTION::CORRECTION — the operation posted/)).toBeVisible();
+    await expect(send).toBeEnabled();
+    await send.click();
+    await expect(page.locator('[data-outcome="transmitted"]')).toBeVisible({ timeout: 90_000 });
   });
 });
 

@@ -129,11 +129,18 @@ export type ValidationInput = {
   invoice: Invoice;
   formatId: FormatId;
   xml: string;
+  // Why the XML is empty when the format's writer refused the invoice. The XML-inspecting stages
+  // then report unavailable with this reason instead of the whole pipeline being skipped — the
+  // contract stage checks the JSON and must run regardless.
+  xmlError?: string | null;
   // The JSON the Compose editor is showing. Omitted, the stage maps the invoice itself, which is
   // the same payload as long as the editor's JSON still round-trips.
   operation?: unknown;
   country?: string;
   uapiContext?: UapiContext;
+  // Aborting stops the run between stages and cancels the in-flight backend calls, so a
+  // superseded run does not keep computing behind the one that replaced it.
+  signal?: AbortSignal;
 };
 
 export type StageRunner = (input: ValidationInput) => Promise<StageResult>;
@@ -164,12 +171,30 @@ async function runStage(id: FindingSource, input: ValidationInput): Promise<Stag
   }
 }
 
+const XML_STAGES: ReadonlySet<FindingSource> = new Set([
+  "well-formed",
+  "xsd",
+  "schematron",
+  "sdi-rules",
+]);
+
 export async function runValidation(
   input: ValidationInput,
   onStage?: (stage: StageResult) => void,
 ): Promise<StageResult[]> {
   const results: StageResult[] = [];
+  const writerNote =
+    input.xml === ""
+      ? `No XML to inspect — the ${getFormat(input.formatId).label} writer failed: ${input.xmlError ?? "no document was produced"}`
+      : null;
   for (const stage of stagesFor(input.formatId)) {
+    if (input.signal?.aborted) break;
+    if (writerNote !== null && XML_STAGES.has(stage.id)) {
+      const skipped = unavailable(stage.id, writerNote);
+      results.push(skipped);
+      onStage?.(skipped);
+      continue;
+    }
     onStage?.({ ...pending(stage.id), status: "running" });
     const result = await runStage(stage.id, input);
     results.push(result);
@@ -213,7 +238,7 @@ export function operationFor(input: ValidationInput): unknown {
 registerStage("uapi-schema", async (input) => {
   const startedAt = performance.now();
   const country = input.country ?? input.invoice.seller.address.country;
-  const outcome = await validateUapiOperation(operationFor(input), country);
+  const outcome = await validateUapiOperation(operationFor(input), country, input.signal);
   if (outcome.status === "unavailable") return unavailable("uapi-schema", outcome.reason);
   const used = outcome.country || country?.toUpperCase() || "IT";
   const substitute = used === country?.toUpperCase() ? "" : ` — checked against the ${used} spec`;
@@ -229,7 +254,7 @@ registerStage("uapi-schema", async (input) => {
 registerStage("xsd", async (input) => {
   const startedAt = performance.now();
   const plugin = getFormat(input.formatId);
-  const outcome = await validateXsd(plugin.xsdSchemaKey, input.xml);
+  const outcome = await validateXsd(plugin.xsdSchemaKey, input.xml, input.signal);
   if (outcome.status === "unavailable") {
     return unavailable("xsd", outcome.reason);
   }

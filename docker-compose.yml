@@ -3,11 +3,26 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
-    env_file: .env
+    # Optional: a clean clone starts straight into MOCK mode with no configuration;
+    # a .env with fiskaly TEST keys is honoured when present.
+    env_file:
+      - path: .env
+        required: false
     environment:
       CORS_ORIGINS: http://localhost:8080
     ports:
       - "8000:8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request as u; u.urlopen('http://localhost:8000/api/health', timeout=3)",
+        ]
+      interval: 3s
+      timeout: 5s
+      retries: 20
   frontend:
     build:
       context: .
@@ -15,4 +30,5 @@ services:
     ports:
       - "8080:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy

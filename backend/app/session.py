@@ -31,7 +31,6 @@ class SessionStore:
         self._systems = {name: {} for name in PERSONAS}
         self._recipients = {name: {} for name in PERSONAS}
         self._base_url = None
-        self._reception_mode = None
         self._revisions = dict.fromkeys(PERSONAS, 0)
 
     @property
@@ -45,10 +44,6 @@ class SessionStore:
     @property
     def environment(self):
         return environment_of(self.base_url)
-
-    @property
-    def reception_mode(self):
-        return self._reception_mode or self.settings.reception_mode
 
     def revision(self, name):
         return self._revisions[known_persona(name)]
@@ -106,9 +101,6 @@ class SessionStore:
         self._base_url = base_url
         for name in PERSONAS:
             self._revisions[name] += 1
-
-    def set_reception_mode(self, reception_mode):
-        self._reception_mode = reception_mode
 
     def _systems_for(self, name, env_systems):
         merged = {}

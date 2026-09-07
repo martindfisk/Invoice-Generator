@@ -39,7 +39,7 @@ function editorText(): string {
 describe("compose editing", () => {
   beforeEach(() => {
     localStorage.clear();
-    store.dispatch({ type: "choosePreset", presetId: first.id });
+    store.dispatch({ type: "choosePreset", presetId: first.id, fresh: true });
     store.dispatch({ type: "setPane", pane: "human", show: true });
     store.dispatch({ type: "setPane", pane: "xml", show: false });
   });

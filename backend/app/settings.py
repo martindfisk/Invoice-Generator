@@ -37,9 +37,6 @@ class Settings(BaseSettings):
     uapi_base_url: str = "https://test.api.fiskaly.com"
     uapi_api_version: str = Field(default_factory=default_api_version)
     uapi_mode: Literal["live", "mock"] = "mock"
-    uapi_record: bool = False
-    allow_mode_override: bool = False
-    reception_mode: Literal["live", "simulated"] = "simulated"
 
     seller_api_key: str | None = None
     seller_api_secret: str | None = None
@@ -93,9 +90,10 @@ class Settings(BaseSettings):
         )
 
     def validate_live(self):
+        # Only the seller sends; the buyer persona degrades to unconfigured and fails precisely
+        # at the point of use (MissingCredentials) if something still asks for it.
         if self.uapi_mode != "live":
             return
-        for name in PERSONAS:
-            missing = self.persona(name).missing_credentials
-            if missing:
-                raise ValueError(f"UAPI_MODE=live but {', '.join(missing)} missing in .env")
+        missing = self.persona("seller").missing_credentials
+        if missing:
+            raise ValueError(f"UAPI_MODE=live but {', '.join(missing)} missing in .env")

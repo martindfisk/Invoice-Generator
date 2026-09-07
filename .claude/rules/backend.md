@@ -12,5 +12,5 @@ paths:
 - Live and mock share the same code path: mock is an `httpx` transport, not an `if mode == "mock"` branch in business logic.
 - Fail loudly at boundaries (missing credentials in live mode, unknown persona, upstream 4xx/5xx passed through with body); no try/except around internal logic.
 - UAPI request/response bodies are pass-through dicts; do not duplicate UAPI schemas as pydantic models.
-- Tests: pytest + respx for upstream, `httpx.ASGITransport` for routes; live smoke tests are read-only and gated by `UAPI_SMOKE=1`.
-- No comments or docstrings in code; the file name and function name carry the meaning.
+- Tests: pytest + respx for upstream, `httpx.ASGITransport` for routes. No live smoke tier exists yet; if one is added it must be read-only and gated by `UAPI_SMOKE=1`.
+- Comments only for load-bearing "why" a reader cannot recover from the code (a constraint, a measured number, an upstream quirk); never narration of what the next line does. No docstrings.

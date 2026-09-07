@@ -226,8 +226,21 @@ export function StepSetup() {
       <p className="text-sm text-muted">
         Pick a scenario to start — by country, and by who the invoice goes to. Every later step
         works on the invoice it loads; you can come back and switch at any time. The format and the
-        legal basis of the chosen scenario are shown in Compose.
+        legal basis of the chosen scenario are shown in the Mapper.
       </p>
+      {presetId && (
+        <p className="flex flex-wrap items-center gap-2 rounded-l border border-line bg-surface px-3 py-2 text-xs text-muted">
+          Clicking the chosen preset again keeps your work and returns to the Mapper.
+          <button
+            type="button"
+            onClick={() => store.dispatch({ type: "choosePreset", presetId, fresh: true })}
+            className="rounded-m border border-line px-2 py-0.5 font-medium text-muted hover:border-warning hover:text-warning-ink"
+          >
+            Reset preset
+          </button>
+          starts it over, discarding every edit, validation run and send result.
+        </p>
+      )}
       {presets.length === 0 ? (
         <p role="status" className="text-sm text-muted">
           No presets are registered in <span className="font-mono">presets.ts</span>.

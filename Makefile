@@ -55,6 +55,12 @@ gap-check:
 	cd "$(ROOT)/frontend" && node scripts/gap-report.mjs --check
 	cd "$(ROOT)/backend" && .venv/bin/python -m pytest -q tests/test_gap_report.py tests/test_gap_remediation.py
 
+handbook:
+	cd "$(ROOT)/frontend" && node scripts/handbook-reference.mjs
+
+handbook-check:
+	cd "$(ROOT)/frontend" && node scripts/handbook-reference.mjs --check
+
 gen-types: spec-integrity
 	cd "$(ROOT)/frontend" && npm run gen-types
 
@@ -84,6 +90,8 @@ lint:
 	cd "$(ROOT)/backend" && .venv/bin/ruff check . && .venv/bin/ruff format --check .
 	cd "$(ROOT)/frontend" && npm run lint && npm run typecheck && npx prettier --check "src/**/*.{ts,tsx,css}" "tests/**/*.ts" "scripts/*.mjs"
 
+# The Dockerfiles fetch and compile the validation assets inside the build, so this works
+# from a clean clone on any OS with Docker — no host-side make/Node/Python needed.
 docker:
 	docker compose up --build
 

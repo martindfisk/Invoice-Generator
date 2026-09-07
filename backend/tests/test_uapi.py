@@ -9,6 +9,7 @@ import respx
 from app.recorder import Recorder
 from app.session import SessionStore
 from app.uapi import UapiClient
+from app.workflow import UpstreamError
 from tests.conftest import SELLER_KEY, SELLER_SECRET, make_settings
 
 BASE_URL = "https://test.api.fiskaly.com"
@@ -177,5 +178,8 @@ async def test_token_failure_raises(uapi, upstream):
     upstream["tokens"].mock(
         return_value=httpx.Response(401, json={"code": "E_UNAUTHORIZED_ACCESS"})
     )
-    with pytest.raises(httpx.HTTPStatusError):
+    with pytest.raises(UpstreamError) as caught:
         await uapi.request("GET", "/systems/abc")
+    assert caught.value.status_code == 401
+    assert "POST /tokens" in caught.value.body["detail"]
+    assert caught.value.body["upstream"]["code"] == "E_UNAUTHORIZED_ACCESS"

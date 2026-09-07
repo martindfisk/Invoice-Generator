@@ -2,7 +2,7 @@ import json
 import re
 import shlex
 
-SECRET_KEYS = frozenset({"secret", "password", "pin", "bearer"})
+SECRET_KEYS = frozenset({"secret", "password", "pin", "bearer", "tax_id_number"})
 BASE64_RE = re.compile(r"^[A-Za-z0-9+/_-]+={0,2}$")
 BASE64_LIMIT = 2048
 TOKEN_PLACEHOLDER = "Bearer $FISKALY_TOKEN"

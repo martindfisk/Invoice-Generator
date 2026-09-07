@@ -195,7 +195,7 @@ describe("preset matrix", () => {
 
     expect(container.querySelector("table")).toBeNull();
     expect(within(picker()).queryAllByRole("columnheader")).toHaveLength(0);
-    expect(within(picker()).getAllByRole("button")).toHaveLength(listPresets().length);
+    expect(picker().querySelectorAll("[data-preset]")).toHaveLength(listPresets().length);
 
     for (const [, name] of countries()) {
       expect(within(picker()).getByRole("region", { name })).toBeInTheDocument();

@@ -1,6 +1,6 @@
 # Demo Script
 
-A scripted showcase for a solutions engineer presenting the e-invoice lifecycle — create → validate → send → receive — to sales, partners, or prospects. Total runtime: `<TBD>` (target ~15 minutes for Acts 1–4, +2 minutes for Act 5).
+A scripted showcase for a solutions engineer presenting the e-invoice lifecycle — create → validate → send — to sales, partners, or prospects. Total runtime: `<TBD>` (target ~15 minutes for Acts 1–3, +2 minutes for Act 4).
 
 ## Setup checklist
 
@@ -13,8 +13,8 @@ A scripted showcase for a solutions engineer presenting the e-invoice lifecycle 
 
 Select preset **"Italian B2B (SDI)"**.
 
-1. Walk the **Human view**: header, seller/buyer party cards, lines, VAT breakdown, totals.
-2. Toggle to **XML view** — same invoice, now as the FatturaPA XML the tool will generate.
+1. Walk the **Mapper's three panes**: the form fields (Human view), the **fiskaly JSON operation** in the middle — the artifact you actually author and Send posts unchanged — and the predicted FatturaPA XML fiskaly will generate from it.
+2. Edit in any pane; the other two follow. Point out the spec-coverage line under the JSON: every unpopulated spec field can be inserted.
 3. Point out the **BT / FPA badges** on a couple of fields (e.g. the seller VAT number, a line's VAT category) — hover for the tooltip naming the EN 16931 business term and the FatturaPA block it maps to.
 
 **Talking point**: every field on screen traces to a legal business term (EN 16931) and to Italy's FatturaPA block — this is the actual document structure SDI expects under the D.Lgs. 127/2015 e-invoicing mandate, not a generic invoice form.
@@ -36,19 +36,17 @@ Select preset **"Italian B2B (SDI)"**.
 
 **Talking point**: fiskaly builds this XML server-side (GOBL → Invopop → SDI) from the same structured JSON just sent — the diff proves the tool's local prediction matches what a tax authority actually receives.
 
-## Act 4 — Receive
+## Act 4 — Peppol BE preset (2 minutes)
 
-1. Switch persona to **Buyer** via the persona switch.
-2. Show the inbox polling `E_INVOICE::RECEPTION` records; the invoice just sent should appear as a new entry — or, if the TEST round trip does not surface one, use **"Simulate delivery"** to feed the Seller's artifact into the Buyer's inbox, calling out that this is the fallback path.
-3. Open the received document in Human view.
-
-**Talking point**: same UI, opposite side of the transaction — this is what the Buyer's system sees, reconstructed from the reception record.
-
-## Act 5 — Peppol BE preset (2 minutes)
-
-Repeat Acts 1–4 compressed, using preset **"Peppol BE"**: Human/XML toggle, send as `TRANSACTION::INVOICE` with `invoicing PEPPOL 0208:<buyer KBO>`, artifact diff (UBL this time, not FatturaPA), Buyer inbox.
+Repeat Acts 1–3 compressed, using preset **"Peppol BE"**: send as `TRANSACTION::INVOICE` with `invoicing PEPPOL 0208:<buyer KBO>`, artifact diff (UBL this time, not FatturaPA).
 
 **Talking point**: same tool, same pipeline, different jurisdiction — Belgium's B2B Peppol mandate takes effect 1 January 2026, and this is the EN 16931-conformant Peppol BIS Billing 3.0 path rather than Italy's SDI path.
+
+## Act 5 — Germany and the credit note (optional, 2 minutes)
+
+1. Preset **"B2G Kommune (XRechnung)"**: the same pipeline, third jurisdiction — XRechnung over Peppol with a Leitweg-ID (`0204:`), Schematron running CEN + KoSIT rules.
+2. Preset **"TD04 credit note"** after an invoice was sent: the JSON pane becomes a `TRANSACTION::CORRECTION` referencing the transmitted record, posted via `POST /api/invoices/{id}/correction`. Until an original invoice exists, Send is blocked with the explanation.
+
 
 ## Error demos
 

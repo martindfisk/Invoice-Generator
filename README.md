@@ -1,15 +1,46 @@
 # Invoice Generator
 
-A browser-based showcase of the e-invoice lifecycle — **create → validate → send → receive** — built for demos (sales, solution engineering, partners) and doubling as a test harness for the fiskaly Unified API (UAPI). The tool is dual-track: a **client-side e-invoice lab** generates and validates the XML a user expects locally, while a **UAPI harness** sends the same invoice through fiskaly, follows its lifecycle, and diffs the locally predicted XML against the XML fiskaly actually transmitted. The UI is a split screen: the workflow the user drives on the left, the live UAPI HTTP calls each step produces on the right.
+A browser-based showcase of the e-invoice lifecycle — **create → validate → send** — built for demos (sales, solution engineering, partners) and doubling as a test harness for the fiskaly Unified API (UAPI). The tool is dual-track: a **client-side e-invoice lab** generates and validates the XML a user expects locally, while a **UAPI harness** sends the same invoice through fiskaly, follows its lifecycle, and diffs the locally predicted XML against the XML fiskaly actually transmitted. The UI is a split screen: the workflow the user drives on the left, the live UAPI HTTP calls each step produces on the right.
 
-## Prerequisites (macOS)
+## Run it
 
-- [Homebrew](https://brew.sh)
-- Python 3.13
-- Node LTS via `brew install node` (one-time)
-- Docker — optional, only needed for `make docker`
+The only prerequisite is [Docker Desktop](https://www.docker.com/products/docker-desktop/) (macOS, Windows with the WSL2 backend, or Linux) and Git:
 
-## Quickstart
+```bash
+git clone <repo-url>
+cd "Invoice Generator"
+docker compose up --build
+```
+
+Then open **http://localhost:8080**.
+
+- The first build takes a few minutes: it downloads the npm/pip packages and the sha256-pinned
+  validation standards (XSDs, Schematron rules, the SaxonJS runtime) and compiles the Schematron
+  rule sets — all inside the image build, so no Node, Python, or `make` is needed on your machine.
+  After that, everything runs **offline in MOCK mode** with zero configuration: every fiskaly
+  response is replayed from committed fixtures through the same client code as a live call.
+- **Talking to the real TEST API** (`test.api.fiskaly.com`): open **Settings** in the app and paste
+  your fiskaly TEST API key — it is held in backend memory only, never persisted. Alternatively,
+  copy `.env.example` to `.env` and fill in the seller key before `docker compose up`.
+- **Windows**: same two commands from PowerShell.
+
+**Troubleshooting**
+
+- _Port already in use_ — the app takes **8080**, the backend **8000**. Find the blocker with
+  `lsof -i :8080` (macOS/Linux) or `netstat -ano | findstr :8080` (Windows), or edit the `ports:`
+  mappings in `docker-compose.yml`.
+- _`docker: command not found` / cannot connect to the daemon_ — Docker Desktop is not installed
+  or not running.
+- _Build fails downloading standards_ — a corporate proxy may block the pinned sources listed in
+  `tools/rulesets.json`. `tools/fetch_assets.py` supports offline bundles via a `STANDARDS_DIRS`
+  environment variable if you have local copies.
+- _White page / 502 right after start_ — the frontend waits for the backend healthcheck; give it a
+  few seconds and reload.
+
+## Develop it (macOS/Linux)
+
+Prerequisites: Python 3.13, Node ≥ 20 (macOS: [Homebrew](https://brew.sh) — `make setup`
+bootstraps Node via brew if missing).
 
 ```bash
 make setup      # install frontend + backend dependencies
@@ -18,10 +49,10 @@ make spec       # ingest spec/drop/*.yaml, else fetch the latest into spec/ (com
 make gen-types  # generate TypeScript types from whichever spec is active
 make schemas    # vendor XSD/XSLT validation assets into vendor/
 make sef        # compile Schematron XSLT to SEF for the browser validator
-make dev        # run frontend + backend
+make dev        # run frontend (:5173) + backend (:8000) natively, with hot reload
 ```
 
-Other targets: `make test` (Vitest + pytest), `make e2e` (Playwright against MOCK), `make lint`, `make docker` (compose build).
+Other targets: `make test` (Vitest + pytest), `make e2e` (Playwright against MOCK), `make lint`, `make gap-report` / `make gap-check` (field-coverage gap report + CI gate), `make sef-check` / `make spec-check` (asset freshness), `make docker` (same as `docker compose up --build`).
 
 ## Updating the OpenAPI spec
 
@@ -49,7 +80,7 @@ as before, so a fresh clone and the offline path are unchanged.
 ## `.env` setup
 
 1. Copy `.env.example` to `.env`.
-2. Fill in Unit-level TEST API keys for the **Seller** and **Buyer** organisations (two existing fiskaly test orgs with commissioned `E_INVOICE_SERVICE` systems).
+2. Fill in a Unit-level TEST API key for the **Seller** organisation (the **Buyer** key is optional — it only serves the test runner's buyer persona). Credentials can also be entered at runtime in the Settings dialog; they are held in backend memory only (ADR-0005).
 3. Never commit `.env` — it is git-ignored and holds real credentials.
 
 ## LIVE vs MOCK
@@ -60,12 +91,14 @@ as before, so a fresh clone and the offline path are unchanged.
 
 ## How the demo works
 
-1. Pick a preset — **"Italian B2B (SDI)"** or **"Peppol BE"** — or start from a blank invoice.
+1. Pick one of the eleven presets — reference scenarios (IT/BE), a German hotel group (XRechnung/ZUGFeRD-CII) and Roman restaurant scenarios (FatturaPA, including a TD04 credit note). Deliberately broken presets are labelled.
 2. **Create**: edit the invoice in the Human view or the generated XML view side by side.
 3. **Validate**: model rules, well-formedness, XSD, Schematron (EN 16931 + Peppol BIS 3.0), and FatturaPA SDI rules run client-side; findings highlight the offending field and XML range.
 4. **Send**: the backend proxies the invoice to the UAPI as an `INTENTION`, then a `TRANSACTION::INVOICE`, polls it to completion, and fetches the compliance artifact — the XML fiskaly actually transmitted.
-5. **Diff**: the locally generated XML is compared against fiskaly's compliance artifact, with normalisation toggles (pretty-print, strip signature, ignore volatile fields). This is the core demo moment.
-6. **Receive**: switch persona to Buyer and watch the inbox poll for the incoming reception record (or use "Simulate delivery" as a fallback).
+5. **Diff**: the locally generated XML is compared against fiskaly's compliance artifact, with normalisation toggles (pretty-print, ignore volatile fields — signature stripping is part of the volatile set). This is the core demo moment.
+6. **Correction**: after an invoice has been transmitted, the TD04 credit-note preset composes a `TRANSACTION::CORRECTION` referencing it and sends through `POST /api/invoices/{id}/correction`.
+
+A second section, the **Test runner**, replays the published fiskaly Postman collections (IT, BE, DE) step by step through the same proxy, with captures, waits and per-step cURL.
 
 Every UAPI call made along the way appears live in the right-hand API log pane, with request/response bodies, redacted secrets, and a copyable cURL command.
 
@@ -95,7 +128,8 @@ Invoice Generator/
 
 ## Further reading
 
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — dual-track design, module tables, UAPI choreography, frontend↔backend contract.
+- [`docs/handbook/`](docs/handbook/README.md) — **the handbook**: how the invoices, mappings, app mechanics, validation, send lifecycle and infrastructure work, with a generated field-mapping reference and a screen-by-screen tour.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — the terse map: dual-track design, module tables, UAPI choreography, frontend↔backend contract.
 - [`docs/DEMO-SCRIPT.md`](docs/DEMO-SCRIPT.md) — the scripted showcase for a solutions engineer.
 - [`docs/adr/`](docs/adr/) — architecture decision records.
 
@@ -103,16 +137,16 @@ Invoice Generator/
 
 This repo ships a project-level agent team in `.claude/`. Ask the agent that owns the area you're touching:
 
-| Agent | Ask it for |
-|---|---|
-| `architect` | ADRs, module boundaries, cross-cutting reviews, `docs/ARCHITECTURE.md`, spike write-ups |
-| `ux-designer` | Split-screen grammar, viewer toggle, API pane anatomy, severity colours, `--fsk-*` token mapping, mockups |
-| `frontend-engineer` | `frontend/` shell, workflow steps, invoice viewer, DiffView, API pane, SSE client, store |
+| Agent                      | Ask it for                                                                                                               |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `architect`                | ADRs, module boundaries, cross-cutting reviews, `docs/ARCHITECTURE.md`, spike write-ups                                  |
+| `ux-designer`              | Split-screen grammar, viewer toggle, API pane anatomy, severity colours, `--fsk-*` token mapping, mockups                |
+| `frontend-engineer`        | `frontend/` shell, workflow steps, invoice viewer, DiffView, API pane, SSE client, store                                 |
 | `einvoice-domain-engineer` | Invoice model, decimal handling, presets, UBL/FatturaPA mapping tables + writers/parsers, `uapi-map.ts`, golden fixtures |
-| `validation-engineer` | SEF build, Schematron worker, SVRL → findings, FatturaPA rules, `validate.py`, `xml-locate.ts` |
-| `backend-engineer` | FastAPI app, settings, recorder/mask/SSE, mock transport, routes, Docker |
-| `fiskaly-api-integrator` | `uapi.py`, `workflow.py`, `inbox.py`, spec fetch + type generation, recorded fixtures, round-trip spikes |
-| `qa-engineer` | Vitest, Playwright, pytest suites, golden + Schematron fixture tests, CI |
-| `compliance-reviewer` | Read-only review of generated XML/labels vs. FatturaPA, Peppol BIS 3.0, EN 16931; legal citations |
-| `devops-engineer` | Makefile, `make doctor`, Dockerfiles/compose, `.env.example`, GitHub Actions, Node bootstrap |
-| `docs-writer` | README, `docs/DEMO-SCRIPT.md`, glossary, ADR formatting |
+| `validation-engineer`      | SEF build, Schematron worker, SVRL → findings, FatturaPA rules, `validate.py`, `xml-locate.ts`                           |
+| `backend-engineer`         | FastAPI app, settings, recorder/mask/SSE, mock transport, routes, Docker                                                 |
+| `fiskaly-api-integrator`   | `uapi.py`, `workflow.py`, spec fetch + type generation, recorded fixtures, round-trip spikes                             |
+| `qa-engineer`              | Vitest, Playwright, pytest suites, golden + Schematron fixture tests, CI                                                 |
+| `compliance-reviewer`      | Read-only review of generated XML/labels vs. FatturaPA, Peppol BIS 3.0, EN 16931; legal citations                        |
+| `devops-engineer`          | Makefile, `make doctor`, Dockerfiles/compose, `.env.example`, GitHub Actions, Node bootstrap                             |
+| `docs-writer`              | README, `docs/DEMO-SCRIPT.md`, glossary, ADR formatting                                                                  |

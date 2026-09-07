@@ -7,8 +7,9 @@ from app.spec import manifest
 COLLECTION_GLOB = "fiskaly_e-invoice_*_postman_collection.json"
 PROXY_SKIP = "handled by the proxy"
 ACCOUNT_SKIP = "creates or mutates account resources"
+RECEPTION_SKIP = "the app has no receive step; a live account has no seeded inbox to list"
 READ_ONLY_RESOURCES = frozenset({"taxpayers", "systems"})
-RUNNABLE_FOLDER_WORDS = ("transmission", "reception")
+RUNNABLE_FOLDER_WORDS = ("transmission",)
 SET_PATTERN = re.compile(r"pm\.environment\.set\(\s*[\"']([A-Za-z0-9_]+)[\"']")
 DOCS_LINK = re.compile(r"developer\.fiskaly\.com/api/([a-z0-9-]+)/(\d{4}-\d{2}-\d{2})")
 TYPE_TEST = re.compile(r"pm\.test\(\s*[\"']Type is ([A-Z_:]+)[\"']")
@@ -21,7 +22,6 @@ MODE_POINTER = "/content/mode"
 
 IT_B2B = "records (B2B E-Invoice Transmission with SDI recipient)"
 IT_B2C = "records (B2C E-Invoice Transmission with pec recipient)"
-IT_RECEPTION = "records (E-Invoice Reception)"
 BE_PEPPOL = "records (E-Invoice Transmission with Peppol recipient)"
 EMAIL = "records (E-Invoice Transmission with email recipient)"
 
@@ -45,9 +45,6 @@ CAPTURES = {
     ("it", IT_B2C, "Create INTENTION::TRANSACTION"): (("invoiceb2cIntentionId", "/content/id"),),
     ("it", IT_B2C, "Create TRANSACTION::INVOICE"): (("b2ceInvoiceId", "/content/id"),),
     ("it", IT_B2C, "Retrieve TRANSACTION::INVOICE"): (("b2ctransmissionId", USED_IN_POINTER),),
-    ("it", IT_RECEPTION, "List Records by Type"): (
-        ("eInvoiceReceptionId", "/results/0/content/id"),
-    ),
     ("be", BE_PEPPOL, "Create INTENTION::TRANSACTION"): (("eInvoiceIntentionId", "/content/id"),),
     ("be", BE_PEPPOL, "Create TRANSACTION::INVOICE"): (("eInvoiceId", "/content/id"),),
     ("be", BE_PEPPOL, "Retrieve TRANSACTION::INVOICE"): (
@@ -100,8 +97,6 @@ ASSERTS = {
     "Retrieve a System::E_INVOICE_SERVICE": (("/content/type", "E_INVOICE_SERVICE"),),
     "Retrieve System with Peppol ID": (("/content/annotations/peppol_id", None),),
     "Retrieve the Receipt of Transmission": (("/content/compliance/archive/data", None),),
-    "Retrieve the Received Invoice": (("/content/compliance/artifact/data", None),),
-    "Retrieve a Record::E_INVOICE::RECEPTION": (("/content/type", "E_INVOICE::RECEPTION"),),
     "Update a Taxpayer::COMPANY (Commission)": (("/content/state", "COMMISSIONED"),),
     "Commission System": (
         ("/content/state", "COMMISSIONED"),
@@ -357,6 +352,8 @@ def _scope(folder, method, path):
     if resource == "tokens":
         return False, PROXY_SKIP
     lowered = folder.lower()
+    if lowered.startswith("records") and "reception" in lowered:
+        return False, RECEPTION_SKIP
     if lowered.startswith("records") and any(word in lowered for word in RUNNABLE_FOLDER_WORDS):
         return True, None
     if method == "GET" and resource in READ_ONLY_RESOURCES:

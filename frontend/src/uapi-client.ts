@@ -13,7 +13,6 @@ export type Config = {
   mode: BackendMode;
   environment: Environment;
   api_version: string;
-  reception_mode: "live" | "simulated";
   personas: { seller: PersonaConfig; buyer: PersonaConfig };
 };
 
@@ -47,7 +46,6 @@ export type Settings = {
   environment: Environment;
   base_url: string;
   api_version: string;
-  reception_mode: "live" | "simulated";
   personas: Record<Persona, PersonaSettings>;
 };
 
@@ -188,6 +186,9 @@ export type SendRequest = {
   country: string;
   operation: unknown;
   systemId?: string;
+  // Reused across retries of the same attempt, so a lost response followed by a retry replays
+  // the record instead of creating a second one.
+  idempotencyKey?: string;
 };
 
 export type SendStart = CreatedInvoice & { transport: Transport; note?: string };
@@ -221,7 +222,7 @@ type UapiRecord = {
 
 type RecordEnvelope = { content: UapiRecord };
 
-export const SEND_COUNTRIES = ["IT", "BE"];
+export const SEND_COUNTRIES = ["IT", "BE", "DE"];
 
 export const WAIT_SLICE_S = 5;
 
@@ -440,13 +441,53 @@ export async function sendInvoice(input: SendRequest, mode: CallMode): Promise<S
       persona: input.persona,
       country: input.country,
       operation: input.operation,
-      idempotency_key: idempotencyKey(),
+      idempotency_key: input.idempotencyKey ?? idempotencyKey(),
     });
     return { ...created, transport: "backend" };
   } catch (error) {
     if (mode !== "MOCK" || !unconfigured(error)) throw error;
   }
   return { ...(await createDirect(input)), transport: "direct", note: PASSTHROUGH_NOTE };
+}
+
+export type CorrectionSendRequest = {
+  persona: Persona;
+  country: string;
+  correctedRecordId: string;
+  // The nested invoice body — the backend wraps it into the TRANSACTION::CORRECTION envelope.
+  operation: unknown;
+  // The full composed CORRECTION value, posted verbatim on the passthrough fallback where no
+  // backend endpoint does the wrapping.
+  correctionValue: unknown;
+  reason?: string;
+  systemId?: string;
+  idempotencyKey?: string;
+};
+
+export async function sendCorrection(
+  input: CorrectionSendRequest,
+  mode: CallMode,
+): Promise<SendStart> {
+  const path = `/api/invoices/${encodeURIComponent(input.correctedRecordId)}/correction`;
+  try {
+    const created = await request<CreatedInvoice>("POST", path, {
+      persona: input.persona,
+      country: input.country,
+      operation: input.operation,
+      reason: input.reason,
+      idempotency_key: input.idempotencyKey ?? idempotencyKey(),
+    });
+    return { ...created, transport: "backend" };
+  } catch (error) {
+    if (mode !== "MOCK" || !unconfigured(error)) throw error;
+  }
+  const direct = await createDirect({
+    persona: input.persona,
+    country: input.country,
+    operation: input.correctionValue,
+    systemId: input.systemId,
+  });
+  return { ...direct, transport: "direct", note: PASSTHROUGH_NOTE };
 }
 
 function readRecord(recordId: string, persona: Persona): Promise<UapiRecord> {
@@ -499,6 +540,9 @@ async function waitDirect(input: WaitRequest): Promise<TransmissionWait> {
 export function waitForTransmission(input: WaitRequest): Promise<TransmissionWait> {
   if (input.transport === "direct") return waitDirect(input);
   const query = new URLSearchParams({ persona: input.persona, timeout: String(WAIT_SLICE_S) });
+  // Once the transmission id is known the backend skips the transaction read — half the poll
+  // traffic on a send that keeps polling for minutes.
+  if (input.transmissionId) query.set("transmission_id", input.transmissionId);
   const path = `/api/invoices/${encodeURIComponent(input.transactionId)}/wait?${query}`;
   return request<TransmissionWait>("GET", path);
 }

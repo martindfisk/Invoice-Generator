@@ -11,7 +11,7 @@ Severity: fatal/error → red, warning → amber, info → blue, success/complet
 
 ## Layout grammar
 Top bar 56 px: product name · preset/format chip · PersonaSwitch · ModeBadge · environment (TEST/LIVE) · theme toggle. Below: horizontal resizable panels, left workflow (min 480 px) / right API log (min 360 px); default 60/40. Below 1024 px the API log becomes a bottom drawer.
-Workflow pane: stepper `setup → compose → validate → send → receive` (done/active/blocked states), content card per step, sticky action row (primary button + secondary), status line with `aria-live`.
+Workflow pane: stepper `setup → mapper → validate → send` (done/active/blocked states), content card per step, sticky action row (primary button + secondary), status line with `aria-live`.
 
 ## Invoice viewer
 Segmented control XML | Human | Split (Split default ≥ 1280 px). Human view = cards per business group (Header, Seller, Buyer incl. channel/identifiers, Delivery, Payment, Lines table, VAT breakdown table, Totals); each `Field` shows label, value (mono for identifiers/amounts), BT badge (`BT-31`) or FPA badge (`1.2.1.1`) with tooltip (name, description, path). Selecting a field outlines it (2 px brand) and underlines the XML range + gutter marker; selecting XML does the reverse; findings use severity colours. DiffView: two panes (local | fiskaly artifact) with normalisation toggles and a semantic change list. Always render the disclaimer under the human view: "Visualisation for review — the XML is the legally valid invoice."

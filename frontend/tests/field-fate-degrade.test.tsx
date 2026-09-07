@@ -10,7 +10,7 @@ import { WorkflowPane } from "../src/WorkflowPane";
 describe("field-fate degradation without the evidence table", () => {
   beforeEach(() => {
     localStorage.clear();
-    store.dispatch({ type: "choosePreset", presetId: "it-b2b-sdi" });
+    store.dispatch({ type: "choosePreset", presetId: "it-b2b-sdi", fresh: true });
     store.dispatch({ type: "setPane", pane: "human", show: false });
     store.dispatch({ type: "setPane", pane: "human", show: true });
     store.dispatch({ type: "setPane", pane: "xml", show: false });

@@ -1,6 +1,5 @@
 import type { ComponentType } from "react";
 import { StepMapper } from "./StepMapper";
-import { StepReceive } from "./StepReceive";
 import { StepSend } from "./StepSend";
 import { StepSetup } from "./StepSetup";
 import { StepValidate } from "./StepValidate";
@@ -12,7 +11,6 @@ const CONTENT: Record<Step, ComponentType> = {
   mapper: StepMapper,
   validate: StepValidate,
   send: StepSend,
-  receive: StepReceive,
 };
 
 export function WorkflowPane() {

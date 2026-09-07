@@ -214,12 +214,17 @@ export function InvoiceViewer({
       return undefined;
     }
   }, [jsonText]);
+  const [insertNotice, setInsertNotice] = useState<string | null>(null);
   const insertFields = useCallback(
     (inserts: { pointer: string; value: unknown }[]) => {
       let next = jsonText;
+      const failures: string[] = [];
       for (const insert of inserts) {
-        next = insertAtPointer(next, insert.pointer, insert.value);
+        next = insertAtPointer(next, insert.pointer, insert.value, (reason) =>
+          failures.push(reason),
+        );
       }
+      setInsertNotice(failures.length > 0 ? `Not inserted: ${failures.join("; ")}` : null);
       if (next !== jsonText) onEditJson(next);
     },
     [jsonText, onEditJson],
@@ -541,6 +546,22 @@ export function InvoiceViewer({
               />
               <div className="border-t border-line px-3 py-1.5">
                 <OperationCaveat invoice={invoice} />
+                {insertNotice && (
+                  <p
+                    role="status"
+                    data-insert-notice
+                    className="mt-1 rounded-m bg-warning-soft px-2 py-1 text-[11px] text-warning-ink"
+                  >
+                    {insertNotice}{" "}
+                    <button
+                      type="button"
+                      onClick={() => setInsertNotice(null)}
+                      className="font-medium underline"
+                    >
+                      Dismiss
+                    </button>
+                  </p>
+                )}
                 {parsedOperation !== undefined && (
                   <CoveragePanel
                     operation={parsedOperation}

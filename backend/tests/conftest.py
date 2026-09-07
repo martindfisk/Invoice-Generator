@@ -22,7 +22,6 @@ def make_settings(**overrides):
     values = {
         "uapi_mode": "mock",
         "uapi_api_version": "2026-06-01",
-        "allow_mode_override": True,
         "seller_api_key": SELLER_KEY,
         "seller_api_secret": SELLER_SECRET,
         "seller_system_id_it": "seller-system-it",

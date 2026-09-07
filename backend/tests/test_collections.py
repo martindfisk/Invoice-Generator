@@ -55,6 +55,7 @@ def test_excluded_steps_carry_skip_reason(collections):
                 assert step["skipReason"] in (
                     "handled by the proxy",
                     "creates or mutates account resources",
+                    "the app has no receive step; a live account has no seeded inbox to list",
                 )
             if step["path"] == "/tokens":
                 assert step["skipReason"] == "handled by the proxy"
@@ -120,15 +121,16 @@ def test_asserts_transcribe_the_test_value_not_the_label(collections):
     ]
 
 
-def test_it_reception_capture_points_into_the_listing(collections):
+def test_it_reception_folder_is_skipped_with_its_reason(collections):
     reception = [
         step
         for step in collections["it"]["steps"]
-        if step["name"] == "List Records by Type" and step["runnable"]
+        if step["folder"] == "records (E-Invoice Reception)"
     ]
-    assert reception[0]["captures"] == [
-        {"variable": "eInvoiceReceptionId", "pointer": "/results/0/content/id"}
-    ]
+    assert reception
+    for step in reception:
+        assert step["runnable"] is False
+        assert "no receive step" in step["skipReason"]
 
 
 def test_de_notes_surface_the_published_defects(collections):

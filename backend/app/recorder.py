@@ -7,6 +7,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 PING_INTERVAL_S = 15.0
+SUBSCRIBER_QUEUE_LIMIT = 1000
 
 
 def _now():
@@ -53,7 +54,13 @@ class Recorder:
         self._next_id += 1
         self._records.append(record)
         for queue in self._queues:
-            queue.put_nowait(record)
+            try:
+                queue.put_nowait(record)
+            except asyncio.QueueFull:
+                # A stalled subscriber (sleeping laptop, paused tab) must not grow memory without
+                # bound; its next delivered id skips ahead and the browser's Last-Event-ID replay
+                # closes the gap on reconnect.
+                pass
         return record
 
     def list(self, since_id=None):
@@ -64,7 +71,7 @@ class Recorder:
 
     @contextlib.asynccontextmanager
     async def subscribe(self):
-        queue = asyncio.Queue()
+        queue = asyncio.Queue(maxsize=SUBSCRIBER_QUEUE_LIMIT)
         self._queues.add(queue)
         try:
             yield queue
@@ -76,7 +83,15 @@ class Recorder:
 
     async def sse(self, request, last_event_id=None):
         async with self.subscribe() as queue:
-            last_sent = self._next_id - 1 if last_event_id is None else int(last_event_id)
+            # A Last-Event-ID from before a backend restart is larger than anything this recorder
+            # has numbered; taken verbatim it would silence the stream forever. An id from another
+            # epoch means the client has seen nothing of this instance — replay the whole buffer.
+            if last_event_id is None:
+                last_sent = self._next_id - 1
+            else:
+                last_sent = int(last_event_id)
+                if last_sent > self._next_id - 1:
+                    last_sent = 0
             for record in self.list(since_id=last_sent):
                 last_sent = int(record.id)
                 yield _event(record)

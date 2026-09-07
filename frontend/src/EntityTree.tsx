@@ -166,7 +166,7 @@ function AccountRows({
 }
 
 // Healthy facts (registrations, Peppol id, "sends and receives") live in the state chip's
-// tooltip; a visible line appears only when something actually blocks a send or a reception.
+// tooltip; a visible line appears only when something actually blocks a send.
 function SystemIssues({ system }: { system: OnboardingSystem }) {
   const compliance = system.compliance_state ?? null;
   const limited = compliance !== null && compliance !== "TRANSMISSION_RECEPTION";
@@ -749,7 +749,7 @@ export function EntityTree() {
             aria-expanded={open}
             aria-controls="entity-tree-body"
             onClick={toggle}
-            title="What exists on the fiskaly account each persona talks to — and what a send or a reception still needs."
+            title="What exists on the fiskaly account each persona talks to — and what a send still needs."
             className="flex items-center gap-1.5 text-left hover:text-brand"
           >
             <span aria-hidden="true" className="w-2 shrink-0 text-muted">

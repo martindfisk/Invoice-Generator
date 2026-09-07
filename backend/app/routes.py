@@ -1,13 +1,11 @@
 import asyncio
 import json
 
-import httpx
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 from fastapi.responses import StreamingResponse
 
 from app.collections import load_collections
 from app.fields import field_metadata
-from app.inbox import after, get_inbox_item, list_inbox, simulate_delivery, sort_inbox
 from app.mock import MockTransport
 from app.models import (
     Artifact,
@@ -18,7 +16,6 @@ from app.models import (
     CorrectionRequest,
     CredentialState,
     Health,
-    InboxItem,
     InvoiceCreated,
     InvoiceRequest,
     ModeState,
@@ -31,7 +28,6 @@ from app.models import (
     RecordListing,
     SettingsState,
     SettingsUpdate,
-    SimulateRequest,
     SpecFields,
     SystemState,
     TransmissionWait,
@@ -95,7 +91,6 @@ async def config(request: Request):
         mode=current_mode(request.app),
         environment=store.environment,
         api_version=store.api_version,
-        reception_mode=store.reception_mode,
         personas=personas,
         spec_source=active.get("file") or _fallback_source(recorded),
         spec_sha256=active.get("sha256"),
@@ -126,7 +121,6 @@ def settings_state(app):
         environment=store.environment,
         base_url=store.base_url,
         api_version=store.api_version,
-        reception_mode=store.reception_mode,
         personas=personas,
     )
 
@@ -202,8 +196,6 @@ async def put_settings(body: SettingsUpdate, request: Request):
             store.set_recipients(name, update.recipients.model_dump())
     if body.environment:
         store.set_environment(body.environment)
-    if body.reception_mode:
-        store.set_reception_mode(body.reception_mode)
     for client in app.state.clients.values():
         await client.sync()
     if body.mode:
@@ -226,7 +218,7 @@ async def delete_settings_credentials(request: Request, persona: str = "all"):
 
 
 def live_available(app):
-    return not any(client.persona.missing_credentials for client in app.state.clients.values())
+    return not app.state.clients["seller"].persona.missing_credentials
 
 
 @router.get("/mode", response_model=ModeState)
@@ -238,11 +230,7 @@ async def get_mode(request: Request):
 async def put_mode(body: ModeUpdate, request: Request):
     app = request.app
     if body.mode != current_mode(app):
-        missing = [
-            name
-            for client in app.state.clients.values()
-            for name in client.persona.missing_credentials
-        ]
+        missing = app.state.clients["seller"].persona.missing_credentials
         if body.mode == "live" and missing:
             raise HTTPException(409, f"cannot switch to live: {', '.join(missing)} missing in .env")
         await apply_mode(app, body.mode)
@@ -290,8 +278,8 @@ async def calls(request: Request, since: int | None = None):
 
 
 @router.get("/events")
-async def events(request: Request):
-    last_event_id = request.headers.get("Last-Event-ID")
+async def events(request: Request, last_event_id: str | None = None):
+    last_event_id = request.headers.get("Last-Event-ID") or last_event_id
     if last_event_id is not None and not last_event_id.isdigit():
         raise HTTPException(400, "Last-Event-ID must be a numeric call id")
     stream = request.app.state.recorder.sse(request, last_event_id)
@@ -464,10 +452,18 @@ async def list_invoices(
 
 @router.get("/invoices/{transaction_id}/wait", response_model=TransmissionWait)
 async def wait_invoice(
-    transaction_id: str, request: Request, persona: str = "seller", timeout: float | None = None
+    transaction_id: str,
+    request: Request,
+    persona: str = "seller",
+    timeout: float | None = None,
+    transmission_id: str | None = None,
 ):
     client = client_for(request.app, persona)
-    return await wait_for_transmission(client, transaction_id, timeout)
+    limit = client.settings.poll_timeout_s
+    timeout = limit if timeout is None else min(max(timeout, 0.0), limit)
+    return await wait_for_transmission(
+        client, transaction_id, timeout, transmission_id=transmission_id, request=request
+    )
 
 
 @router.post("/invoices/{transaction_id}/correction", response_model=CorrectionCreated)
@@ -501,31 +497,6 @@ async def record_files(record_id: str, request: Request, persona: str = "seller"
     )
 
 
-@router.get("/inbox", response_model=list[InboxItem])
-async def inbox_listing(
-    request: Request, persona: str = "buyer", country: str = "IT", since: str | None = None
-):
-    client = client_for(request.app, persona)
-    store = request.app.state.store
-    items = [
-        item for item in request.app.state.simulated_inbox if after(item["received_at"], since)
-    ]
-    system_id = system_for(request.app, persona, country)
-    if system_id:
-        entries = await list_inbox(client, system_id, since)
-        items += await asyncio.gather(*(get_inbox_item(client, entry["id"]) for entry in entries))
-    elif store.reception_mode == "live":
-        raise HTTPException(
-            409, f"{persona.upper()}_SYSTEM_ID_{country} is not set in .env; cannot list receptions"
-        )
-    return sort_inbox(items)
-
-
-@router.post("/inbox/simulate", response_model=InboxItem)
-async def inbox_simulate(body: SimulateRequest, request: Request):
-    return simulate_delivery(request.app.state.simulated_inbox, body.xml, body.meta)
-
-
 @router.api_route("/uapi/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 async def passthrough(path: str, request: Request):
     persona = request.headers.get("X-Persona", "seller")
@@ -538,20 +509,15 @@ async def passthrough(path: str, request: Request):
         raise HTTPException(400, f"request body is not valid JSON: {exc}") from exc
     url = f"/{path}?{request.url.query}" if request.url.query else f"/{path}"
     client = request.app.state.clients[persona]
-    try:
-        upstream = await client.request(
-            request.method,
-            url,
-            json=body,
-            step="passthrough",
-            idempotency_key=request.headers.get("X-Idempotency-Key"),
-            step_name=request.headers.get("X-Step"),
-            run_id=request.headers.get("X-Run-Id"),
-        )
-    except httpx.HTTPStatusError as exc:
-        upstream = exc.response
-    except httpx.TransportError as exc:
-        raise HTTPException(502, f"fiskaly API unreachable: {exc}") from exc
+    upstream = await client.request(
+        request.method,
+        url,
+        json=body,
+        step="passthrough",
+        idempotency_key=request.headers.get("X-Idempotency-Key"),
+        step_name=request.headers.get("X-Step"),
+        run_id=request.headers.get("X-Run-Id"),
+    )
     headers = {
         name: upstream.headers[name] for name in UPSTREAM_HEADERS if name in upstream.headers
     }

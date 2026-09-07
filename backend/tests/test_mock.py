@@ -5,7 +5,6 @@ import zipfile
 
 import pytest
 
-from app.inbox import list_inbox
 from app.mock import MockTransport
 from app.recorder import Recorder
 from app.session import SessionStore
@@ -133,33 +132,6 @@ async def test_recipient_without_invoicing_completes_without_transmission(client
     ]
 
 
-async def test_reception_reaches_the_buyer_system_only(clients):
-    await send(clients, number="2026-777")
-    buyer_inbox = await list_inbox(clients["buyer"], BUYER_IT)
-    assert len(buyer_inbox) == 1
-    assert buyer_inbox[0]["source"] == "uapi"
-    seller_inbox = await list_inbox(clients["seller"], SELLER_IT)
-    assert seller_inbox == []
-
-
-async def test_failed_transmission_produces_no_reception(clients):
-    await send(clients, number="FAIL-002")
-    assert await list_inbox(clients["buyer"], BUYER_IT) == []
-
-
-async def test_reception_carries_artifact_and_operation(clients):
-    await send(clients, number="2026-778")
-    entry = (await list_inbox(clients["buyer"], BUYER_IT))[0]
-    response = await clients["buyer"].request(
-        "GET", f"/records/{entry['id']}?compliance-artifact&operation"
-    )
-    content = response.json()["content"]
-    assert content["type"] == "E_INVOICE::RECEPTION"
-    assert (content["state"], content["mode"]) == ("COMPLETED", "FINISHED")
-    assert content["system"] == {"id": BUYER_IT}
-    assert json.loads(content["operation"])["document"]["number"] == "2026-778"
-
-
 async def test_receipt_of_transmission_is_italian_only(clients):
     _, italian = await send(clients, number="2026-779")
     receipt = await fetch_artifact(clients["seller"], italian["transmission_id"], "receipt")
@@ -185,7 +157,7 @@ async def test_receipt_and_compliance_artifacts_are_two_different_documents(clie
     assert invoice["label"] != receipt["label"]
 
 
-async def test_correction_creates_its_own_record_transmission_and_reception(clients):
+async def test_correction_creates_its_own_record_and_transmission(clients):
     seller = clients["seller"]
     created, waited = await send(clients, number="2026-781")
     corrected = await create_correction(
@@ -216,9 +188,6 @@ async def test_correction_creates_its_own_record_transmission_and_reception(clie
 
     artifact = await fetch_artifact(seller, finished["transmission_id"])
     assert "<Numero>2026-781-NC</Numero>" in artifact["xml"]
-
-    inbox = await list_inbox(clients["buyer"], BUYER_IT)
-    assert len(inbox) == 2
 
 
 async def test_correction_of_a_record_that_does_not_exist_is_a_404(clients):

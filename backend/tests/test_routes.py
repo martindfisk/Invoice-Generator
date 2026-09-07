@@ -26,7 +26,6 @@ async def test_config_exposes_systems_but_no_secrets(api):
     assert body["mode"] == "mock"
     assert body["environment"] == "test"
     assert body["api_version"] == "2026-06-01"
-    assert body["reception_mode"] == "simulated"
     assert body["personas"]["seller"]["BE"] == {
         "system_id": "seller-system-be",
         "taxpayer_id": "seller-taxpayer-be",
@@ -37,17 +36,18 @@ async def test_config_exposes_systems_but_no_secrets(api):
         assert secret not in response.text
 
 
-async def test_mode_switch_to_live_refused_without_credentials():
-    settings = make_settings(buyer_api_key=None, buyer_api_secret=None)
+async def test_mode_switch_to_live_refused_without_seller_credentials():
+    settings = make_settings(seller_api_key=None, seller_api_secret=None)
     async with api_for(settings) as (_, client):
         response = await client.put("/api/mode", json={"mode": "live"})
         assert response.status_code == 409
-        assert "BUYER_API_KEY" in response.json()["detail"]
+        assert "SELLER_API_KEY" in response.json()["detail"]
         assert (await client.get("/api/mode")).json() == {"mode": "mock", "live_available": False}
 
 
-async def test_mode_switch_does_not_depend_on_override_flag():
-    async with api_for(make_settings(allow_mode_override=False)) as (_, client):
+async def test_mode_switch_to_live_needs_no_buyer_credentials():
+    settings = make_settings(buyer_api_key=None, buyer_api_secret=None)
+    async with api_for(settings) as (_, client):
         assert (await client.get("/api/mode")).json() == {"mode": "mock", "live_available": True}
         response = await client.put("/api/mode", json={"mode": "live"})
         assert response.status_code == 200
@@ -123,23 +123,9 @@ async def test_passthrough_surfaces_token_failure(api, tmp_path):
         await uapi.use(MockTransport(tmp_path))
     response = await client.get("/api/uapi/systems/x")
     assert response.status_code == 404
-    assert "POST_tokens.json" in response.json()["content"]["message"]
-
-
-async def test_mock_mode_does_not_require_configured_system_ids(api):
-    _, client = api
-    response = await client.get("/api/inbox?persona=buyer&country=IT")
-    assert response.status_code == 200
-
-
-async def test_live_mode_still_demands_a_configured_system_id():
-    settings = make_settings(uapi_mode="live", reception_mode="live", buyer_system_id_it=None)
-    async with api_for(settings) as (app, client):
-        for uapi in app.state.clients.values():
-            await uapi.use(None)
-        response = await client.get("/api/inbox?persona=buyer&country=IT")
-        assert response.status_code == 409
-        assert "BUYER_SYSTEM_ID_IT" in response.json()["detail"]
+    body = response.json()
+    assert "POST /tokens" in body["detail"]
+    assert "POST_tokens.json" in body["upstream"]["message"]
 
 
 async def test_spec_fields_describes_the_payload_surface(api):
