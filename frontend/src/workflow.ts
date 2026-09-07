@@ -1,4 +1,4 @@
-import type { ApiCall, Persona } from "./api-log";
+import type { ApiCall, CallMode, Persona } from "./api-log";
 import { FORMATS, getFormat } from "./formats";
 import { getField, setField, type FieldId, type FormatId, type Invoice } from "./model";
 import { preset, type PresetId } from "./presets";
@@ -92,6 +92,9 @@ export type SendState = {
   // What was posted: "TRANSACTION::INVOICE" or "TRANSACTION::CORRECTION". Only a transmitted
   // invoice becomes the correction target a later credit note may reference.
   operationLabel: string | null;
+  // MOCK or LIVE at the moment of the send — the correction target inherits it, so a record id
+  // minted by the mock can never be referenced from a LIVE correction.
+  callMode: CallMode | null;
   note: string | null;
   error: string | null;
   nodes: SendNode[];
@@ -120,10 +123,18 @@ export type WorkflowState = {
   edit: EditState;
   validation: ValidationState;
   send: SendState;
-  // The record id of the last invoice this browser transmitted — what a credit note's
-  // TRANSACTION::CORRECTION references. Survives preset changes: the credit-note preset differs
-  // from the invoice it corrects.
-  correctionTarget: string | null;
+  // The last invoice this browser transmitted — what a credit note's TRANSACTION::CORRECTION
+  // references. Survives preset changes (the credit-note preset differs from the invoice it
+  // corrects) and carries enough context to refuse a cross-country or cross-mode reference.
+  correctionTarget: CorrectionTarget | null;
+};
+
+export type CorrectionTarget = {
+  id: string;
+  presetId: PresetId | null;
+  country: string;
+  mode: CallMode;
+  at: number;
 };
 
 export type WorkflowAction =
@@ -147,7 +158,7 @@ export type WorkflowAction =
 
 export type SendAction =
   | { type: "sendReset" }
-  | { type: "sendStarted"; at: number; localXml: string; label?: string }
+  | { type: "sendStarted"; at: number; localXml: string; label?: string; callMode?: CallMode }
   | {
       type: "sendCreated";
       at: number;
@@ -227,7 +238,7 @@ type Persisted = {
   invoice: Invoice | null;
   edit: EditState;
   send: SendState | null;
-  correctionTarget: string | null;
+  correctionTarget: CorrectionTarget | null;
 };
 
 function firstFormatId(): FormatId {
@@ -306,6 +317,7 @@ export function freshSend(): SendState {
     outcome: null,
     transport: null,
     operationLabel: null,
+    callMode: null,
     note: null,
     error: null,
     nodes: SEND_NODES.map((node): SendNode => ({ ...node, status: "pending", logs: [] })),
@@ -461,6 +473,7 @@ export function sendReducer(state: SendState, action: SendAction): SendState {
         startedAt: action.at,
         localXml: action.localXml,
         operationLabel: action.label ?? null,
+        callMode: action.callMode ?? null,
         nodes: withNode(fresh.nodes, "intention", { status: "active" }, action.at),
       };
     }
@@ -498,8 +511,9 @@ export function sendReducer(state: SendState, action: SendAction): SendState {
     case "sendPolled":
       return polled(state, action);
     case "sendResumed":
+      // note: null — a restore/stop explanation must not keep sitting above a live poll.
       return state.outcome === "timeout" || state.outcome === "stopped"
-        ? { ...state, phase: "polling", outcome: null, endedAt: null }
+        ? { ...state, phase: "polling", outcome: null, endedAt: null, note: null }
         : state;
     case "sendStopped":
       return {
@@ -681,7 +695,7 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
           validation: freshValidation(),
         };
       }
-      const prefix = buildOperation(state.invoice, state.correctionTarget).prefix;
+      const prefix = buildOperation(state.invoice, state.correctionTarget?.id ?? null).prefix;
       let invoice: Invoice;
       try {
         invoice = applyOperation(parsed, state.invoice);
@@ -742,7 +756,13 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
         send.outcome === "transmitted" &&
         send.operationLabel === "TRANSACTION::INVOICE" &&
         send.transactionId !== null
-          ? send.transactionId
+          ? {
+              id: send.transactionId,
+              presetId: state.presetId,
+              country: state.invoice?.seller.address.country ?? "",
+              mode: send.callMode ?? "MOCK",
+              at: Date.now(),
+            }
           : state.correctionTarget;
       return { ...state, send, correctionTarget };
     }
@@ -817,18 +837,43 @@ function restoreEdit(saved: unknown): EditState {
   return { ...freshEdit(), ...value };
 }
 
+const TERMINAL_OUTCOMES: readonly SendOutcome[] = [
+  "transmitted",
+  "rejected",
+  "failed",
+  "not-transmitted",
+];
+
 function restoreSend(saved: unknown): SendState {
   if (saved === null || typeof saved !== "object") return freshSend();
   const value = saved as Partial<SendState>;
   if (typeof value.phase !== "string" || !Array.isArray(value.nodes)) return freshSend();
   const send: SendState = { ...freshSend(), ...value };
-  // A reload killed the poll loop; an in-flight phase becomes a settled "stopped" the user can
-  // resume with Keep polling — the record ids are all it needs.
+  // A reload killed the poll loop; an in-flight phase becomes settled. A terminal outcome is
+  // kept — a reload during the artifact fetches must not relabel a transmitted invoice as
+  // "you stopped the polling". Only a genuinely undecided save becomes a resumable "stopped".
   if (send.phase === "creating" && send.transactionId === null) return freshSend();
   if (send.phase !== "idle" && send.phase !== "settled") {
+    if (send.outcome !== null && TERMINAL_OUTCOMES.includes(send.outcome)) {
+      return { ...send, phase: "settled" };
+    }
     return { ...send, phase: "settled", outcome: "stopped", note: RESTORED_SEND_NOTE };
   }
   return send;
+}
+
+function readCorrectionTarget(saved: unknown): CorrectionTarget | null {
+  if (saved === null || typeof saved !== "object") return null;
+  const value = saved as Partial<CorrectionTarget>;
+  if (typeof value.id !== "string" || typeof value.country !== "string") return null;
+  if (value.mode !== "MOCK" && value.mode !== "LIVE") return null;
+  return {
+    id: value.id,
+    presetId: value.presetId ?? null,
+    country: value.country,
+    mode: value.mode,
+    at: typeof value.at === "number" ? value.at : 0,
+  };
 }
 
 function restoreInvoice(saved: unknown, fallback: Invoice): Invoice {
@@ -860,7 +905,9 @@ export function initialWorkflow(): WorkflowState {
     ...fresh,
     persona: saved.persona === "buyer" ? "buyer" : "seller",
     panes: migratePanes(saved),
-    correctionTarget: typeof saved.correctionTarget === "string" ? saved.correctionTarget : null,
+    // A legacy bare-string target (pre-typed shape) lacks the country/mode context the
+    // mismatch guards need, so it is dropped rather than trusted.
+    correctionTarget: readCorrectionTarget(saved.correctionTarget),
   };
   if (!saved.presetId) return shell;
 
@@ -895,7 +942,7 @@ let composeMemo: {
   invoice: Invoice;
   json: string | null;
   jsonError: string | null;
-  target: string | null;
+  target: CorrectionTarget | null;
   result: OperationView;
 } | null = null;
 
@@ -936,7 +983,7 @@ function composeOperationUncached(state: WorkflowState): OperationView {
       text: "",
     };
   }
-  const derived = buildOperation(state.invoice, state.correctionTarget);
+  const derived = buildOperation(state.invoice, state.correctionTarget?.id ?? null);
   const edited = state.edit.json;
   if (edited === null) {
     return { ...derived, text: derived.error ? "" : stringifyOperation(derived.value) };

@@ -78,6 +78,10 @@ const OUTCOME: Record<SendOutcome, { tone: string; headline: string; body: strin
 
 let activeRun = 0;
 
+// Whether any send ran in this browser session (vs. one restored from localStorage) — a restored
+// send has no calls in the log, only startup backfill, so arrival clears the pane.
+let sendRanThisSession = false;
+
 function reason(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -157,9 +161,12 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
   const focus = useStore((state) => state.focus);
   // Arriving at Send starts the call log empty, so what appears below is this send and nothing
   // else — startup backfill and earlier attempts would otherwise be indistinguishable from it.
-  // Only on a fresh arrival: coming back after a send keeps that send's calls on screen.
+  // Coming back after a send in *this session* keeps that send's calls on screen; a restored
+  // send from a previous session has no calls here, only backfill, so it clears too.
   useEffect(() => {
-    if (store.getState().workflow.send.phase === "idle") store.clearCalls();
+    if (store.getState().workflow.send.phase === "idle" || !sendRanThisSession) {
+      store.clearCalls();
+    }
   }, []);
 
   // Read from the store, not fetched here: saving a system id in Settings has to reach this
@@ -172,11 +179,25 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
   const attemptKey = useRef<string | null>(null);
 
   const meta = listPresets().find((candidate) => candidate.id === presetId);
-  const country = meta?.country ?? "";
+  // The invoice decides the country — hand edits can move it away from the preset's. The preset
+  // is only the fallback for a blob with no seller country.
+  const country = invoice.seller.address.country || (meta?.country ?? "");
+  const countryDiverges = meta !== undefined && country !== meta.country;
   const format = getFormat(formatId);
   const systemId = config?.personas?.[persona]?.[country as SettingsCountry]?.system_id;
 
   const operation = composeOperation(workflow);
+  const target = workflow.correctionTarget;
+  const isCorrection = operation.label === "TRANSACTION::CORRECTION";
+  const callMode: "MOCK" | "LIVE" = mode === "MOCK" ? "MOCK" : "LIVE";
+  const targetMismatch =
+    isCorrection && target !== null
+      ? target.country !== country
+        ? `This credit note would reference record ${target.id}, which was transmitted for ${target.country} — the invoice at hand is for ${country}. Send the original invoice for this country first.`
+        : target.mode !== callMode
+          ? `This credit note would reference record ${target.id}, which exists only in ${target.mode} mode — the app is now in ${callMode}. Send the original invoice in this mode first.`
+          : null
+      : null;
 
   const localXml = useMemo(() => {
     if (editXml !== null) return editXml;
@@ -193,6 +214,7 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
     offline || mode === "unknown"
       ? "The backend is unreachable, so nothing can be sent — and the API log would not show the exchange."
       : (operation.error ??
+        targetMismatch ??
         (operation.correctionPending
           ? CORRECTION_BLOCKED_NOTE
           : supported
@@ -221,6 +243,25 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
     }
   };
 
+  // A restored terminal send lost its artifacts (they are stripped from persistence); the record
+  // ids survive, so refetch instead of showing a transmitted invoice without its diff.
+  useEffect(() => {
+    const current = store.getState().workflow.send;
+    if (
+      current.phase === "settled" &&
+      current.outcome === "transmitted" &&
+      current.transmissionId !== null &&
+      current.transport !== null &&
+      current.compliance === null
+    ) {
+      const alive = () => true;
+      void loadArtifact("compliance", current.transmissionId, current.transport, alive);
+      void loadArtifact("archive", current.transmissionId, current.transport, alive);
+    }
+    // Mount-only by design: the ids come from the restored snapshot, not from render state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const run = async (resume: boolean) => {
     const runId = (activeRun += 1);
     const alive = () => activeRun === runId;
@@ -238,8 +279,14 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
             ? attemptKey.current
             : crypto.randomUUID();
         attemptKey.current = idempotencyKey;
-        store.dispatch({ type: "sendStarted", at: Date.now(), localXml, label: operation.label });
-        const callMode = mode === "MOCK" ? "MOCK" : "LIVE";
+        sendRanThisSession = true;
+        store.dispatch({
+          type: "sendStarted",
+          at: Date.now(),
+          localXml,
+          label: operation.label,
+          callMode,
+        });
         const correction =
           operation.label === "TRANSACTION::CORRECTION"
             ? (operation.value as {
@@ -351,7 +398,16 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
           mode={mode}
           stages={stages}
           operation={operation}
+          correction={target}
         />
+
+        {countryDiverges && (
+          <p className="shrink-0 rounded-l bg-warning-soft px-3 py-2 text-[11px] text-warning-ink">
+            The invoice's seller country is <span className="font-mono">{country}</span>, but the
+            preset was written for <span className="font-mono">{meta?.country}</span> — the send
+            uses the invoice's country for the system id and support checks.
+          </p>
+        )}
 
         {send.phase !== "idle" && (
           <SendTimeline send={send} focusedRecordId={focus?.recordId ?? null} />

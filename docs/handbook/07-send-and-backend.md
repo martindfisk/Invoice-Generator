@@ -52,9 +52,12 @@ The backend derives stable sub-keys per step (intention/transaction) from it.
 
 A credit note (`typeCode 381`) needs the record id of the invoice it corrects. The app tracks
 `correctionTarget` — the last **invoice** this browser transmitted (a transmitted correction never
-becomes its own target) — and routes the wrapped operation through
+becomes its own target), stored as a typed record `{id, presetId, country, mode, at}` and shown in
+the preflight's "Corrects" row. Send routes the wrapped operation through
 `POST /api/invoices/{id}/correction`, which builds the `TRANSACTION::CORRECTION` envelope
-server-side and echoes `corrected_record_id`. No target yet → Send is blocked with the explanation.
+server-side and echoes `corrected_record_id`. Guard rails: no target yet → blocked with an
+explanation; target from a different country or from the other MOCK/LIVE mode → blocked too (a
+mock-minted record id must never be referenced in LIVE).
 
 ### Two transports
 

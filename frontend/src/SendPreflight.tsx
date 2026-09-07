@@ -6,7 +6,7 @@ import { CORRECTION_PENDING_NOTE } from "./uapi-json";
 import type { Mode } from "./store";
 import type { Config, CredentialState } from "./uapi-client";
 import { countBySeverity, type StageResult } from "./validation";
-import type { OperationView } from "./workflow";
+import type { CorrectionTarget, OperationView } from "./workflow";
 
 function channelText(channel: Channel): string {
   if (channel.kind === "SDI") {
@@ -26,9 +26,10 @@ function verdict(stages: StageResult[]): { tone: string; text: string } {
   const notRun = stages.filter((stage) => stage.status === "unavailable").length;
   const blocking = counts.fatal + counts.error;
   if (!ran) {
+    // Also the state after a reload: validation results are session-only and are not restored.
     return {
       tone: "bg-warning-soft text-warning-ink",
-      text: "Not validated — nothing here says this will be accepted.",
+      text: "Not validated in this session — run Validate before sending; nothing here says this will be accepted.",
     };
   }
   if (blocking > 0) {
@@ -67,6 +68,7 @@ export type SendPreflightProps = {
   mode?: Mode;
   stages: StageResult[];
   operation: OperationView;
+  correction?: CorrectionTarget | null;
 };
 
 export function SendPreflight({
@@ -81,6 +83,7 @@ export function SendPreflight({
   mode,
   stages,
   operation,
+  correction,
 }: SendPreflightProps) {
   const state = verdict(stages);
   return (
@@ -109,6 +112,16 @@ export function SendPreflight({
             </span>
           )}
         </Row>
+        {operation.label === "TRANSACTION::CORRECTION" && correction && (
+          <Row label="Corrects">
+            <span className="font-mono">{correction.id}</span>
+            <span className="ml-2 text-muted">
+              transmitted {correction.at ? new Date(correction.at).toLocaleString() : "earlier"}
+              {correction.presetId ? ` · preset ${correction.presetId}` : ""} · {correction.country}{" "}
+              · {correction.mode}
+            </span>
+          </Row>
+        )}
         <Row label="Credentials">
           {credentials?.configured ? (
             <span className="font-mono">

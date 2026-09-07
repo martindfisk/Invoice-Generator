@@ -258,13 +258,57 @@ describe("workflow persistence", () => {
       workflowReducer,
       chosen(),
     );
-    expect(invoiceSent.correctionTarget).toBe("txn-1");
+    expect(invoiceSent.correctionTarget).toMatchObject({
+      id: "txn-1",
+      presetId: first.id,
+      country: preset(first.id).seller.address.country,
+      mode: "MOCK",
+    });
 
     const correctionSent = transmitted("TRANSACTION::CORRECTION", "txn-2").reduce(
       workflowReducer,
       invoiceSent,
     );
-    expect(correctionSent.correctionTarget).toBe("txn-1");
+    expect(correctionSent.correctionTarget?.id).toBe("txn-1");
+  });
+
+  it("a legacy string correction target is dropped on restore, not trusted", () => {
+    const state = chosen();
+    persistWorkflow(state);
+    const blob = JSON.parse(localStorage.getItem(WORKFLOW_KEY) ?? "{}") as Record<string, unknown>;
+    blob.correctionTarget = "txn-legacy";
+    localStorage.setItem(WORKFLOW_KEY, JSON.stringify(blob));
+    // The bare id carries no country/mode context, so the mismatch guards could not protect it.
+    expect(initialWorkflow().correctionTarget).toBeNull();
+  });
+
+  it("a restore keeps a terminal outcome instead of relabelling it as stopped", () => {
+    const state = chosen();
+    const actions: WorkflowAction[] = [
+      { type: "sendStarted", at: 1, localXml: "", label: "TRANSACTION::INVOICE" },
+      {
+        type: "sendCreated",
+        at: 2,
+        created: { intention_id: "int-9", transaction_id: "txn-9" },
+        transport: "backend",
+      },
+      {
+        type: "sendPolled",
+        at: 3,
+        wait: {
+          transaction_id: "txn-9",
+          finished: true,
+          transmission_id: "trn-9",
+          transmission: { id: "trn-9", state: "COMPLETED", mode: "FINISHED", logs: [] },
+        },
+      },
+    ];
+    const sent = actions.reduce(workflowReducer, state);
+    // Simulate a reload that happened during the artifact fetches (phase not yet settled).
+    persistWorkflow({ ...sent, send: { ...sent.send, phase: "artifacts" } });
+    const restored = initialWorkflow();
+    expect(restored.send.outcome).toBe("transmitted");
+    expect(restored.send.phase).toBe("settled");
   });
 
   it("a transmission-id poll slice with unknown logs keeps the transaction node's entries", () => {
