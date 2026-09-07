@@ -67,6 +67,10 @@ function call(id: string, overrides: Partial<ApiCall> = {}): ApiCall {
 beforeEach(() => {
   localStorage.clear();
   store.clearCalls();
+  // The Send step now refuses to claim MOCK safety while the mode is unknown, so the tests
+  // state their precondition explicitly.
+  store.setMode("MOCK");
+  store.setOffline(false);
   store.dispatch({ type: "sendReset" });
   store.dispatch({ type: "choosePreset", presetId: "it-b2b-sdi", fresh: true });
   sendInvoice.mockReset();
@@ -165,6 +169,39 @@ describe("SendTimeline", () => {
 });
 
 describe("Send step", () => {
+  it("says the mode is unknown instead of claiming MOCK safety when the backend never answered", () => {
+    store.setMode("unknown");
+    render(<StepSend />);
+    expect(screen.getByText(/MODE UNKNOWN/)).toBeInTheDocument();
+    expect(screen.queryByText(/no request leaves this machine/i)).toBeNull();
+    expect(screen.getByRole("button", { name: "Send to fiskaly" })).toBeDisabled();
+  });
+
+  it("blocks sending while the backend is offline", () => {
+    store.setOffline(true);
+    render(<StepSend />);
+    expect(screen.getByRole("button", { name: "Send to fiskaly" })).toBeDisabled();
+  });
+
+  it("guards a LIVE send behind a confirmation naming what will be created", async () => {
+    store.setMode("LIVE");
+    sendInvoice.mockResolvedValue({
+      intention_id: "int-1",
+      transaction_id: "txn-1",
+      transport: "backend",
+    });
+    waitForTransmission.mockResolvedValue({ transaction_id: "txn-1", finished: false, logs: [] });
+    render(<StepSend />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Send to fiskaly" }));
+    expect(sendInvoice).not.toHaveBeenCalled();
+    const dialog = screen.getByRole("dialog", { name: "Send to LIVE fiskaly?" });
+    expect(dialog).toHaveTextContent(/creates an INTENTION and a TRANSACTION::INVOICE record/);
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Send it" }));
+    await waitFor(() => expect(sendInvoice).toHaveBeenCalledTimes(1));
+  });
+
   it("walks the lifecycle and shows the diff once the artifact arrives", async () => {
     sendInvoice.mockResolvedValue({
       intention_id: "int-1",

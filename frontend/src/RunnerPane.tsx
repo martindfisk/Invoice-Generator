@@ -384,15 +384,22 @@ export function RunnerPane() {
                   disabledReason="no recorded calls for this run yet"
                 />
               )}
-              {!runner.running && runner.haltedAt !== null && (
-                <button
-                  type="button"
-                  className={SECONDARY}
-                  onClick={() => void startRun(runner.haltedAt! + 1)}
-                >
-                  Continue anyway
-                </button>
-              )}
+              {!runner.running &&
+                runner.haltedAt !== null &&
+                // No-op past the last step: the halted step was the final one, so there is
+                // nothing to continue into.
+                runner.collection !== null &&
+                runner.haltedAt + 1 < runner.collection.steps.length && (
+                  <button
+                    type="button"
+                    className={SECONDARY}
+                    // Through requestRun, not startRun: continuing after a failure creates LIVE
+                    // records exactly like Run all does, and deserves the same confirmation.
+                    onClick={() => requestRun(runner.haltedAt! + 1)}
+                  >
+                    Continue anyway
+                  </button>
+                )}
               <p aria-live="polite" role="status" className="text-xs text-muted">
                 {runner.status ?? ""}
               </p>

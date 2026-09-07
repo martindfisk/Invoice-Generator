@@ -374,6 +374,8 @@ function SettingsBody({ onClose, focusSection }: { onClose: () => void; focusSec
     () => settings?.environment ?? config?.environment ?? "test",
   );
   const [confirmLive, setConfirmLive] = useState(false);
+  const [pendingLiveMode, setPendingLiveMode] = useState(false);
+  const [confirmLiveMode, setConfirmLiveMode] = useState(false);
   const [secrets, setSecrets] = useState<Record<Persona, Secret>>({
     seller: { key: "", secret: "" },
     buyer: { key: "", secret: "" },
@@ -644,26 +646,67 @@ function SettingsBody({ onClose, focusSection }: { onClose: () => void; focusSec
           <fieldset>
             <legend className="sr-only">Backend mode</legend>
             <div className="flex flex-col gap-1.5">
+              {/* Switching to LIVE is staged behind the same confirm gesture as the LIVE
+                  environment — a one-click radio next to a checkbox-gated one taught users the
+                  wrong lesson. MOCK applies immediately (the safe direction). */}
               <Choice
                 name="settings-mode"
-                checked={mode === "LIVE"}
+                checked={mode === "LIVE" || pendingLiveMode}
                 disabled={busy}
-                onSelect={() => void applyMode("live")}
+                onSelect={() => setPendingLiveMode(true)}
               >
                 <span className="font-mono font-semibold">LIVE</span> — real HTTP calls to the
-                environment above.
+                environment above. Needs confirmation below.
               </Choice>
               <Choice
                 name="settings-mode"
-                checked={mode === "MOCK"}
+                checked={mode === "MOCK" && !pendingLiveMode}
                 disabled={busy}
-                onSelect={() => void applyMode("mock")}
+                onSelect={() => {
+                  setPendingLiveMode(false);
+                  setConfirmLiveMode(false);
+                  void applyMode("mock");
+                }}
               >
                 <span className="font-mono font-semibold">MOCK</span> — recorded fixtures, replayed
-                through the same client code.
+                through the same client code. Applies immediately.
               </Choice>
             </div>
           </fieldset>
+          {pendingLiveMode && mode !== "LIVE" && (
+            <>
+              <label className="flex items-start gap-2 rounded-m bg-error-soft px-3 py-2 text-[11px] text-error-ink">
+                <input
+                  type="checkbox"
+                  checked={confirmLiveMode}
+                  disabled={busy}
+                  onChange={(event) => setConfirmLiveMode(event.target.checked)}
+                  className="mt-0.5 accent-brand"
+                />
+                <span>
+                  I understand LIVE mode makes real HTTP calls to fiskaly with the configured
+                  credentials.
+                </span>
+              </label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={busy || !confirmLiveMode}
+                  onClick={() => {
+                    setPendingLiveMode(false);
+                    setConfirmLiveMode(false);
+                    void applyMode("live");
+                  }}
+                  className={PRIMARY}
+                >
+                  Apply LIVE mode
+                </button>
+                {!confirmLiveMode && (
+                  <span className="text-[11px] text-muted">Tick the confirmation to switch.</span>
+                )}
+              </div>
+            </>
+          )}
         </Section>
 
         <Section id="settings-credentials" title="Credentials" blurb={SECRET_BLURB}>

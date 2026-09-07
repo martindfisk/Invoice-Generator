@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DiffView } from "./DiffView";
+import { Modal } from "./Modal";
 import { getFormat } from "./formats";
 import type { Invoice } from "./model";
 import { listPresets, type PresetId } from "./presets";
@@ -86,6 +87,21 @@ function delay(ms: number): Promise<void> {
 }
 
 function ModeBanner({ mode, environment }: { mode: string; environment?: string }) {
+  // "unknown" is the boot value and the state while /api/config is unreachable. Falling through
+  // to the MOCK copy here would assert "no request leaves this machine" exactly when that
+  // cannot be verified.
+  if (mode !== "LIVE" && mode !== "MOCK") {
+    return (
+      <p
+        role="status"
+        className="shrink-0 rounded-l bg-error-soft px-3 py-2 text-xs text-error-ink"
+      >
+        <span className="font-mono font-bold">MODE UNKNOWN</span> — the backend has not answered{" "}
+        <span className="font-mono">/api/config</span> yet, so whether a send would be mocked or
+        real cannot be determined. Nothing can be sent until it does.
+      </p>
+    );
+  }
   if (mode === "LIVE") {
     return (
       <p
@@ -130,6 +146,7 @@ export function StepSend() {
 
 function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }) {
   const mode = useStore((state) => state.mode);
+  const offline = useStore((state) => state.offline);
   const workflow = useStore((state) => state.workflow);
   const { formatId, send } = workflow;
   // The flow sends as the seller, always: with no Receive step the buyer persona exists only for
@@ -151,6 +168,7 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
   const settings = useStore((state) => state.settings);
   const [filesError, setFilesError] = useState<string | null>(null);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [confirmLive, setConfirmLive] = useState(false);
   const attemptKey = useRef<string | null>(null);
 
   const meta = listPresets().find((candidate) => candidate.id === presetId);
@@ -172,12 +190,14 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
   const supported = SEND_COUNTRIES.includes(country);
   const busy = send.phase === "creating" || send.phase === "polling" || send.phase === "artifacts";
   const blocked =
-    operation.error ??
-    (operation.correctionPending
-      ? CORRECTION_BLOCKED_NOTE
-      : supported
-        ? null
-        : unsupportedCountry(country));
+    offline || mode === "unknown"
+      ? "The backend is unreachable, so nothing can be sent — and the API log would not show the exchange."
+      : (operation.error ??
+        (operation.correctionPending
+          ? CORRECTION_BLOCKED_NOTE
+          : supported
+            ? null
+            : unsupportedCountry(country)));
 
   const loadArtifact = async (
     kind: ArtifactKind,
@@ -419,7 +439,9 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
           type="button"
           disabled={busy || blocked !== null}
           title={blocked ?? undefined}
-          onClick={() => void run(false)}
+          // LIVE creates real records; the runner already guards this with a counting modal, so
+          // the flow's Send gets the same standard. MOCK stays one click.
+          onClick={() => (mode === "LIVE" ? setConfirmLive(true) : void run(false))}
           className="rounded-m bg-brand px-3 py-1.5 text-xs font-semibold text-bunker disabled:cursor-not-allowed disabled:opacity-60"
         >
           {send.phase === "idle" ? "Send to fiskaly" : "Send again"}
@@ -482,6 +504,51 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
           </button>
         )}
       </div>
+
+      <Modal
+        open={confirmLive}
+        labelledBy="send-live-guard-title"
+        describedBy="send-live-guard-blurb"
+        onClose={() => setConfirmLive(false)}
+        className="max-w-md p-4"
+      >
+        <h3 id="send-live-guard-title" className="text-sm font-semibold text-ink">
+          Send to LIVE fiskaly?
+        </h3>
+        <p id="send-live-guard-blurb" className="mt-2 text-xs text-muted">
+          {send.outcome === "transmitted" && (
+            <span className="mb-1 block font-medium text-error-ink">
+              {operation.label === "TRANSACTION::CORRECTION"
+                ? "This document was already transmitted — sending again files a second TRANSACTION::CORRECTION against the same original."
+                : "This invoice was already transmitted — sending again files a duplicate invoice."}
+            </span>
+          )}
+          This creates an INTENTION and a {operation.label} record at fiskaly, and a transmission
+          the moment fiskaly hands the generated document to the network.{" "}
+          {config?.environment === "live"
+            ? "The environment is PRODUCTION: the document is transmitted for real and cannot be recalled."
+            : "The TEST environment simulates validation and transmits nothing to a tax authority."}
+        </p>
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setConfirmLive(false)}
+            className="rounded-m border border-line px-3 py-1.5 text-xs font-medium text-muted hover:border-brand hover:text-ink"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setConfirmLive(false);
+              void run(false);
+            }}
+            className="rounded-m bg-brand px-3 py-1.5 text-xs font-semibold text-bunker"
+          >
+            {send.phase === "idle" ? "Send it" : "Send it again"}
+          </button>
+        </div>
+      </Modal>
     </section>
   );
 }

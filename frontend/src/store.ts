@@ -32,6 +32,9 @@ export type State = {
   settingsRequest: SettingsRequest;
   layoutNonce: number;
   eventsDown: boolean;
+  // /api/config is unreachable — set by the boot/retry loop in app.tsx. Distinct from
+  // eventsDown (the SSE stream), and the reason `mode` may still read "unknown".
+  offline: boolean;
 };
 
 const MAX_CALLS = 1000;
@@ -106,6 +109,7 @@ export function createStore(initial: Partial<State> = {}) {
     settingsRequest: null,
     layoutNonce: 0,
     eventsDown: false,
+    offline: false,
     ...initial,
   };
   const listeners = new Set<() => void>();
@@ -165,6 +169,9 @@ export function createStore(initial: Partial<State> = {}) {
     setMode: (mode: Mode) => update({ mode }),
     setEventsDown(down: boolean) {
       if (state.eventsDown !== down) update({ eventsDown: down });
+    },
+    setOffline(offline: boolean) {
+      if (state.offline !== offline) update({ offline });
     },
     addCall(call: ApiCall) {
       // Calls almost always arrive in order; the common case is a prepend, and only an
