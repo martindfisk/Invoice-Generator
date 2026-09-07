@@ -272,6 +272,32 @@ describe("workflow persistence", () => {
     expect(correctionSent.correctionTarget?.id).toBe("txn-1");
   });
 
+  it("a v3 blob keeps the cosmetics but silently drops the work — the documented migration", () => {
+    localStorage.setItem(
+      WORKFLOW_KEY,
+      JSON.stringify({
+        viewVersion: 3,
+        step: "send",
+        presetId: first.id,
+        formatId: "fatturapa",
+        persona: "seller",
+        panes: { human: true, xml: false },
+        invoice: { ...preset(first.id), number: "V3-EDITED" },
+        edit: { source: "human", xml: "<edited/>", error: null, lossy: false, json: null },
+        send: { phase: "settled", transactionId: "txn-old", nodes: [] },
+      }),
+    );
+    const restored = initialWorkflow();
+    // Cosmetics survive…
+    expect(restored.presetId).toBe(first.id);
+    expect(restored.step).toBe("send");
+    expect(restored.panes).toEqual({ human: true, xml: false });
+    // …the work does not (pre-v4 shapes are not trusted; documented in handbook ch. 09).
+    expect(restored.invoice?.number).toBe(preset(first.id).number);
+    expect(restored.edit.xml).toBeNull();
+    expect(restored.send.phase).toBe("idle");
+  });
+
   it("a legacy string correction target is dropped on restore, not trusted", () => {
     const state = chosen();
     persistWorkflow(state);

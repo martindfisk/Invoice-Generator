@@ -6,8 +6,16 @@ from app.spec import manifest
 from tests.conftest import api_for, make_settings
 
 SPEC_DIR = Settings.model_fields["spec_dir"].default
-API_VERSION = (manifest(SPEC_DIR) or {}).get("apiVersion")
 TIMEOUT_S = 60.0
+
+
+def collection_version(country):
+    return next(
+        entry["version"]
+        for entry in (manifest(SPEC_DIR) or {}).get("collections", [])
+        if entry["country"] == country and entry.get("kind") == "collection"
+    )
+
 
 DE_RUNNABLE = [
     "Retrieve a Taxpayer::COMPANY",
@@ -34,13 +42,19 @@ def collections():
 
 def test_all_three_collections_parse(collections):
     assert sorted(collections) == ["be", "de", "it"]
-    for collection in collections.values():
-        assert collection["version"] == API_VERSION
+    for country, collection in collections.items():
+        # Each collection's version is its OWN manifest entry, not the active spec's apiVersion:
+        # the dropped all-products spec and the fetched collections can legitimately sit on
+        # different CalVers the day fiskaly publishes a new one.
+        assert collection["version"] == collection_version(country)
         assert collection["steps"]
         assert collection["name"].startswith("fiskaly E-INVOICE")
 
 
 def test_de_runnable_steps_in_order(collections):
+    # Deliberately exact against the committed collections — CI fetches --frozen, so this can
+    # only change when a new collection version is ingested on purpose (and then this list is
+    # part of reviewing what changed upstream).
     steps = collections["de"]["steps"]
     assert [step["name"] for step in steps if step["runnable"]] == DE_RUNNABLE
     assert len(steps) == 28
@@ -189,7 +203,7 @@ async def test_collections_endpoints(api):
     summaries = {entry["id"]: entry for entry in listing.json()}
     assert set(summaries) == {"be", "de", "it"}
     assert summaries["de"]["steps"] == 28
-    assert summaries["de"]["version"] == API_VERSION
+    assert summaries["de"]["version"] == collection_version("de")
     assert summaries["de"]["notes"] == 6
     assert summaries["be"]["notes"] == 2
     assert summaries["it"]["notes"] == 1

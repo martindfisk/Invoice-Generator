@@ -1,9 +1,11 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
-const sourceFile = new URL(
-  "file:///Users/martin.dutzler/Documents/GitHub/E-Invoicing-Formats-and-Profiles/Outputted files/EN16931_BT_BG_Reference.md",
-);
+// src/bt-catalog.json is committed; regeneration needs the EN 16931 BT/BG reference sheet,
+// which is not distributed with this repo. Point BT_REFERENCE_MD at your copy to rebuild.
+const sourceDefault =
+  "file:///Users/martin.dutzler/Documents/GitHub/E-Invoicing-Formats-and-Profiles/Outputted files/EN16931_BT_BG_Reference.md";
+const sourceFile = new URL(process.env.BT_REFERENCE_MD ?? sourceDefault);
 const outFile = new URL("../src/bt-catalog.json", import.meta.url);
 
 const ID = /^(BG|BT)-\d+(\.\d+)?$/;

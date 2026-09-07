@@ -769,16 +769,17 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
   }
 }
 
+// Exactly the step buckets the backend emits (see CallRecord in ARCHITECTURE.md); a step with no
+// workflow home (list, onboarding, passthrough) renders without a jump target. The send bucket
+// covers the whole lifecycle including the token minted for it, corrections and the files ZIP.
 const CALL_STEPS: Record<string, Step> = {
-  token: "setup",
-  setup: "setup",
-  system: "setup",
-  taxpayer: "setup",
-  validate: "validate",
+  token: "send",
   intention: "send",
   transaction: "send",
+  correction: "send",
   poll: "send",
   artifact: "send",
+  files: "send",
 };
 
 export function stepForCall(call: Pick<ApiCall, "step">): Step | undefined {

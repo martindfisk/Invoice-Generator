@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DiffView } from "./DiffView";
 import { Modal } from "./Modal";
+import { blockedByLine, DEGRADED_NO_CAUSE } from "./onboarding";
 import { getFormat } from "./formats";
 import type { Invoice } from "./model";
 import { listPresets, type PresetId } from "./presets";
@@ -9,6 +10,7 @@ import { SendTimeline } from "./SendTimeline";
 import { store, useStore } from "./store";
 import {
   fetchArtifact,
+  getOnboardingStatus,
   fetchRecordFiles,
   POLL_DELAY_MS,
   sendCorrection,
@@ -176,6 +178,7 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
   const [filesError, setFilesError] = useState<string | null>(null);
   const [showReceipt, setShowReceipt] = useState(false);
   const [confirmLive, setConfirmLive] = useState(false);
+  const [degradedNote, setDegradedNote] = useState<string | null>(null);
   const attemptKey = useRef<string | null>(null);
 
   const meta = listPresets().find((candidate) => candidate.id === presetId);
@@ -243,6 +246,31 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
     }
   };
 
+  // In LIVE, a DEGRADED system (typically Peppol proof-of-ownership outstanding for BE/DE) means
+  // the transmission will not go out — say so before Send, not after. LIVE-only: in MOCK the
+  // fixture account is always OPERATIVE and the extra listing calls would be noise.
+  useEffect(() => {
+    if (mode !== "LIVE" || !systemId) return;
+    let cancelled = false;
+    getOnboardingStatus(persona).then(
+      (status) => {
+        if (cancelled) return;
+        const system = status.systems.find((entry) => entry.id === systemId);
+        setDegradedNote(
+          system && system.mode === "DEGRADED"
+            ? system.blocked_by
+              ? blockedByLine(system.blocked_by)
+              : DEGRADED_NO_CAUSE
+            : null,
+        );
+      },
+      () => undefined,
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, systemId, persona]);
+
   // A restored terminal send lost its artifacts (they are stripped from persistence); the record
   // ids survive, so refetch instead of showing a transmitted invoice without its diff.
   useEffect(() => {
@@ -259,7 +287,6 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
       void loadArtifact("archive", current.transmissionId, current.transport, alive);
     }
     // Mount-only by design: the ids come from the restored snapshot, not from render state.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const run = async (resume: boolean) => {
@@ -400,6 +427,12 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
           operation={operation}
           correction={target}
         />
+
+        {mode === "LIVE" && degradedNote && (
+          <p className="shrink-0 rounded-l bg-warning-soft px-3 py-2 text-[11px] text-warning-ink">
+            System <span className="font-mono">{systemId}</span> is DEGRADED — {degradedNote}
+          </p>
+        )}
 
         {countryDiverges && (
           <p className="shrink-0 rounded-l bg-warning-soft px-3 py-2 text-[11px] text-warning-ink">

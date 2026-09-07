@@ -688,6 +688,15 @@ test.describe("send · correction", () => {
     await expect(send).toBeEnabled();
     await send.click();
     await expect(page.locator('[data-outcome="transmitted"]')).toBeVisible({ timeout: 90_000 });
+    // Through the typed backend endpoint (POST /api/invoices/{id}/correction), not the
+    // passthrough fallback: the upstream calls are recorded under the "correction" step.
+    // Two matches prove the point twice: the step-filter chip and the call card's step chip.
+    await expect(
+      page
+        .getByRole("region", { name: "API log" })
+        .getByRole("button", { name: "correction", exact: true })
+        .first(),
+    ).toBeVisible();
   });
 });
 

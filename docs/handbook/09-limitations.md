@@ -53,6 +53,15 @@ app re-verifies the IBAN exactly (BigInt) and downgrades **only provably-false**
 `info`, appending a note naming the engine defect — the finding stays visible, re-explained, never
 deleted.
 
+## Persistence migrations drop old work
+
+The saved-workflow format is versioned (`VIEW_VERSION` in `frontend/src/workflow.ts`). A blob from
+an older version restores only the cosmetics — preset, step, pane layout — and silently drops the
+saved invoice edits and send state, because pre-current shapes are not trusted enough to rehydrate.
+The same applies to a legacy bare-string correction target (it lacks the country/mode context the
+mismatch guards need). One-time cost per format bump, taken deliberately over migration code for a
+demo tool.
+
 ## The MOCK diff caveat
 
 In MOCK mode the "transmitted" artifact is a static fixture with only the invoice number and total

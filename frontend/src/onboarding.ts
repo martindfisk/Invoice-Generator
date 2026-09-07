@@ -109,10 +109,13 @@ export function systemStateText(system: OnboardingSystem): string {
   return system.mode ? `${state} / ${system.mode}` : state;
 }
 
+// Keys are the backend's blocked_by values normalized to UPPER_SNAKE — the backend emits
+// "peppol-proof-of-ownership" (see backend/app/onboarding.py PEPPOL_BLOCKER).
 const BLOCKED_WORDS: Record<string, string> = {
-  PROOF_OF_OWNERSHIP:
-    "proof of ownership of the taxpayer is still outstanding — completing fiskaly's ownership " +
-    "verification unblocks transmission",
+  PEPPOL_PROOF_OF_OWNERSHIP:
+    "the Peppol proof of ownership of the taxpayer is still outstanding — completing fiskaly's " +
+    "ownership verification unblocks transmission. This app cannot run that upload flow; use " +
+    "the fiskaly dashboard",
 };
 
 export function blockedByLine(blockedBy: string): string {

@@ -26,9 +26,7 @@ SPEC_RE = re.compile(
 )
 DROP_NAME = "fiskaly.unified-api.all.{v}.yaml"
 DROP_TITLE = "Unified API"
-DROP_SOURCE = (
-    "hand-dropped into spec/drop/ (not published on workspace.fiskaly.com — verified 404)"
-)
+DROP_SOURCE = "hand-dropped into spec/drop/ (not published on workspace.fiskaly.com — verified 404)"
 CA_BUNDLES = (
     "/etc/ssl/cert.pem",
     "/etc/ssl/certs/ca-certificates.crt",
@@ -96,7 +94,9 @@ def read_info(text, origin):
     if not re.search(r"^openapi:\s*['\"]?3\.", text, re.MULTILINE):
         raise ValueError(f"{origin} is not an OpenAPI 3 document")
     head = text.split("\npaths:", 1)[0]
-    version = re.search(r"^ {2}version:\s*['\"]?(\d{4}-\d{2}-\d{2})", head, re.MULTILINE)
+    version = re.search(
+        r"^ {2}version:\s*['\"]?(\d{4}-\d{2}-\d{2})", head, re.MULTILINE
+    )
     title = re.search(r"^ {2}title:\s*['\"]?([^'\"\n]+)", head, re.MULTILINE)
     if not version:
         raise ValueError(f"{origin}: no CalVer info.version in the document head")
@@ -216,7 +216,11 @@ def rows(manifest):
 
 
 def write_sources(manifest):
-    active = manifest["spec"]["file"] if manifest.get("spec") else "the per-country specs below"
+    active = (
+        manifest["spec"]["file"]
+        if manifest.get("spec")
+        else "the per-country specs below"
+    )
     lines = [
         "# spec/ provenance",
         "",
@@ -247,6 +251,12 @@ def main():
         action="store_true",
         help="fail instead of falling back to the cached spec/",
     )
+    ap.add_argument(
+        "--frozen",
+        action="store_true",
+        help="use the committed spec/ exactly as spec.json records it — verify, never download. "
+        "CI runs this so a new upstream CalVer publication cannot change what a build sees.",
+    )
     ap.add_argument("--products-url", default=PRODUCTS_URL)
     args = ap.parse_args()
     SPEC_DIR.mkdir(exist_ok=True)
@@ -259,6 +269,27 @@ def main():
         print(f"ERROR: {e}", file=sys.stderr)
         return 1
 
+    if args.frozen:
+        if previous is None:
+            print(
+                "ERROR: --frozen needs an existing spec/spec.json to freeze on",
+                file=sys.stderr,
+            )
+            return 1
+        fallback = previous.get("fallback", [])
+        collections = previous.get("collections", [])
+        blobs = {}
+        absent = [
+            entry["file"]
+            for entry in fallback + collections
+            if not (SPEC_DIR / entry["file"]).exists()
+        ]
+        if absent:
+            print(f"ERROR: --frozen but spec/ is incomplete: {absent}", file=sys.stderr)
+            return 1
+        print("frozen: using the committed spec/ as recorded; nothing fetched")
+        return finish(previous, spec, fallback, collections, blobs)
+
     try:
         fallback, collections, blobs = refresh_fetched(args.products_url)
     except (
@@ -270,7 +301,10 @@ def main():
     ) as e:
         cached = (previous or {}).get("fallback") or (previous or {}).get("collections")
         if not cached or args.strict:
-            print(f"ERROR: spec fetch failed and no usable cache in spec/: {e}", file=sys.stderr)
+            print(
+                f"ERROR: spec fetch failed and no usable cache in spec/: {e}",
+                file=sys.stderr,
+            )
             return 1
         fallback = previous.get("fallback", [])
         collections = previous.get("collections", [])
@@ -281,10 +315,19 @@ def main():
             if not (SPEC_DIR / e2["file"]).exists()
         ]
         if absent:
-            print(f"ERROR: spec fetch failed and cached spec/ is incomplete: {absent}", file=sys.stderr)
+            print(
+                f"ERROR: spec fetch failed and cached spec/ is incomplete: {absent}",
+                file=sys.stderr,
+            )
             return 1
-        print(f"WARNING: spec refresh failed ({e}); using cached spec/", file=sys.stderr)
+        print(
+            f"WARNING: spec refresh failed ({e}); using cached spec/", file=sys.stderr
+        )
 
+    return finish(previous, spec, fallback, collections, blobs)
+
+
+def finish(previous, spec, fallback, collections, blobs):
     if spec is None and not fallback:
         print(
             "ERROR: no spec available; drop one into spec/drop/ or restore network access",

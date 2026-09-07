@@ -4,7 +4,6 @@ import { EntityTree, PersonaTree, ProvisionDialog } from "../src/EntityTree";
 import {
   DEGRADED_NO_CAUSE,
   availableCountries,
-  blockedByLine,
   countryRow,
   noCredentialsHint,
 } from "../src/onboarding";
@@ -181,19 +180,24 @@ describe("PersonaTree", () => {
     );
   });
 
-  it("renders DEGRADED unlike OPERATIVE and surfaces blocked_by in plain words", () => {
+  it("renders DEGRADED unlike OPERATIVE and surfaces blocked_by with the curated guidance", () => {
+    // The exact value the backend emits (onboarding.py PEPPOL_BLOCKER) — a made-up fixture
+    // value here once hid a key-normalization bug that made the curated string unreachable.
     renderTree(
       status({
-        systems: [system({ mode: "DEGRADED", blocked_by: "PROOF_OF_OWNERSHIP" })],
+        systems: [system({ mode: "DEGRADED", blocked_by: "peppol-proof-of-ownership" })],
         ready: { DE: false, IT: false, BE: false },
         missing: ["DE: system sys-de is COMMISSIONED/DEGRADED, needs COMMISSIONED/OPERATIVE"],
       }),
     );
     const row = document.querySelector("[data-entity='system-DE']") as HTMLElement;
     expect(row).toHaveAttribute("data-entity-state", "COMMISSIONED / DEGRADED");
-    const blocked = row.querySelector("[data-blocked-by='PROOF_OF_OWNERSHIP']") as HTMLElement;
-    expect(blocked).toHaveTextContent(blockedByLine("PROOF_OF_OWNERSHIP"));
-    expect(blocked).toHaveTextContent(/proof of ownership/);
+    const blocked = row.querySelector(
+      "[data-blocked-by='peppol-proof-of-ownership']",
+    ) as HTMLElement;
+    // The curated wording, not the generic "blocked by …" fallback.
+    expect(blocked).toHaveTextContent(/ownership verification unblocks transmission/);
+    expect(blocked).not.toHaveTextContent(/blocked by peppol proof of ownership/);
   });
 
   it("glosses a compliance state other than sends-and-receives visibly", () => {
