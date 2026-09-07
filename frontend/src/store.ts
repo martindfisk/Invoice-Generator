@@ -117,10 +117,15 @@ export function createStore(initial: Partial<State> = {}) {
 
   // Persisting serialises the whole workflow (invoice, edits, send state) — too much for every
   // selection click, so it trails the burst of dispatches and flushes when the page hides.
+  // `dirty` gates the pagehide flush: pagehide fires on *every* tab close, and a tab that never
+  // dispatched must not overwrite the storage another tab is actively working in.
   let persistTimer: ReturnType<typeof setTimeout> | undefined;
+  let dirty = false;
   const flushPersist = () => {
     clearTimeout(persistTimer);
     persistTimer = undefined;
+    if (!dirty) return;
+    dirty = false;
     persistWorkflow(state.workflow);
   };
   if (typeof window !== "undefined") {
@@ -131,6 +136,7 @@ export function createStore(initial: Partial<State> = {}) {
     const workflow = workflowReducer(state.workflow, action);
     if (workflow === state.workflow) return;
     update({ workflow });
+    dirty = true;
     clearTimeout(persistTimer);
     persistTimer = setTimeout(flushPersist, PERSIST_DEBOUNCE_MS);
   };

@@ -115,7 +115,7 @@ async def test_gives_up_after_second_401(uapi, upstream):
     assert route.call_count == 2
 
 
-async def test_idempotency_key_is_fresh_per_attempt_unless_given(uapi, upstream, recorder):
+async def test_the_401_retry_replays_the_same_idempotency_key(uapi, upstream, recorder):
     route = upstream.post("/records").mock(
         side_effect=[
             httpx.Response(401),
@@ -124,7 +124,10 @@ async def test_idempotency_key_is_fresh_per_attempt_unless_given(uapi, upstream,
     )
     await uapi.request("POST", "/records", json={"content": {}}, step="intention")
     keys = [call.request.headers["X-Idempotency-Key"] for call in route.calls]
-    assert len({uuid.UUID(key) for key in keys}) == 2
+    uuid.UUID(keys[0])
+    # The retry replays the same attempt; a fresh key would make a keyless caller (onboarding,
+    # passthrough) able to create the same record twice around a token expiry.
+    assert keys[0] == keys[1]
     assert recorder.list()[-1].record_id == "rec-1"
 
     route.mock(return_value=httpx.Response(201, json={"content": {"id": "rec-2"}}))
@@ -132,6 +135,27 @@ async def test_idempotency_key_is_fresh_per_attempt_unless_given(uapi, upstream,
     await uapi.request("POST", "/records", json={"content": {}}, idempotency_key=fixed)
     assert route.calls.last.request.headers["X-Idempotency-Key"] == fixed
     assert recorder.list()[-1].record_id == "rec-2"
+
+
+async def test_use_retires_the_previous_client_without_closing_it(uapi, upstream):
+    import asyncio
+
+    release = asyncio.Event()
+
+    async def slow(request):
+        await release.wait()
+        return httpx.Response(200, json={"content": {"id": "rec-slow"}})
+
+    upstream.get("/systems/slow").mock(side_effect=slow)
+    in_flight = asyncio.create_task(uapi.request("GET", "/systems/slow"))
+    await asyncio.sleep(0.01)
+    # A settings save or mode switch swaps the client mid-poll; the old pool must survive until
+    # its in-flight request completes. Closing it here used to raise into the running request.
+    await uapi.use(None)
+    release.set()
+    response = await in_flight
+    assert response.status_code == 200
+    await uapi.aclose()
 
 
 async def test_recorder_receives_masked_data_only(uapi, upstream, recorder):

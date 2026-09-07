@@ -79,6 +79,31 @@ describe("store", () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
+  it("pagehide on a store that never dispatched writes nothing", () => {
+    // Flush any dirty stores left behind by earlier tests (each createStore registers its own
+    // pagehide listener on the shared window), then start clean.
+    window.dispatchEvent(new Event("pagehide"));
+    localStorage.clear();
+    createStore();
+    window.dispatchEvent(new Event("pagehide"));
+    // An idle tab's close must not overwrite the storage a working tab persisted into.
+    expect(localStorage.getItem(WORKFLOW_KEY)).toBeNull();
+  });
+
+  it("pagehide flushes pending work without waiting for the debounce", () => {
+    vi.useFakeTimers();
+    try {
+      const store = createStore();
+      const presetId = listPresets()[0].id;
+      store.dispatch({ type: "choosePreset", presetId, fresh: true });
+      expect(localStorage.getItem(WORKFLOW_KEY)).toBeNull();
+      window.dispatchEvent(new Event("pagehide"));
+      expect(JSON.parse(localStorage.getItem(WORKFLOW_KEY) ?? "{}")).toMatchObject({ presetId });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("rehydrates the persisted workflow", () => {
     vi.useFakeTimers();
     try {

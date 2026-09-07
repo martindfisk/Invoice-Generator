@@ -142,6 +142,7 @@ export type WorkflowAction =
   | { type: "validationStarted"; key: string; stages: StageResult[] }
   | { type: "validationStage"; key: string; stage: StageResult }
   | { type: "validationFinished"; key: string; stages: StageResult[] }
+  | { type: "validationReset" }
   | SendAction;
 
 export type SendAction =
@@ -365,7 +366,9 @@ function polled(state: SendState, action: { at: number; wait: TransmissionWait }
       status: "active",
       state: defined(wait.state, transaction?.state),
       mode: defined(wait.mode, transaction?.mode),
-      logs: wait.logs ?? transaction?.logs ?? [],
+      // defined(), not ??: a transmission-id slice reports logs as null (not read), and an
+      // empty array from it must not wipe the entries already on the node.
+      logs: defined(wait.logs, transaction?.logs) ?? [],
     },
     at,
   );
@@ -721,6 +724,8 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
     case "validationFinished":
       if (state.validation.key !== action.key) return state;
       return { ...state, validation: { key: action.key, running: false, stages: action.stages } };
+    case "validationReset":
+      return { ...state, validation: freshValidation() };
     case "sendReset":
     case "sendStarted":
     case "sendCreated":
@@ -770,7 +775,13 @@ export function persistWorkflow(state: WorkflowState): void {
     viewVersion: VIEW_VERSION,
     invoice: state.invoice,
     edit: state.edit,
-    send: state.send.phase === "idle" ? null : state.send,
+    // Artifact XML is stripped: it can be re-fetched from the persisted record ids, and a large
+    // artifact would otherwise be the one thing that pushes the blob over the storage quota —
+    // silently losing everything else with it.
+    send:
+      state.send.phase === "idle"
+        ? null
+        : { ...state.send, localXml: null, compliance: null, archive: null },
     correctionTarget: state.correctionTarget,
   };
   try {
@@ -823,7 +834,20 @@ function restoreSend(saved: unknown): SendState {
 function restoreInvoice(saved: unknown, fallback: Invoice): Invoice {
   if (saved === null || typeof saved !== "object") return fallback;
   const value = saved as Partial<Invoice>;
-  if (!knownFormat(value.format) || !Array.isArray(value.lines)) return fallback;
+  // The loss tables, presence strip and viewers walk these members unguarded; a blob missing any
+  // of them would crash the render, and the bad blob would reproduce the crash on every reload.
+  const record = (candidate: unknown) => candidate !== null && typeof candidate === "object";
+  if (
+    !knownFormat(value.format) ||
+    !Array.isArray(value.lines) ||
+    !Array.isArray(value.vatBreakdown) ||
+    !record(value.seller) ||
+    !record(value.buyer) ||
+    !record(value.payment) ||
+    !record(value.totals)
+  ) {
+    return fallback;
+  }
   return value as Invoice;
 }
 
@@ -847,11 +871,15 @@ export function initialWorkflow(): WorkflowState {
     return shell;
   }
   const restored = saved.viewVersion === VIEW_VERSION;
+  const invoice = restored ? restoreInvoice(saved.invoice, fallback) : fallback;
+  // Edits ride with the invoice: restoring hand-edited XML/JSON next to a rejected (pristine)
+  // invoice would show three panes describing three different documents.
+  const invoiceRestored = restored && invoice !== fallback;
   return {
     ...shell,
     presetId: saved.presetId,
-    invoice: restored ? restoreInvoice(saved.invoice, fallback) : fallback,
-    edit: restored ? restoreEdit(saved.edit) : freshEdit(),
+    invoice,
+    edit: invoiceRestored ? restoreEdit(saved.edit) : freshEdit(),
     send: restored ? restoreSend(saved.send) : freshSend(),
     formatId: knownFormat(saved.formatId) ? saved.formatId : fallback.format,
     step: migrateStep(saved.step),

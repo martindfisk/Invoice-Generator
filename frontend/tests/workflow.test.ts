@@ -267,6 +267,75 @@ describe("workflow persistence", () => {
     expect(correctionSent.correctionTarget).toBe("txn-1");
   });
 
+  it("a transmission-id poll slice with unknown logs keeps the transaction node's entries", () => {
+    const actions: WorkflowAction[] = [
+      { type: "sendStarted", at: 1, localXml: "", label: "TRANSACTION::INVOICE" },
+      {
+        type: "sendCreated",
+        at: 2,
+        created: {
+          intention_id: "int-1",
+          transaction_id: "txn-1",
+          logs: [{ severity: "ERROR", message: "00471 Cessionario uguale al cedente" }],
+        },
+        transport: "backend",
+      },
+      {
+        type: "sendPolled",
+        at: 3,
+        wait: {
+          transaction_id: "txn-1",
+          finished: false,
+          transmission_id: "trn-1",
+          transmission: { id: "trn-1", state: "ACCEPTED", mode: "PROCESSING", logs: [] },
+          // The backend's short-circuit slice: transaction not read, logs unknown.
+          state: null,
+          mode: null,
+          logs: null,
+        },
+      },
+    ];
+    const started = actions.reduce(workflowReducer, chosen());
+    const transaction = started.send.nodes.find((node) => node.stage === "transaction");
+    expect(transaction?.logs).toEqual([
+      { severity: "ERROR", message: "00471 Cessionario uguale al cedente" },
+    ]);
+  });
+
+  it("a rejected restored invoice also drops the saved hand edits", () => {
+    localStorage.setItem(
+      WORKFLOW_KEY,
+      JSON.stringify({
+        viewVersion: VIEW_VERSION,
+        step: "mapper",
+        presetId: first.id,
+        formatId: first.id === "be-peppol" ? "ubl" : "fatturapa",
+        persona: "seller",
+        panes: { human: true, xml: true },
+        // vatBreakdown missing — the restore guard must reject this blob…
+        invoice: { format: "fatturapa", lines: [] },
+        // …and the stale edits must not survive it, or the JSON pane would describe a
+        // different invoice than the fields and the XML.
+        edit: {
+          source: "json",
+          xml: null,
+          error: null,
+          lossy: false,
+          json: '{"type":"INVOICE"}',
+          jsonError: null,
+          jsonLossy: false,
+          notice: null,
+        },
+        send: null,
+        correctionTarget: null,
+      }),
+    );
+    const restored = initialWorkflow();
+    expect(restored.invoice?.number).toBe(preset(first.id).number);
+    expect(restored.edit.json).toBeNull();
+    expect(restored.edit.xml).toBeNull();
+  });
+
   it("restores the edited invoice and the send's record ids after a reload", () => {
     const state = chosen();
     const edited = workflowReducer(state, { type: "editField", field: "number", value: "KEEP-42" });

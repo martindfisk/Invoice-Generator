@@ -204,7 +204,8 @@ class TransmissionWait(BaseModel):
     finished: bool
     state: str | None = None
     mode: str | None = None
-    logs: list[dict[str, Any]] = Field(default_factory=list)
+    # None means "not read this slice" (transmission-id short-circuit); [] would mean "cleared".
+    logs: list[dict[str, Any]] | None = None
     transmission: TransmissionRef | None = None
 
 

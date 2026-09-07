@@ -28,6 +28,7 @@ class UapiClient:
         self.store = store
         self.recorder = recorder
         self._lock = asyncio.Lock()
+        self._retired = []
         self._open(transport)
 
     @property
@@ -43,9 +44,11 @@ class UapiClient:
         return "live" if self._transport is None else "mock"
 
     async def use(self, transport):
-        previous = self._http
+        # The old client is retired, not closed: a mode switch or settings save must not tear
+        # down the connection pool a poll loop is mid-request on. Retired clients are closed at
+        # shutdown; the list is bounded by the number of settings changes in the process's life.
+        self._retired.append(self._http)
         self._open(transport)
-        await previous.aclose()
 
     async def sync(self):
         async with self._lock:
@@ -53,6 +56,9 @@ class UapiClient:
 
     async def aclose(self):
         await self._http.aclose()
+        for client in self._retired:
+            await client.aclose()
+        self._retired.clear()
 
     async def token(self):
         async with self._lock:
@@ -103,6 +109,10 @@ class UapiClient:
         step_name=None,
         run_id=None,
     ):
+        # Resolved here, not in _authorized: the 401 retry replays the same args, and a retry
+        # that minted a fresh key would no longer be idempotent upstream.
+        if method.upper() in IDEMPOTENT_METHODS:
+            idempotency_key = idempotency_key or str(uuid.uuid4())
         args = (method, path, json, params, headers, step, idempotency_key, step_name, run_id)
         response = await self._authorized(*args)
         if response.status_code == 401:

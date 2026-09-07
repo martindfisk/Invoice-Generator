@@ -166,7 +166,8 @@ export type TransmissionWait = {
   finished: boolean;
   state?: string | null;
   mode?: string | null;
-  logs?: RecordLog[];
+  // null = the transaction was not read this slice (transmission-id short-circuit).
+  logs?: RecordLog[] | null;
   transmission?: TransmissionRef | null;
 };
 

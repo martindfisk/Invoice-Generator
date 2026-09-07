@@ -264,6 +264,28 @@ async def test_wait_timeout_keeps_record_ids(client, upstream):
     assert route.call_count == 1
 
 
+async def test_wait_short_circuit_reports_unknown_logs_not_cleared_logs(client, upstream):
+    transaction = upstream.get(f"/records/{TRANSACTION_ID}").mock(
+        return_value=httpx.Response(
+            200, json=record(TRANSACTION_ID, "TRANSACTION::INVOICE", "COMPLETED", "FINISHED")
+        )
+    )
+    upstream.get(f"/records/{TRANSMISSION_ID}").mock(
+        return_value=httpx.Response(
+            200, json=record(TRANSMISSION_ID, "E_INVOICE::TRANSMISSION", "ACCEPTED", "PROCESSING")
+        )
+    )
+    result = await wait_for_transmission(
+        client, TRANSACTION_ID, timeout=0.0, transmission_id=TRANSMISSION_ID
+    )
+    assert transaction.call_count == 0
+    assert result["state"] is None
+    # None means "not read this slice"; an empty list would tell the frontend the transaction's
+    # log entries were cleared, wiping the SDI wording already on the timeline node.
+    assert result["logs"] is None
+    assert result["transmission"]["mode"] == "PROCESSING"
+
+
 async def test_wait_timeout_while_transmission_is_processing(client, upstream):
     upstream.get(f"/records/{TRANSACTION_ID}").mock(
         return_value=httpx.Response(

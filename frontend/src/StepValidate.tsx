@@ -380,7 +380,19 @@ function Validating({ invoice, presetId }: { invoice: Invoice; presetId: PresetI
     return () => clearTimeout(timer);
   }, [invoice, formatId, xml, error, key, stored, value]);
 
-  useEffect(() => () => controller.current?.abort(), []);
+  useEffect(
+    () => () => {
+      // Leaving the step aborts the in-flight run AND invalidates it: without the run.current
+      // bump the aborted result would be dispatched as final, and a partial (or one-stage
+      // "backend not reachable") pipeline would stick because the run key still matches.
+      run.current += 1;
+      controller.current?.abort();
+      if (store.getState().workflow.validation.running) {
+        store.dispatch({ type: "validationReset" });
+      }
+    },
+    [],
+  );
 
   const stages = useMemo(
     () => (validation.stages.length > 0 ? validation.stages : emptyRun(formatId)),
