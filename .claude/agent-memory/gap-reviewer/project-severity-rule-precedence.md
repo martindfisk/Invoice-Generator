@@ -1,0 +1,16 @@
+---
+name: severity-rule-precedence
+description: gap-report.ts severityFor precedence — "optional" does NOT downgrade a json-loss row to note; R2 fires before the R3 fallback. Worked example - xrechnung buyer.* rows confirmed 2026-09-07
+metadata:
+  type: project
+---
+
+`severityFor` in `frontend/src/gap-report.ts` (~lines 162-183) applies rules in strict order: R3-inapplicable → R4-platform → R1-blocking (needs `missingFrom=xml` AND mandatory AND `bindsEn16931`) → R2-should-fix (`missingFrom=json && carriedInXml`, or `missingFrom=model && required`) → R3-note fallback. So a term being _optional_ in the standard never downgrades a json-loss row to note — optionality only matters to rule out R1, and R1 additionally requires the syntax itself to render no element.
+
+**Why:** A reviewer claim "optional term, should-fix stands" looks self-contradictory against the README's R3 line ("optional → note") until you read the code precedence. Confirmed 2026-09-07 for all five `xrechnung|buyer.{contact.email,contact.name,contact.phone,legalRegScheme,tradeName}|json` rows: XRechnung 3.0.2 CIUS model (`.../Germany/xrechnung-3.0.2-bundle-2026-01-31/xrechnung-3.0.2-xrechnung-model-2026-01-31/model/xrechnung-cius-model.xml`) has BT-45 @3284, BT-47 @3286, BG-9 @3298, BT-56/57/58 @3299-3301 all `min-occurs="0"`, and BT-47's scheme-id component @826-828 is 0..1 → not blocking; `UapiBusinessRecipient` (uapi-map.ts ~124-134) has no tradeName/contact/scheme fields and the fate table marks the reason "lost" → R2 stands.
+
+**How to apply:** For any severity-correct verdict on a `missingFrom=json` row with "xml mapped": check (a) the operation type really lacks the field, (b) the CIUS/format model for the term's cardinality (only to test the blocking escalation). Contrast trap: XRechnung tightens _seller_ contact BG-6 to mandatory (model @3276-3280) but leaves _buyer_ BG-9 optional — don't conflate. Sibling rows with the same UAPI_LOSSY_FIELDS reason ("BusinessRecipient has no trading name...") exist for ubl/cii; same R2 logic, only the format cardinality half needs re-checking. See [[lines-id-severity-evidence]] for the lines.{i}.id chain.
+
+Also confirmed 2026-09-07: `cii|references.{salesOrder,invoicedObject}|json` (BT-14/BT-18, both 0..1 in bt-catalog). Rendered = cii-map.ts lines 220/250 real paths; uncarriable = UAPI_LOSSY_FIELDS uapi-map.ts ~576-583 ("document.references carries neither BT-14 nor BT-18...") + spec `DocumentReferences` closed (`additionalProperties: false`, properties: buyer/project/contract/purchase_order/despatch_advice/tender/buyer_routing/preceding_document — no sales_order/invoiced_object).
+
+CII five confirmed 2026-09-07: `cii-map.ts` partyRows template @44-131 renders all five (TradingBusinessName, SpecifiedLegalOrganization/ID/@schemeID, DefinedTradeContact PersonName/Telephone/Email), buyer instantiation @200-207 (BT-45, BT-47-1, BT-56/57/58 under ram:BuyerTradeParty). CII binding = EN 16931-3-3 direct, no CIUS tightening: `vendor/schematron/EN16931-CII-validation.xslt` has no assert requiring buyer contact/trading name — only CII-SR-356 (warning: _Payee_ must not carry TradingBusinessName). Spec side (all-2026-06-01): `BusinessRecipient` closed (`additionalProperties: false`), `CompanyIdentifier` = bare string 1-20 chars (no scheme slot), `LegalName` = PlainString128.

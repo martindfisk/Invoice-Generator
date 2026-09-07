@@ -50,6 +50,16 @@ def test_every_blocking_row_has_been_reviewed():
     assert blocking - judged == set(), f"unreviewed blocking rows: {sorted(blocking - judged)}"
 
 
+def test_every_should_fix_cause_has_been_reviewed():
+    # The report currently grades no row `blocking`, which would leave the test above vacuous —
+    # the audit's actual working tier is should-fix. Claims carry sample row ids per cause, so
+    # coverage is asserted per cause (verbatim reason), not per row.
+    judged = {claim["reason"] for claim in CLAIMS}
+    should_fix = {row["reason"] for row in ROWS if row["severity"] == "should-fix"}
+    unreviewed = sorted(should_fix - judged)
+    assert unreviewed == [], f"unreviewed should-fix causes: {unreviewed[:5]}"
+
+
 def test_every_verdict_uses_the_declared_vocabulary():
     for claim in CLAIMS:
         assert claim["status"] in STATUSES, claim

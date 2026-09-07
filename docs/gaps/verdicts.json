@@ -1,0 +1,2053 @@
+{
+ "generatedBy": "/gap-audit workflow run wf_c50be5e4-7f4",
+ "generatedAt": "2026-09-07T15:11:47+00:00",
+ "report": "docs/gaps/gap-report.json",
+ "tiers": [
+  "blocking",
+  "should-fix"
+ ],
+ "slices": 7,
+ "causes": 53,
+ "claims": [
+  {
+   "reason": "BusinessRecipient has no trading name, no ISO 6523 scheme for company_id and no contact group",
+   "rowIds": [
+    "cii|buyer.contact.email|json",
+    "cii|buyer.contact.name|json",
+    "cii|buyer.contact.phone|json",
+    "cii|buyer.legalRegScheme|json",
+    "cii|buyer.tradeName|json"
+   ],
+   "format": "cii",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "docs/gaps/README.md lines 49-57 (R2 definition); frontend/src/cii-map.ts lines 44-131; frontend/src/bt-catalog.json (BT-45/56/57/58 cardinality 0..1)",
+   "source": {
+    "kind": "repo",
+    "ref": "frontend/src/cii-map.ts"
+   },
+   "summary": "should-fix is the right band: rendered by the syntax, uncarriable by the operation, optional in EN so never blocking.",
+   "verifier": {
+    "refuted": false,
+    "reason": "All three legs hold for all five cii|buyer.*|json rows. (1) Rendered by the syntax: cii-map.ts lines 44-131 (cited range) template all five fields — TradingBusinessName, SpecifiedLegalOrganization/ID/@schemeID, DefinedTradeContact PersonName/Telephone/Email — instantiated for the buyer at lines 200-207 (BT-45, BT-47-1, BT-56/57/58 under ram:BuyerTradeParty). (2) Uncarriable by the operation: uapi-map.ts:619-625 lists exactly these five under the verbatim reason, and the active spec (fiskaly.unified-api.all.2026-06-01.yaml) proves it — BusinessRecipient is additionalProperties:false with no trading-name/contact properties, CompanyIdentifier is a bare 1-20 char string with no ISO 6523 scheme slot. (3) Optional in EN, never blocking: bt-catalog.json has BT-45/56/57/58 all 0..1 as cited (BT-47, parent of legalRegScheme, also 0..1 in the same file though omitted from the citation); CII is a direct EN 16931-3-3 binding with no CIUS tightening — vendor/schematron/EN16931-CII-validation.xslt has no assert requiring buyer contact or trading name (only CII-SR-356, a payee-only 'should not be present' warning); mandatory buyer content in EN is limited to BR-07 name and BR-10/BR-11 address. Rows carry severity should-fix / source R2, matching the README R2 definition at docs/gaps/README.md lines 49-57 (verified). Same conclusion as the previously confirmed xrechnung siblings; for CII, EN 16931 applies directly (listed syntax), not by analogy.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "details.number is optional; without it the entry's position becomes the line id",
+   "rowIds": [
+    "cii|lines.{i}.id|json"
+   ],
+   "format": "cii",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "frontend/src/cii-map.ts line 442; frontend/src/bt-catalog.json BT-126 (1..1); docs/gaps/README.md lines 49-57",
+   "source": {
+    "kind": "repo",
+    "ref": "frontend/src/cii-map.ts"
+   },
+   "summary": "should-fix is right: mandatory term, rendered, but authored values are lost.",
+   "verifier": {
+    "refuted": false,
+    "reason": "All citations verified on disk and the severity-correct claim for row cii|lines.{i}.id|json holds. (1) Mandatory term: frontend/src/bt-catalog.json lines 1235-1241 gives BT-126 cardinality 1..1, and BR-21 is flag=fatal in vendor/schematron/EN16931-CII-validation.xslt lines 1287-1292, testing ram:AssociatedDocumentLineDocument/ram:LineID non-empty — CII (Factur-X/ZUGFeRD EN 16931 profile) is a true EN 16931 syntax binding, so cardinality binds directly, no analogy caveat. (2) Rendered: frontend/src/cii-map.ts lines 442-446 is exactly the cited row mapping lines.{i}.id (BT-126) to ${LINE}/ram:AssociatedDocumentLineDocument/ram:LineID, so the syntax renders the element — R1 blocking (docs/gaps/README.md line 51: syntax renders no element AND nothing downstream can supply it) does not apply, also because the value is always positionally derivable. (3) Authored values lost: the row's belongsAt /entries/{i}/details/number resolves to spec EntryNumber (spec/fiskaly.unified-api.all.2026-06-01.yaml lines 7225-7230), an optional UnsignedInteger4 that \"defaults to the sequence of the array index, starting at one\" — a string BT-126 identifier cannot be carried and an unsent one is replaced by position, matching the row's verbatim UAPI_PARTIAL_FIELDS reason (frontend/src/uapi-map.ts line 739). (4) Rule derivation: README lines 49-57 define R2 should-fix as \"syntax renders it but the operation cannot carry it\"; the row's source (structural · uapi-map.UAPI_PARTIAL_FIELDS · R2) matches, and R3 is excluded because the term is 1..1 mandatory. should-fix is correct; the claim stands.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "The bank details only travel inside a CREDIT_TRANSFER instruction",
+   "rowIds": [
+    "cii|payment.accountName|json",
+    "cii|payment.bic|json",
+    "cii|payment.iban|json"
+   ],
+   "format": "cii",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "frontend/src/cii-map.ts lines 305-317; frontend/src/uapi-map.ts lines 460-482; docs/gaps/README.md lines 49-57",
+   "source": {
+    "kind": "repo",
+    "ref": "frontend/src/uapi-map.ts"
+   },
+   "summary": "should-fix is right: real conditional data loss, never blocking.",
+   "verifier": {
+    "refuted": false,
+    "reason": "Confirmed on all legs. (1) Citations verified: uapi-map.ts 460-482 is the payment() composer whose `iban && accountName && bic` gate drops bank details into a bank-slot-less UNKNOWN instruction when the trio is incomplete; cii-map.ts 305-321 renders BT-84/85/86 at real CII D16B paths; README.md 49-57 carries the R1-R4 severity rules. (2) 'Never blocking' holds twice over: severityFor (gap-report.ts 162-183) grants R1 only to missingFrom=xml rows and these are missingFrom=json with the syntax rendering all three; and no CII profile makes bank details unconditionally mandatory — EN 16931 BR-61 conditions BT-84 on BT-81 credit-transfer codes (vendor/schematron/EN16931-CII-validation.xslt line 311), BT-85/86 are 0..1 in conditional BG-17, and even XRechnung-CII BR-DE-23-a requires BG-17 only when BT-81 ∈ {30,58} (XRechnung-CII-validation.xsl line 1787). CII is a genuine EN 16931 syntax binding, so this is direct citation, not analogy. (3) 'Real conditional data loss' is exact: the active spec's CreditTransferPaymentInstruction requires all of account/name/payment_service_provider and is closed, and UnknownPaymentInstruction is closed with no bank slots, so an EN-valid partial trio (e.g. IBAN alone) provably cannot travel, while a complete trio does. All three rows carry severity should-fix from rule R2 (uapi-map.UAPI_PARTIAL_FIELDS), which is the correct derivation.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "document.references carries neither BT-14 nor BT-18, and despatch_advice is a bare number without BT-16's date",
+   "rowIds": [
+    "cii|references.invoicedObject|json",
+    "cii|references.salesOrder|json"
+   ],
+   "format": "cii",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "frontend/src/cii-map.ts lines 220, 250; frontend/src/bt-catalog.json (BT-14/BT-18 0..1); docs/gaps/README.md lines 49-57",
+   "source": {
+    "kind": "repo",
+    "ref": "frontend/src/cii-map.ts"
+   },
+   "summary": "should-fix is the right band for two optional, rendered, uncarriable references.",
+   "verifier": {
+    "refuted": false,
+    "reason": "Confirmed. Both rows (cii|references.salesOrder|json BT-14, cii|references.invoicedObject|json BT-18) are severity should-fix via rule R2. All three cited sources verify: cii-map.ts line 220 renders BT-14 (ram:SellerOrderReferencedDocument/ram:IssuerAssignedID) and line 250 renders BT-18 (ram:AdditionalReferencedDocument[TypeCode=130]) with real paths; bt-catalog.json gives both terms cardinality 0..1 (optional); docs/gaps/README.md lines 49-57 define R2 should-fix as \"the syntax renders it but the operation cannot carry it\" — exactly these rows. Uncarriable is proven: UAPI_LOSSY_FIELDS (uapi-map.ts ~576-583) lists both under the verbatim row reason, and the active spec's DocumentReferences schema is additionalProperties:false with no sales_order/invoiced_object property. Blocking would be wrong (terms optional, missingFrom is json not xml; CEN CII XSLT imposes no requirement — CII-SR-107 restricts only line-level SpecifiedLineTradeAgreement, not the header BT-14 binding) and note would be wrong (R2 precedes the R3 optional fallback). EN 16931 semantics apply directly: CII is an EN 16931 syntax binding (CEN/TS 16931-3-3), not a national schema.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
+   "rowIds": [
+    "cii|seller.address.city|json",
+    "cii|seller.address.country|json",
+    "cii|seller.address.number|json",
+    "cii|seller.address.postCode|json",
+    "cii|seller.address.region|json",
+    "cii|seller.address.street|json",
+    "cii|seller.electronicAddress.id|json",
+    "cii|seller.electronicAddress.scheme|json",
+    "cii|seller.legalRegId|json",
+    "cii|seller.legalRegScheme|json",
+    "cii|seller.name|json",
+    "cii|seller.taxId|json",
+    "cii|seller.tradeName|json",
+    "cii|seller.vatId|json"
+   ],
+   "format": "cii",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "docs/gaps/README.md lines 49-57 ('A mandatory business term missing from the operation is deliberately not blocking...'); frontend/src/cii-map.ts lines 44-131; docs/reference/fatturapa/README.md (capture covers FatturaPA only)",
+   "source": {
+    "kind": "repo",
+    "ref": "docs/gaps/README.md"
+   },
+   "summary": "should-fix is correct: not blocking by the rubric's explicit design, not note because no CII capture licenses R4.",
+   "verifier": {
+    "refuted": false,
+    "reason": "Confirmed. All five rows (cii|seller.address.{city,country,number,postCode,region}|json) exist in docs/gaps/gap-report.json with severity should-fix, source \"structural · uapi-map.UAPI_LOSSY_FIELDS · R2\", presentIn \"xml mapped; json —\". (1) Not blocking: R1 requires the syntax to render no element (README lines 49-54), but frontend/src/cii-map.ts lines 84-119 (within cited 44-131, seller instantiation line 175) carry real CII paths for all five (ram:PostalTradeAddress/{PostcodeCode,LineTwo,CityName,CountryID,CountrySubDivisionName}); README lines 56-57 match the claim's quote verbatim and explicitly name seller-from-Taxpayer as the deliberate not-blocking case — covering even the 1..1 BT-40. severityFor (frontend/src/gap-report.ts lines 162-183) implements this: R1 only fires on missingFrom=xml. (2) Not note: R4 (→note) requires a platform fate proven by capture; FATES_BY_FORMAT in frontend/src/uapi-field-fate.ts lines 367-369 contains only fatturapa (\"fateFor answers undefined for every other format\" per its header comment), and docs/reference/fatturapa/README.md confirms the sole capture (2026-08-25) covers the FatturaPA path only — so no CII capture can license R4, exactly as claimed. R3 also inapplicable: applicability is null (applicable=true) and the R2 branch (json missing + carriedInXml) precedes the R3 fallback regardless of the 0..1 cardinality of four fields. Adversarial cross-check: even the fatturapa seller.address|json analogues, where a capture exists, remain R2 (no JSON pointer for fateFor to match), and the report's only R4 row is fatturapa|payment.meansCode|xml — the rubric is applied consistently, R2 should-fix is correct. Judged against the repo's own rubric plus EN 16931 semantics for the CII/Factur-X EN profile (BG-5 1..1, BT-40 1..1); severity semantics here are rubric-defined, not EN-cardinality-defined, by the rubric's explicit design.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "totals.vat is a three-value VAT summary; the EN 16931 document-level sums and adjustments are not carried",
+   "rowIds": [
+    "cii|totals.allowance|json",
+    "cii|totals.charge|json",
+    "cii|totals.prepaid|json",
+    "cii|totals.rounding|json"
+   ],
+   "format": "cii",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "frontend/src/cii-map.ts lines 380-416; docs/gaps/README.md lines 49-57; frontend/src/bt-catalog.json (0..1)",
+   "source": {
+    "kind": "repo",
+    "ref": "frontend/src/cii-map.ts"
+   },
+   "summary": "should-fix is right for the four uncarriable BG-22 adjustments.",
+   "verifier": {
+    "refuted": false,
+    "reason": "All four rows (cii|totals.{allowance,charge,prepaid,rounding}|json) carry severity should-fix via R2, and R2 fits exactly: cii-map.ts lines 380-416/420 render all four as ram:ChargeTotalAmount/AllowanceTotalAmount/RoundingAmount/TotalPrepaidAmount (syntax renders it), while the spec's Totals/TotalsVat schemas (additionalProperties:false, only vat.{amount,exclusive,inclusive}) make them genuinely uncarriable (operation cannot carry it); the verbatim lossy reason at uapi-map.ts 644-650 lists exactly these fields. Not blocking: BT-107/108/113/114 are 0..1 in bt-catalog.json and the CII binding's own rules (vendor/schematron/EN16931-CII-validation.xslt, BR-CO-13/16 analogs lines 687-704, BR-CO-11/12 lines 657-674) tolerate their absence; R1 also requires the syntax to render no element, and here it does. Not note: authored model data is silently lost, which the report's R2 explicitly ranks above R3 optionality. EN 16931 applied directly (CII is an EN 16931 syntax binding). Only quibble: BT-113 is a prepayment, not strictly an \"adjustment\" — terminology, not substance.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "BT-3 is derived by fiskaly; the operation only distinguishes INVOICE from CORRECTION",
+   "rowIds": [
+    "cii|typeCode|json"
+   ],
+   "format": "cii",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "docs/gaps/README.md lines 56-57; frontend/src/cii-map.ts line 150",
+   "source": {
+    "kind": "repo",
+    "ref": "docs/gaps/README.md"
+   },
+   "summary": "should-fix is the rubric's own, defensible call for derived-but-mandatory BT-3.",
+   "verifier": {
+    "refuted": false,
+    "reason": "Citation verified and claim confirmed. docs/gaps/README.md lines 56-57 state verbatim that a mandatory BT missing from the operation is \"deliberately not blocking: fiskaly derives BT-3\" — the rubric's own call, exactly as the reviewer says. Row cii|typeCode|json carries severity should-fix from rule R2 (\"syntax renders it but the operation cannot carry it\"), and both R2 conditions hold: frontend/src/cii-map.ts line 150 maps typeCode/BT-3 to rsm:ExchangedDocument/ram:TypeCode (syntax renders it, so R1 blocking would be wrong), and the active spec fiskaly.unified-api.all.2026-06-01.yaml (fee9b16d1c7c) constrains InvoiceTransaction.type to [INVOICE] and CorrectionTransaction.type to [CORRECTION] with no UNTDID 1001 property anywhere (operation cannot carry authored codes like 326/384/389). \"Mandatory\" is grounded in the CII binding directly, not by analogy: fatal BR-04 in vendor/schematron/EN16931-CII-validation.xslt lines 916-929 (\"An Invoice shall have an Invoice type code (BT-3)\"), mirrored at CEN-EN16931-UBL.sch line 83; row cardinality 1..1. R3 (optional) and R4 (platform, which requires a capture — none exists for CII, as the row's evidence states) both fit worse. Severity-correct: confirmed.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "rateCode/exemptionCode are many-to-one: the SystemVatRateCode and SystemVatExemptionCode enums cannot express Natura or a VATEX code",
+   "rowIds": [
+    "cii|vatBreakdown.{i}.vatexCode|json"
+   ],
+   "format": "cii",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "frontend/src/cii-map.ts line 348; spec/fiskaly.unified-api.all.2026-06-01.yaml lines 4768-4820; docs/gaps/README.md lines 49-57",
+   "source": {
+    "kind": "repo",
+    "ref": "frontend/src/cii-map.ts"
+   },
+   "summary": "should-fix is right: non-derivable authored data is lost.",
+   "verifier": {
+    "refuted": false,
+    "reason": "Confirmed. Row cii|vatBreakdown.{i}.vatexCode|json (gap-report.json:632, BT-121, should-fix, R2) matches all citations: cii-map.ts:348 is exactly the vatexCode→ram:ExemptionReasonCode (BT-121) mapping row, so the CII syntax renders the term (R1 impossible); spec yaml 4768-4820 is the SystemVatExemptionCode closed enum (NOT_SUBJECT/NOT_TAXABLE/CAUSE_1..31) with no VATEX values and many-to-one IT mapping, so the authored VATEX code cannot travel and cannot be derived back; README.md:49-57 defines R2 as \"syntax renders it but the operation cannot carry it, so authored data never reaches fiskaly\" — the reviewer's exact paraphrase. Not blocking: BT-121 is 0..1 and the vendored CEN CII rules (EN16931-CII-validation.xslt lines 1977/2454/2613/2772/2961) are disjunctive — ExemptionReason text (BT-120, carried via entries[].vat.reason) alone satisfies them. Not a mere note: authored + syntax-mapped + operation-uncarriable is the R2 definition, which the report's rule engine ranks above R3-optional. EN 16931 semantics apply directly since CII is a CEN/TS 16931-3-3 binding, not an analogy case.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "The operation accepts this pointer but no model field addresses it",
+   "rowIds": [
+    "operation|/details/creators/{i}/label|model",
+    "operation|/details/creators/{i}/name/forename|model",
+    "operation|/details/creators/{i}/name/gender|model",
+    "operation|/details/creators/{i}/name/surname|model",
+    "operation|/details/creators/{i}/type|model",
+    "operation|/entries/{i}/data/vat/fiscal_location/country|model",
+    "operation|/tax_representative/country|model",
+    "operation|/tax_representative/name|model",
+    "operation|/tax_representative/vat_number|model"
+   ],
+   "format": "fatturapa",
+   "missingFrom": "model",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd:29: <xs:element name=\"RappresentanteFiscale\" type=\"RappresentanteFiscaleType\" minOccurs=\"0\" />; vendor/schematron/CEN-EN16931-UBL.sch:212: '[BR-18]-The Seller tax representative name (BT-62) shall be provided in the Invoice, if the Seller (BG-4) has a Seller tax representative party (BG-11)'; spec required arrays as cited.",
+   "source": {
+    "kind": "vendor",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
+   },
+   "summary": "should-fix is right for the nine conditionally-required pointers; blocking would be wrong because nothing here is unconditionally mandatory in EN 16931 (by analogy) or in FatturaPA's own XSD.",
+   "verifier": {
+    "refuted": false,
+    "reason": "Confirmed. Both citations verify verbatim at the exact cited lines: vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd:29 has RappresentanteFiscale minOccurs=\"0\" (children mandatory only when the block is present), and vendor/schematron/CEN-EN16931-UBL.sch:212 carries the conditional BR-18 text (BR-56/BR-20 at lines 214/217 likewise scoped to cac:TaxRepresentativeParty, i.e. BG-11 present). The fatturapa/model slice of docs/gaps/gap-report.json contains exactly nine should-fix rows (the five creators pointers given, three tax_representative pointers, fiscal_location/country), all rule R2. The active spec (fiskaly.unified-api.all.2026-06-01.yaml, sha matches the report) proves each is conditionally required: required arrays (TaxRepresentative=[name,vat_number,country]; InvoiceDetails=[creators]; PersonRecordCreator=[type,label]; PersonName=[gender,forename,surname]; FiscalLocation=[country]) all sit under ancestors absent from InvoiceTransaction.required (details, tax_representative) or optional (name, fiscal_location — \"when omitted, the taxpayer's registered fiscal region is used as default\"). Blocking (R1: standard-mandated term the syntax renders no element for) cannot apply: EN 16931 has no term for creator label/type/forename/surname/gender or per-line fiscal jurisdiction; BT-62/63/69 are conditional on BG-11 (0..1); FatturaPA renders the tax representative (element exists); and these are model gaps, not rendering gaps. The claim correctly frames EN 16931 as analogy since FatturaPA is not a CIUS. The optional siblings (prefix/infix/suffix, region) got note, confirming the required-array split is coherent.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "Only a CONSUMER recipient carries a PersonName; a BUSINESS recipient has one legal name and no forename, surname or gender",
+   "rowIds": [
+    "fatturapa|buyer.person.forename|json",
+    "fatturapa|buyer.person.surname|json"
+   ],
+   "format": "fatturapa",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd AnagraficaType; docs/reference/fatturapa/README.md CessionarioCommittente section ('.name → Anagrafica/Denominazione — mapped')",
+   "source": {
+    "kind": "vendor",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
+   },
+   "summary": "should-fix is right: FatturaPA renders Nome+Cognome (its own schema), the operation cannot carry them for the mandated BUSINESS recipient",
+   "verifier": {
+    "refuted": false,
+    "reason": "Confirmed on every leg. (1) vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd lines 680-697: AnagraficaType is an xs:choice of Denominazione | (Nome+Cognome) — FatturaPA's own schema renders Nome+Cognome; buyer-side mapping rows exist (fatturapa-map.ts lines 288-299, Anagrafica/Nome fpa 1.4.1.3.2, Cognome 1.4.1.3.3), so 'xml mapped' holds. (2) docs/reference/fatturapa/README.md lines 46-48 (CessionarioCommittente): '.name → Anagrafica/Denominazione … all mapped' — quote accurate. (3) spec/fiskaly.unified-api.all.2026-06-01.yaml: BusinessRecipient is closed (additionalProperties: false), name → LegalName → PlainString128 bare string; PersonName (forename/surname) exists only on ConsumerRecipient.name → NaturalName; ConsumerRecipient's description says 'Not supported yet', so BUSINESS is the only supported recipient type — 'mandated BUSINESS recipient' is grounded in the contract itself, and the operation genuinely cannot carry forename/surname. (4) Severity rule fit: docs/gaps/README.md line 52 defines R2 should-fix as 'syntax renders it but the operation cannot carry it' — both rows are severity should-fix via UAPI_PARTIAL_FIELDS R2 (reason string verbatim at uapi-map.ts line 730). Not blocking: FatturaPA's own choice model lets a business buyer be named by Denominazione (populated from .name, proven by the captured transmission), so no FatturaPA-mandatory content becomes unrenderable; R1 also requires the syntax to render no element, which is false here. Judgment rests on FatturaPA's own specification (XSD 1.2.3), not EN 16931 analogy.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "identification names one identifier, so a buyer with a VAT id sends only that; its codice fiscale is preserved but not editable through the JSON",
+   "rowIds": [
+    "fatturapa|buyer.taxId|json"
+   ],
+   "format": "fatturapa",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd DatiAnagraficiCessionarioType; SDI control 00417 as curated in frontend/src/fatturapa-rules.ts",
+   "source": {
+    "kind": "vendor",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
+   },
+   "summary": "should-fix is right: authored CF lost, FatturaPA renders it, not blocking because IdFiscaleIVA alone satisfies SDI (control 00417 requires either)",
+   "verifier": {
+    "refuted": false,
+    "reason": "Confirmed on all legs. Row fatturapa|buyer.taxId|json is should-fix (R2 via UAPI_PARTIAL_FIELDS). (1) Authored CF lost: uapi-map.ts identification() (lines 374-380) sends one identifier, vatId wins, so a buyer with a VAT id never transmits its codice fiscale; reason verbatim at lines 728-729. (2) FatturaPA renders it: fatturapa-map.ts line 274 maps buyer.taxId to DatiAnagrafici/CodiceFiscale (1.4.1.2, BT-46) and vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd DatiAnagraficiCessionarioType (lines 762-768) carries the CodiceFiscale element — so R1 (syntax renders no element) cannot apply. (3) Not blocking: both identifiers are minOccurs=0 in the XSD; curated 00417 (fatturapa-rules.ts lines 228-237) fires only when both vatId and taxId are absent; and FatturaPA's own Specifiche tecniche V1.4 sec. 1.4 states CodiceFiscale is 'in alternativa non esclusiva' to IdFiscaleIVA (may be omitted when IdFiscaleIVA is valued) — FatturaPA's own specification, not EN 16931 analogy. Matches README R2 definition exactly.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "The Italian document extras (bollo virtuale, CUP, CIG) have no counterpart in the operation",
+   "rowIds": [
+    "fatturapa|it.bollo.amount|json",
+    "fatturapa|it.bollo.virtuale|json",
+    "fatturapa|it.cig|json",
+    "fatturapa|it.cup|json"
+   ],
+   "format": "fatturapa",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd (DatiBollo minOccurs=0; CodiceCUP/CodiceCIG minOccurs=0); frontend/src/fatturapa-map.ts labels (L. 3/2003 art. 11, L. 136/2010 art. 3)",
+   "source": {
+    "kind": "vendor",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
+   },
+   "summary": "should-fix is right: authored bollo/CUP/CIG are silently dropped although FatturaPA renders them; CIG/CUP are legally significant for traceability",
+   "verifier": {
+    "refuted": false,
+    "reason": "Confirmed on all legs. Citation verified: vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd exists and shows DatiBollo minOccurs=0 (line 121) and CodiceCUP/CodiceCIG minOccurs=0 (lines 490-491); fatturapa-map.ts labels cite L. 3/2003 art. 11 (CUP, line 465) and L. 136/2010 art. 3 (CIG, line 471) exactly as claimed. All four rows exist with severity should-fix and shape \"model; json —; xml mapped\". Silent drop proven: uapi-map.ts UAPI_LOSSY_FIELDS (lines 584-588) lists exactly it.bollo.virtuale, it.bollo.amount, it.cup, it.cig under the rows' verbatim reason; the closed Document schema has no stamp-duty property. FatturaPA renders all four via real paths (DatiBollo/BolloVirtuale, DatiBollo/ImportoBollo, DatiOrdineAcquisto/CodiceCUP, DatiOrdineAcquisto/CodiceCIG) matching real XSD elements. Legal significance per Italian law itself (not EN analogy): L. 136/2010 art. 3 (tracciabilità dei flussi finanziari) and DL 66/2014 art. 25 make CIG/CUP conditionally mandatory for public-contract invoices, yet minOccurs=0 and no SDI 004xx control mandates them universally — so should-fix rather than blocking matches both substance and the report's R2 rule (docs/gaps/README.md: syntax renders it but operation cannot carry it). Nuance not refuting severity: spec DocumentReferences has project/tender slots (BT-11/BT-17, IT_EI applicable), but uapi-map.ts (lines 489/493) already fills them from the model's references.project/tenderOrLot, so authored it.cig/it.cup still have no operation home.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "details.number is optional; without it the entry's position becomes the line id",
+   "rowIds": [
+    "fatturapa|lines.{i}.id|json"
+   ],
+   "format": "fatturapa",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd DettaglioLineeType (NumeroLinea 1..1); docs/reference/fatturapa/README.md line-discard statement",
+   "source": {
+    "kind": "vendor",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
+   },
+   "summary": "should-fix is right: an authored line id that differs from position is lost, and corrections reference entry numbers",
+   "verifier": {
+    "refuted": false,
+    "reason": "Confirmed. Citation verified on disk: vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd has DettaglioLineeType at line 1000 with NumeroLinea at line 1002 carrying no occurrence attributes (XSD default 1..1), NumeroLineaType (lines 1427-1432) = xs:integer 1-9999; docs/reference/fatturapa/README.md lines 89-90 carries the line-discard statement (\"We currently send details.description and details.number; both go nowhere\"). Severity should-fix (R2) is right: not blocking because FatturaPA's own XSD requirement is always satisfied — the gateway assigns NumeroLinea from entry position, so the element is never absent (FatturaPA's own spec cited, not EN 16931 by analogy); the loss is real because spec EntryNumber (lines 7225-7230) is UnsignedInteger4 so non-numeric authored ids (BT-126 free string) cannot be carried at all, and the declared fate evidence (uapi-field-fate.ts lines 261-267, quoted verbatim in the row) says even numeric ones are discarded while the XSD permits non-sequential values. \"Corrections reference entry numbers\" is verbatim in the spec at line 7228: \"In case of a correction record, this number is required as it indicates the original entry number being corrected.\" Caveat: the captured payload never sent details.number, so the capture proves only the position-default; discard-when-sent rests on the cited README declaration — but the verdict is robust, since even an honored EntryNumber would still lose non-numeric ids, keeping severity at R2, never R1.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "AltriDatiGestionali has no counterpart in the operation",
+   "rowIds": [
+    "fatturapa|lines.{i}.it.altriDatiGestionali.riferimentoData|json",
+    "fatturapa|lines.{i}.it.altriDatiGestionali.riferimentoNumero|json",
+    "fatturapa|lines.{i}.it.altriDatiGestionali.riferimentoTesto|json",
+    "fatturapa|lines.{i}.it.altriDatiGestionali.tipoDato|json"
+   ],
+   "format": "fatturapa",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd (AltriDatiGestionali minOccurs=0 maxOccurs=unbounded); docs/reference/fatturapa/README.md FAQ-45 note",
+   "source": {
+    "kind": "vendor",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
+   },
+   "summary": "should-fix is right: authored management data is lost though FatturaPA renders it; optional in the XSD, so not blocking",
+   "verifier": {
+    "refuted": false,
+    "reason": "Confirmed. XSD citation exact: vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd line 1017 has AltriDatiGestionali minOccurs=\"0\" maxOccurs=\"unbounded\" (type at 1026-1033; TipoDato required only within the optional block). README FAQ-45 note exists at docs/reference/fatturapa/README.md lines 75-77: gateway does not implement AltriDatiGestionali. All four rows verified: severity should-fix, reason verbatim from UAPI_LOSSY_FIELDS (uapi-map.ts 636-641). Loss is real — active spec fee9b16 has no counterpart (DocumentReferences is closed/document-level; EntryProperties is a generic string map, not a typed management-data carrier); FatturaPA renders it — fatturapa-map.ts 532-553 maps all four to DettaglioLinee/AltriDatiGestionali (fpa 2.2.1.16.1-.4). Not blocking is right per FatturaPA's own schema (optional, no SDI 004xx control mandates it; no EN BT involved) and per the report taxonomy (R1 requires missingFrom=xml; these are missingFrom=json → R2 should-fix).",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "rateCode/exemptionCode are many-to-one: the SystemVatRateCode and SystemVatExemptionCode enums cannot express Natura or a VATEX code",
+   "rowIds": [
+    "fatturapa|lines.{i}.vat.natura|json",
+    "fatturapa|vatBreakdown.{i}.natura|json"
+   ],
+   "format": "fatturapa",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd NaturaType; SDI controls 00400/00429 (elenco controlli, curated in frontend/src/fatturapa-rules.ts)",
+   "source": {
+    "kind": "vendor",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
+   },
+   "summary": "should-fix is right: the gateway must derive a sub-code the author cannot choose, and a wrong N-sub-code misstates the legal basis of the exemption",
+   "verifier": {
+    "refuted": false,
+    "reason": "Confirmed. Both rows (fatturapa|lines.{i}.vat.natura|json, fatturapa|vatBreakdown.{i}.natura|json) are should-fix R2 and the reviewer's rationale is factually right on FatturaPA's own sources. NaturaType (vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd line 1077) gives each sub-code a distinct legal basis (N3.1 esportazioni vs N3.2 cessioni intracomunitarie; N6.1-N6.9 reverse-charge cases) and marks generic N2/N3/N6 invalid for invoices from 2021-01-01 (comment lines 1084/1100/~1146) — so a concrete sub-code must be rendered. The operation cannot express it: the IT spec's closed SystemVatExemptionCode enum (spec/fiskaly.uapi.e-invoice-it.2026-06-01.yaml line 4243+, referenced at entry 6813 and breakdown 6944) maps only to Natura families per the documented IT table (all-spec lines 4770-4780: NOT_SUBJECT→N2, NOT_TAXABLE→N3, CAUSE_1→N1, CAUSE_2→N4, CAUSE_3→N5, CAUSE_4→N6; no CAUSE covers N7), so the gateway must derive the sub-code — uapi-map.ts line 710 marks this reason's fate 'platform', and a wrong sub-code misstates the legal basis. Severity is taxonomy-correct: not R1-blocking because the syntax renders Natura (fatturapa-map.ts lines 524/564; docs/gaps/README.md lines 51-57 make derived mandatory terms deliberately not blocking, BT-3 precedent); not R3-note because Natura is mandatory when AliquotaIVA=0 per SDI 00400/00429, both curated in frontend/src/fatturapa-rules.ts (lines 78, 134). Verdict rests on FatturaPA's own specification (XSD 1.2.3 + elenco controlli), not EN 16931 analogy. Caveat: the captured transmission (docs/reference/fatturapa/) has no exempt line (both lines AliquotaIVA 22.00), so the derivation is proven from the contract and fate declarations, not from an observed exempt artifact — this does not weaken the severity verdict.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "The bank details only travel inside a CREDIT_TRANSFER instruction",
+   "rowIds": [
+    "fatturapa|payment.accountName|json",
+    "fatturapa|payment.bic|json",
+    "fatturapa|payment.iban|json"
+   ],
+   "format": "fatturapa",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd DettaglioPagamentoType; docs/reference/fatturapa/tested-response.xml <IstitutoFinanziario>/<IBAN>/<BIC>",
+   "source": {
+    "kind": "vendor",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
+   },
+   "summary": "should-fix is right: when the payment means is not a credit transfer, authored bank details are lost though FatturaPA renders them",
+   "verifier": {
+    "refuted": false,
+    "reason": "Confirmed. All three rows (fatturapa|payment.{iban,accountName,bic}|json, BT-84/85/86) carry severity should-fix with reason \"The bank details only travel inside a CREDIT_TRANSFER instruction\" (source uapi-map.UAPI_PARTIAL_FIELDS · R2). Cited XSD verified: DettaglioPagamentoType (Schema_VFPR12_v1.2.3.xsd lines 818-842) has IstitutoFinanziario/IBAN/BIC all minOccurs=\"0\" unconditioned on ModalitaPagamento — FatturaPA's own schema renders these terms for any payment means (no SDI 004xx control ties them to MP05). Cited capture verified: tested-response.xml lines 104-111 show the gateway rendering all three from the payload's CREDIT_TRANSFER instruction. Loss mechanism verified in the active spec (fiskaly.unified-api.all.2026-06-01.yaml 8429-8492): payee bank slots exist only in the closed CreditTransferPaymentInstruction; DirectDebitPaymentInstruction carries only debited_account (BT-91, buyer side) and UnknownPaymentInstruction only text — so with a non-credit-transfer means the authored payee details have no JSON slot. Severity matches the report taxonomy (docs/gaps/README.md line 52: R2 = syntax renders it but operation cannot carry it): not blocking because DatiPagamento is minOccurs=\"0\" (XSD line 40) and the elements are optional, so FatturaPA never mandates them; not note because authored data is genuinely lost. Minor nuance only: the client mapper gates on trio completeness (uapi-map.ts 460-482), not on the means code, so a complete trio with non-CT means loses the means rather than the details — a simplification in the reviewer's phrasing, true at the contract level the row asserts.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "The payment instruction is a bank transfer or nothing; ModalitaPagamento and the FatturaPA payment conditions are not carried",
+   "rowIds": [
+    "fatturapa|payment.conditions|json",
+    "fatturapa|payment.italianMeansCode|json"
+   ],
+   "format": "fatturapa",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd DatiPagamentoType/DettaglioPagamentoType; docs/reference/fatturapa/tested-response.xml TP02/MP05",
+   "source": {
+    "kind": "vendor",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
+   },
+   "summary": "should-fix is right: mandatory elements are always rendered with derived values, so an authored TP01/MP12 silently becomes TP02/MP05",
+   "verifier": {
+    "refuted": false,
+    "reason": "Confirmed against sources read directly. XSD vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd: CondizioniPagamento (line 793) and ModalitaPagamento (line 821) have no minOccurs → 1..1 mandatory within DatiPagamentoType/DettaglioPagamentoType, while DatiPagamento itself is minOccurs=\"0\" (line 40) — so mandatory-within-block, block optional, hence should-fix not blocking. Capture: docs/reference/fatturapa/tested-payload.json contains no TP/MP code (instruction = CREDIT_TRANSFER {account,name,payment_service_provider}) yet tested-response.xml lines 103/105 render TP02/MP05 → values derived. \"Always derived\" holds by deduction, not just one sample: active spec (fiskaly.unified-api.all.2026-06-01.yaml) instruction schemas are all additionalProperties:false with no TP/MP/conditions slot anywhere in components.schemas, and the XSD forces both codes whenever the block is emitted. \"Authored TP01/MP12\" is real: model.ts 179-180 makes both authorable; fatturapa-map.ts 600-614 renders them locally — so local prediction TP01/MP12 vs transmitted TP02/MP05 is a silent, schema-valid semantic substitution (XSD 801-810: TP01 installments vs TP02 full payment). Severity matches docs/gaps/README.md line 52 R2 definition (xml mapped, json —); rows fatturapa|payment.conditions|json and fatturapa|payment.italianMeansCode|json both carry severity should-fix · R2. Basis is FatturaPA's own XSD, not EN 16931 analogy.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "document.references carries neither BT-14 nor BT-18, and despatch_advice is a bare number without BT-16's date",
+   "rowIds": [
+    "fatturapa|references.despatchAdvice.issueDate|json",
+    "fatturapa|references.invoicedObject|json"
+   ],
+   "format": "fatturapa",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd DatiDDTType/DatiGeneraliType; docs/reference/fatturapa/README.md 'Correction to the source on despatch_advice'",
+   "source": {
+    "kind": "vendor",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
+   },
+   "summary": "should-fix is right: the missing date makes the whole DatiDDT block unfillable from the JSON, and an authored invoiced-object id is lost",
+   "verifier": {
+    "refuted": false,
+    "reason": "Both cited sources exist and support the claim. XSD DatiDDTType (Schema_VFPR12_v1.2.3.xsd:500-506) makes NumeroDDT AND DataDDT mandatory while DatiDDT itself is minOccurs=0 in DatiGeneraliType (:109) — so the block is optional (not blocking) but unfillable without a date. The active spec's DocumentReferences is closed (additionalProperties:false) with no BT-14/BT-18 property and despatch_advice is a bare AlphaNumerical32 string with no date — the only despatch route in the contract — making the whole DatiDDT block genuinely unfillable from the JSON. The model authors BT-18 and fatturapa-map.ts:414/:442 render both fields (DatiRicezione/IdDocumento, DatiDDT/DataDDT), so authored data is truly lost, matching the report's R2 should-fix definition (syntax renders it, operation cannot carry it) exactly; neither R1 (nothing standard-mandated) nor R3 (loss is real) fits. The README correction (lines 70-73) only leaves gateway rendering of DatiDDT unproven, which does not touch the contract-level 'unfillable from the JSON' argument.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "totals.vat is a three-value VAT summary; the EN 16931 document-level sums and adjustments are not carried",
+   "rowIds": [
+    "fatturapa|totals.rounding|json"
+   ],
+   "format": "fatturapa",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd (Arrotondamento minOccurs=0); docs/reference/fatturapa/README.md totals-discard statement",
+   "source": {
+    "kind": "vendor",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
+   },
+   "summary": "should-fix is right: a nonzero authored rounding is not derivable from lines, so the recomputed document can never reproduce it",
+   "verifier": {
+    "refuted": false,
+    "reason": "Confirmed. Row fatturapa|totals.rounding|json has severity should-fix (R2, uapi-map.UAPI_LOSSY_FIELDS). Citation verified: vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd line 125 has Arrotondamento minOccurs=\"0\" in DatiGeneraliDocumentoType (document-level BT-114 analog; a second per-riepilogo Arrotondamento at line 1049 is also minOccurs=0), and docs/reference/fatturapa/README.md line 85 states \"breakdown[] and totals are discarded — DatiRiepilogo is always recomputed server-side\". Severity is right on both the report's own rules and the semantics: not blocking because FatturaPA's own XSD makes the element optional (EN 16931's 0..1 on BT-114 agrees, applied by analogy only — FatturaPA is not a CIUS) and the syntax renders it (fatturapa-map.ts:379-383 maps totals.rounding → DatiGeneraliDocumento/Arrotondamento); not a mere note because the loss is real and unrecoverable — the UAPI Totals schema is {vat} with additionalProperties:false (spec line 7005), so the operation cannot carry BT-114, and the reviewer's kernel holds: the captured gateway output (tested-response.xml line 71) emits ImportoTotaleDocumento but no Arrotondamento, and a nonzero rounding is an arbitrary issuer adjustment not derivable from lines, so server-side recomputation can never reproduce it. Not R4 platform: the row has no JSON pointer and totals' fate is discarded, not platform.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "esigibilita (FatturaPA EsigibilitaIVA) has no counterpart in the VAT breakdown",
+   "rowIds": [
+    "fatturapa|vatBreakdown.{i}.esigibilita|json"
+   ],
+   "format": "fatturapa",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd EsigibilitaIVAType (D 'esigibilità differita', I 'esigibilità immediata', S 'scissione dei pagamenti'; minOccurs=0)",
+   "source": {
+    "kind": "vendor",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
+   },
+   "summary": "should-fix is right: an authored D (cash accounting) or S (split payment) is real fiscal information the operation cannot deliver",
+   "verifier": {
+    "refuted": false,
+    "reason": "Citation verified verbatim: vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd line 1052 has EsigibilitaIVA minOccurs=\"0\" in DatiRiepilogoType; lines 1056-1076 enumerate D 'esigibilità differita', I 'esigibilità immediata', S 'scissione dei pagamenti'. The gap row (gap-report.json lines 2468-2483) is should-fix/R2 as claimed. The 'cannot deliver' prong is contract-proven, not just asserted: the active spec (fiskaly.unified-api.all.2026-06-01.yaml) has zero hits for esigibilità/split payment/cash accounting/chargeability, and all three VatBreakdown entry schemas (lines 7823-7882) are additionalProperties:false with no slot for it; moreover the capture (docs/reference/fatturapa/tested-response.xml) shows the server-recomputed DatiRiepilogo omits EsigibilitaIVA entirely. Severity is rule-consistent: not R1-blocking (element is optional in the XSD, missingFrom=json, fatturapa-map.ts:585 renders it), not R4 (fate 'unknown', no platform evidence), R2 correctly beats the R3 fallback. The fiscal-materiality prong holds: S = split payment art. 17-ter DPR 633/72 (buyer remits VAT to Treasury, changes amount payable), D = deferred chargeability/IVA per cassa — judged against FatturaPA's own XSD, no EN 16931 analogy required.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "The operation accepts this pointer but no model field addresses it",
+   "rowIds": [
+    "operation|/entries/{i}/data/product/type|model"
+   ],
+   "format": "ubl",
+   "missingFrom": "model",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "bt-catalog.json: BT-155 \"Item Seller's identifier\" cardinality 0..1; BT-157 \"Item standard identifier\" cardinality 0..1 (+BT-157-1 scheme from ICD mandatory when present) — catalog built from the local EN16931_BT_BG_Reference; gap-report.ts:151-153 R2 definition",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/frontend/src/bt-catalog.json"
+   },
+   "summary": "Confirmed: should-fix is the right level — real expressiveness loss (GTIN inexpressible), but nothing EN 16931 makes mandatory is endangered.",
+   "verifier": {
+    "refuted": false,
+    "reason": "Claim verified on all points. Row operation|/entries/{i}/data/product/type|model (docs/gaps/gap-report.json) is format ubl, missingFrom model, severity should-fix via R2, bt null. Citation checks: frontend/src/bt-catalog.json exists and carries BT-155 \"Item Seller's identifier\" 0..1 and BT-157 \"Item standard identifier\" 0..1 with \"+BT-157-1 Scheme ID from ICD, mandatory when BT-157 present\" — exact matches; frontend/src/gap-report.ts:151-153 is the R2 definition as cited. Severity semantics confirmed: spec/fiskaly.unified-api.all.2026-06-01.yaml defines Product as a discriminated union (type ∈ GTIN-8/12/13/14, MPN, SKU, OTHER; type required in every variant), and uapi-map.ts:450-458 hardcodes type:\"OTHER\" with no model field addressing the discriminator (model.ts:126-127 cover only product.number/code) — so a GTIN-typed identifier is genuinely inexpressible (sent as OTHER, i.e. declared a non-GTIN scheme), a real expressiveness loss. Nothing mandatory endangered: BT-155/BT-157 are 0..1; vendor/schematron/CEN-EN16931-UBL.sch:184 BR-64 mandates the scheme only when BT-157 is present; PEPPOL-EN16931-UBL.sch has no item-identifier rules; XRechnung-UBL-validation.xsl only conditional scheme rules. Blocking is ruled out (missingFrom=model, no mandatory EN term) and note would understate a genuine authoring gap, so should-fix is the right level. Minor imprecision — the GTIN digits do reach fiskaly via itemNumber→product.number, only the GTIN typing is lost — does not alter the severity verdict.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "BusinessRecipient has no trading name, no ISO 6523 scheme for company_id and no contact group",
+   "rowIds": [
+    "ubl|buyer.contact.email|json",
+    "ubl|buyer.contact.name|json",
+    "ubl|buyer.contact.phone|json",
+    "ubl|buyer.legalRegScheme|json",
+    "ubl|buyer.tradeName|json"
+   ],
+   "format": "ubl",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "CEN-EN16931-UBL.sch (no assert names BT-45/BT-56/BT-57/BT-58); docs/gaps/README.md R2: \"the syntax renders it but the operation cannot carry it, so authored data never reaches fiskaly\"",
+   "source": {
+    "kind": "vendor",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/schematron/CEN-EN16931-UBL.sch"
+   },
+   "summary": "should-fix is right: optional EN terms, rendered by the UBL binding, lost from the operation",
+   "verifier": {
+    "refuted": false,
+    "reason": "Confirmed on all legs. Source vendor/schematron/CEN-EN16931-UBL.sch exists; grep finds zero asserts naming BT-45/BT-56/BT-57/BT-58 (also zero in PEPPOL-EN16931-UBL.sch), matching the citation. docs/gaps/README.md line 52 carries the R2 text verbatim. The five rows exist with severity should-fix, source R2. Optionality: bt-catalog.json gives 0..1 for all four BTs; CEN mandatory buyer content is only BR-07 (BT-44) and BR-10 (BG-8); for buyer.legalRegScheme the CEN rule context CompanyID[@schemeID] is conditional on presence, and Peppol schemeID rules are DK/NO national rules inapplicable to BE. Rendered by UBL: ubl-map.ts lines 232-314 map all five to real EN 16931 UBL paths, and the CEN UBL-CR series suppresses only non-EN Contact children, not Name/Telephone/ElectronicMail. Lost from operation: spec BusinessRecipient is additionalProperties:false with no trading name (only LegalName=BT-44), no contact group (no contact schema exists in the spec), and company_id a bare string with no scheme slot — matching the verbatim UAPI_LOSSY_FIELDS reason in uapi-map.ts lines 619-624. Blocking would require a mandatory term the mandated syntax cannot render; these are optional and the syntax renders them, so should-fix is correct. EN 16931 semantics apply directly since UBL/Peppol BIS 3.0 is a CIUS of EN 16931 — no FatturaPA analogy involved. Minor precision note: the citation omits BT-47-1 for the legalRegScheme row (bt null in report); its optionality was verified independently via the conditional schematron contexts.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "BT-72 only travels inside recipients[].shipping, which requires BG-15: without a delivery address there is nowhere to put it",
+   "rowIds": [
+    "ubl|delivery.date|json"
+   ],
+   "format": "ubl",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "refuted",
+   "severity": "should-fix",
+   "citation": "CEN-EN16931-UBL.sch contains no assert requiring BT-72's presence; EN16931_BT_BG_Reference.md: BT-72 0..1",
+   "source": {
+    "kind": "vendor",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/schematron/CEN-EN16931-UBL.sch"
+   },
+   "summary": "Optional term (0..1), rendered by UBL, conditionally lost — should-fix, not blocking",
+   "verifier": {
+    "refuted": true,
+    "reason": "Citation falsified by its own source: vendor/schematron/CEN-EN16931-UBL.sch (exists, line 112) contains BR-IC-11 (flag=fatal) — for VAT category K (intra-community supply), \"the Actual delivery date (BT-72) or the Invoicing period (BG-14) shall not be blank\" — so the statement \"contains no assert requiring BT-72's presence\" is wrong as stated; the requirement is conditional and disjunctive, but it exists. It is also material to this row: the active spec (spec/fiskaly.unified-api.all.2026-06-01.yaml) has no BG-14/invoicing-period field, and Shipping (lines 8247–8259) requires address while carrying date = BT-72 (BE_EI), so a K invoice can only satisfy BR-IC-11 via shipping.address+date — the exact scenario the blanket negative erases. The rest of the claim checks out: EN16931_BT_BG_Reference.md line 97 confirms BT-72 = 0..1; UBL renders it (cac:Delivery/cbc:ActualDeliveryDate); PEPPOL-EN16931-UBL.sch line 1133 adds only a date-format rule, no presence rule. The severity itself (should-fix, not blocking) is therefore correct on corrected grounds — BT-72 is not mandatory in EN 16931, the mandated syntax renders it, and the loss is conditional — and the report's ladder only uses {should-fix, note}. EN 16931 semantics apply directly (Peppol BIS is a CIUS; no FatturaPA analogy). Verdict: citation refuted as written; proposition severity-correct should be confirmed once the citation acknowledges BR-IC-11.",
+    "citationVerified": false,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "details.number is optional; without it the entry's position becomes the line id",
+   "rowIds": [
+    "ubl|lines.{i}.id|json"
+   ],
+   "format": "ubl",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "CEN-EN16931-UBL.sch: \"[BR-21]-Each Invoice line (BG-25) shall have an Invoice line identifier (BT-126).\" (flag=fatal)",
+   "source": {
+    "kind": "vendor",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/schematron/CEN-EN16931-UBL.sch"
+   },
+   "summary": "BT-126 is mandatory (BR-21) but always derivable from position — not blocking; authored ids can be lost, so should-fix",
+   "verifier": {
+    "refuted": false,
+    "reason": "Claim survives refutation. (1) Citation exact: /Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/schematron/CEN-EN16931-UBL.sch:142 has id=\"BR-21\" flag=\"fatal\" with the quoted text verbatim; the CEN set applies directly to this row's format (Peppol BIS 3.0 UBL is a CIUS of EN 16931 — no analogy needed), and PEPPOL-EN16931-UBL.sch adds no stricter line-id rule. (2) \"Always derivable from position\" is documented in the contract itself, not just inferred: spec/fiskaly.unified-api.all.2026-06-01.yaml EntryNumber (~line 7227) states \"If this field is not used, the print order defaults to the sequence of the array index, starting at one (1)\", and the tool's round-trip implements String(index+1) (frontend/src/uapi-map.ts, lineFrom). (3) \"Not blocking\" is correct under the report's own R1 definition (docs/gaps/README.md): R1 requires the mandated syntax to render no element AND nothing downstream able to supply it — here ubl-map.ts:458 maps lines.{i}.id → cbc:ID (BT-126) and the id is always suppliable from position, so both R1 conditions fail. (4) \"Authored ids can be lost\" is true and even understated: EntryDetails requires only concept (number optional), and EntryNumber is UnsignedInteger4, so a non-numeric authored BT-126 (any string is legal in EN 16931) cannot be carried at all — fidelity loss without validity loss, exactly R2 should-fix, matching the row's severity in docs/gaps/gap-report.json (lines 3334–3350, severity \"should-fix\", source UAPI_PARTIAL_FIELDS · R2). \"Note\" would be wrong (BT-126 is 1..1/BR-21 fatal, not optional). Caveat consistent with the row's own evidence field: no BE UBL transmission capture exists, so fiskaly's server-side position-derivation is proven by contract prose, not by capture — but even the predicted XML always carries an id, so severity does not hinge on it.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "Only a VAT_RATE row has a percentage; an exemption or reverse-charge row carries none",
+   "rowIds": [
+    "ubl|lines.{i}.vat.rate|json",
+    "ubl|vatBreakdown.{i}.rate|json"
+   ],
+   "format": "ubl",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "CEN-EN16931-UBL.sch: \"[BR-48]-Each VAT breakdown (BG-23) shall have a VAT category rate (BT-119), except if the Invoice is not subject to VAT.\" (flag=fatal)",
+   "source": {
+    "kind": "vendor",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/schematron/CEN-EN16931-UBL.sch"
+   },
+   "summary": "Not blocking: BR-48 requires BT-119 except category O, but EN pins the E/AE/Z/K/G rate to 0, so the missing value is always derivable",
+   "verifier": {
+    "refuted": false,
+    "reason": "Citation verified verbatim: vendor/schematron/CEN-EN16931-UBL.sch line 226 has id=\"BR-48\" flag=\"fatal\" with the exact quoted text, and its test exempts only category O. The derivability argument survives scrutiny: (1) the gap rows (ubl|lines.{i}.vat.rate|json BT-152, ubl|vatBreakdown.{i}.rate|json BT-119, both severity should-fix) limit the missing percentage to exemption/reverse-charge rows, and spec/fiskaly.unified-api.all.2026-06-01.yaml confirms VAT_RATE rows require percentage at line and breakdown level while VAT_EXEMPTION/VAT_REVERSE_CHARGE rows carry none — so non-derivable S rates always travel in the JSON; (2) EN pins the rate to 0 for E/AE/Z/K/G: BR-E-05/BR-AE-05/BR-Z-05/BR-IC-05(K)/BR-G-05 (all fatal, \"shall be 0 (zero)\") pin BT-152 directly, and BT-119=0 follows by entailment from BR-*-09 (BT-117=0) plus BR-CO-17 — a wording shorthand, not an error; BR-O-05 forbids the rate for O, which BR-48 also exempts; (3) PEPPOL-EN16931-UBL.sch adds no stricter Percent rule (only R041/R042 on allowance/charge percentages). A generator can therefore always emit a valid BT-119/BT-152 without the missing JSON value, so the term is renderable and \"blocking\" does not apply — severity \"should-fix\" is correct. EN 16931 applies directly here (UBL/Peppol BIS), not by analogy.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "The bank details only travel inside a CREDIT_TRANSFER instruction",
+   "rowIds": [
+    "ubl|payment.iban|json",
+    "ubl|payment.accountName|json",
+    "ubl|payment.bic|json"
+   ],
+   "format": "ubl",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "CEN-EN16931-UBL.sch: \"[BR-61]-If the Payment means type code (BT-81) means SEPA credit transfer, Local credit transfer or Non-SEPA international credit transfer, the Payment account identifier (BT-84) shall be present.\"",
+   "source": {
+    "kind": "vendor",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/schematron/CEN-EN16931-UBL.sch"
+   },
+   "summary": "Not blocking: BT-84 is only mandatory when the means code is a credit transfer (BR-61), and in exactly that shape the operation requires it",
+   "verifier": {
+    "refuted": false,
+    "reason": "Citation verified verbatim: vendor/schematron/CEN-EN16931-UBL.sch line 197 carries the exact BR-61 text; its test makes BT-84 mandatory only when PaymentMeansCode is 30 or 58. BT-84 has no unconditional mandate: the only other assert is BR-50 (line 193), also conditional on BG-17 credit-transfer info being present, and PEPPOL-EN16931-UBL.sch adds only DK/SE national account rules irrelevant to the rows' BE_EI applicability. The second half of the claim holds in the contract: spec/fiskaly.unified-api.all.2026-06-01.yaml lines 8429-8452 define CreditTransferPaymentInstruction with required [type, account, name, payment_service_provider], where account is InternationalBankAccountNumber documented as BT-84 for BE_EI — exactly the rows' belongsAt pointers (/payments/{i}/instruction/account|name|payment_service_provider). So the one scenario where the standard mandates BT-84 is precisely the shape the operation supports and requires; nothing mandatory is inexpressible, and BT-85/BT-86 are 0..1 (never mandatory). The rows' should-fix (not blocking) severity is therefore correct. Minor nuance only: BR-61's prose names three transfer kinds while its test enforces codes 30 and 58 — the reviewer's paraphrase tracks the enforced rule.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "document.references carries neither BT-14 nor BT-18, and despatch_advice is a bare number without BT-16's date",
+   "rowIds": [
+    "ubl|references.salesOrder|json",
+    "ubl|references.invoicedObject|json"
+   ],
+   "format": "ubl",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "CEN-EN16931-UBL.sch contains no assert requiring BT-14/BT-18; docs/gaps/README.md rule R2",
+   "source": {
+    "kind": "vendor",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/schematron/CEN-EN16931-UBL.sch"
+   },
+   "summary": "Both terms optional (0..1), rendered by UBL, unconditionally lost from the operation — should-fix",
+   "verifier": {
+    "refuted": false,
+    "reason": "Claim confirmed on all legs. (1) Citation true: boundary-exact grep of vendor/schematron/CEN-EN16931-UBL.sch finds no assert requiring BT-14 or BT-18 (plain grep false-positives on BT-140..148); UBL-SR-04/SR-43/CR-651/665/666/673 only constrain form when present. PEPPOL-EN16931-UBL.sch also has no BT-14/BT-18 assert, so the Peppol BIS profile does not make them mandatory. (2) Both 0..1 per frontend/src/bt-catalog.json. (3) UBL renders both: ubl-map.ts maps BT-14 to cac:OrderReference/cbc:SalesOrderID and BT-18 to cac:AdditionalDocumentReference/cbc:ID + DocumentTypeCode 130. (4) Loss is unconditional: both in UAPI_LOSSY_FIELDS, and DocumentReferences in spec/fiskaly.unified-api.all.2026-06-01.yaml is additionalProperties:false with no sales_order/invoiced_object property. (5) should-fix matches README rule R2 exactly (syntax renders it, operation cannot carry it); R1 inapplicable (optional, rendered), R3 is for format-level gaps. Rows carry severity should-fix, source R2.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
+   "rowIds": [
+    "ubl|seller.name|json",
+    "ubl|seller.tradeName|json",
+    "ubl|seller.vatId|json",
+    "ubl|seller.legalRegId|json",
+    "ubl|seller.legalRegScheme|json",
+    "ubl|seller.electronicAddress.id|json",
+    "ubl|seller.electronicAddress.scheme|json",
+    "ubl|seller.address.street|json",
+    "ubl|seller.address.number|json",
+    "ubl|seller.address.city|json",
+    "ubl|seller.address.postCode|json",
+    "ubl|seller.address.region|json",
+    "ubl|seller.address.country|json"
+   ],
+   "format": "ubl",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "CEN-EN16931-UBL.sch: \"[BR-06]-An Invoice shall contain the Seller name (BT-27).\"; PEPPOL-EN16931-UBL.sch R020: \"Seller electronic address MUST be provided\" (both fatal)",
+   "source": {
+    "kind": "vendor",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/schematron/CEN-EN16931-UBL.sch"
+   },
+   "summary": "Mandatory seller terms (BR-06 name, BR-09 country, R020 endpoint) are platform-rendered, so not blocking; model-authored values silently replaced — should-fix",
+   "verifier": {
+    "refuted": false,
+    "reason": "Citations verified verbatim on disk: vendor/schematron/CEN-EN16931-UBL.sch line 85 has BR-06 \"[BR-06]-An Invoice shall contain the Seller name (BT-27).\" (fatal) and line 209 BR-09 (fatal); vendor/schematron/PEPPOL-EN16931-UBL.sch line 312 has PEPPOL-EN16931-R020 \"Seller electronic address MUST be provided\" (fatal). All five gap-report rows exist with severity should-fix and reason \"seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)\". The platform-rendering premise holds for the UBL path by contract, not just FatturaPA analogy: the active spec (fiskaly.unified-api.all.2026-06-01.yaml) defines the operation Seller as {name?, phone?, email?} with additionalProperties:false and its prose maps them to BT-41/42/43 (contact point) for BE_EI/DE_EI/IT_EI, so BT-27/28/30/31 cannot be authored via the request and must come from the Taxpayer resource (which carries vat_number and CompanyTaxpayer name/address); the FatturaPA capture (docs/reference/fatturapa/README.md, seller marked platform) corroborates. Under the severity definition (blocking = mandatory term the mandated syntax cannot render), none of the five qualifies: BT-27 is mandatory (BR-06 fatal) but IS rendered from the taxpayer; BT-28/BT-30/legalRegScheme are optional; BT-31 is 0..1 with the taxpayer vat_number satisfying BR-CO-26. The defect is silent replacement of model-authored values — a fidelity issue, correctly should-fix. Claim confirmed.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "totals.vat is a three-value VAT summary; the EN 16931 document-level sums and adjustments are not carried",
+   "rowIds": [
+    "ubl|totals.allowance|json",
+    "ubl|totals.charge|json",
+    "ubl|totals.lineExtension|json",
+    "ubl|totals.prepaid|json",
+    "ubl|totals.rounding|json"
+   ],
+   "format": "ubl",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "CEN-EN16931-UBL.sch: \"[BR-12]-An Invoice shall have the Sum of Invoice line net amount (BT-106).\" (fatal); docs/reference/fatturapa/README.md: \"breakdown[] and totals are discarded — DatiRiepilogo is always recomputed server-side\"",
+   "source": {
+    "kind": "vendor",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/schematron/CEN-EN16931-UBL.sch"
+   },
+   "summary": "BR-12..BR-15 totals are mandatory but fiskaly recomputes them; BT-107/108/113/114 optional — should-fix, not blocking",
+   "verifier": {
+    "refuted": false,
+    "reason": "Both citations verified verbatim on disk: vendor/schematron/CEN-EN16931-UBL.sch line 61 has BR-12 exactly as quoted with flag=\"fatal\" (BR-13/14/15 likewise fatal, lines 62-64), and docs/reference/fatturapa/README.md line 85 contains the discarded/recomputed sentence exactly. All five rows (ubl|totals.{allowance,charge,lineExtension,prepaid,rounding}|json) carry severity \"should-fix\". The severity is correct: BT-107/108/113/114 are 0..1 in EN 16931 (local corpus EN16931_BT_BG_Reference.md lines 142-149; CEN BR-CO-13/BR-CO-16 explicitly branch on their absence; the vendored PEPPOL-EN16931-UBL.sch adds no presence rule), so they cannot be \"blocking\" (a mandatory term the mandated syntax cannot render). BT-106 is 1..1/BR-12-fatal, but the gap is missingFrom json, not the syntax — UBL renders cbc:LineExtensionAmount, and a Peppol transmission cannot complete without passing fatal BR-12, so a functioning generator necessarily derives it from entries[] (the spec's Totals schema at spec/fiskaly.unified-api.all.2026-06-01.yaml lines 7005-7028 is a closed {vat:{amount,exclusive,inclusive}} object, confirming the gap is real). Caveat: the \"fiskaly recomputes them\" leg is proven only for the FatturaPA path; for UBL it is analogy — the rows themselves mark the UBL path \"Unobserved\" — but that leg is not load-bearing for the should-fix verdict.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "BT-3 is derived by fiskaly; the operation only distinguishes INVOICE from CORRECTION",
+   "rowIds": [
+    "ubl|typeCode|json"
+   ],
+   "format": "ubl",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "docs/gaps/README.md: \"A mandatory business term missing from the operation is deliberately not blocking: fiskaly derives BT-3 and takes the seller identity from the commissioned Taxpayer.\"",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/docs/gaps/README.md"
+   },
+   "summary": "BT-3 mandatory (BR-04) but derived and rendered by fiskaly — deliberately not blocking; should-fix right",
+   "verifier": {
+    "refuted": false,
+    "reason": "Confirmed. Citation verbatim at docs/gaps/README.md lines 56-57. Row ubl|typeCode|json has severity should-fix via R2. BR-04 (fatal, \"An Invoice shall have an Invoice type code (BT-3)\") verified at vendor/schematron/CEN-EN16931-UBL.sch line 83 and binds UBL directly since Peppol BIS 3.0 is a CIUS of EN 16931. The spec (fiskaly.unified-api.all.2026-06-01.yaml, active per spec/spec.json) proves the operation cannot carry BT-3: InvoiceTransaction.type enum [INVOICE], CorrectionTransaction.type enum [CORRECTION], Document schema has no type-code field, additionalProperties: false. Derivation is declared in frontend/src/uapi-map.ts UAPI_LOSSY_FIELDS (fate platform) and observed on the captured FatturaPA path (payload sends no type code, tested-response.xml renders TipoDocumento TD01); UBL rendering itself is unobserved, as the row states. Blocking would require the mandated syntax to be unable to render the term - UBL renders BT-3 as cbc:InvoiceTypeCode and fiskaly supplies the value, so BR-04 is satisfied downstream; only authoring fidelity (e.g. UNCL1001 384/389) is lost. should-fix is correct.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "rateCode/exemptionCode are many-to-one: the SystemVatRateCode and SystemVatExemptionCode enums cannot express Natura or a VATEX code",
+   "rowIds": [
+    "ubl|vatBreakdown.{i}.vatexCode|json"
+   ],
+   "format": "ubl",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "CEN-EN16931-UBL.sch: \"[BR-E-10]-A VAT breakdown (BG-23) with VAT Category code (BT-118) 'Exempt from VAT' shall have a VAT exemption reason code (BT-121) or a VAT exemption reason text (BT-120).\" (fatal)",
+   "source": {
+    "kind": "vendor",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/schematron/CEN-EN16931-UBL.sch"
+   },
+   "summary": "Not blocking: BR-E-10/BR-AE-10 accept BT-120 text as the alternative, and BT-120 can travel via the line-level reason",
+   "verifier": {
+    "refuted": false,
+    "reason": "Citation verified verbatim: BR-E-10 at vendor/schematron/CEN-EN16931-UBL.sch:251, flag=fatal, test `exists(cbc:TaxExemptionReason) or exists(cbc:TaxExemptionReasonCode)`; BR-AE-10 at :237 has the same OR. Sibling rules BR-G-10/BR-IC-10/BR-O-10 (:265/:279/:321) are likewise disjunctive, and PEPPOL-EN16931-UBL.sch only constrains BT-121 when present (lines ~1143-1164), never requires it — BT-121 is 0..1. The second leg also holds in the contract itself: spec/fiskaly.unified-api.all.2026-06-01.yaml ItemEntry.vat (7275) → EntryVat (7623) → VatExemptionCategory.reason → VatExemptionReason (7701-7717), whose BE_EI/DE_EI/IT_EI description says \"(BT-120 VAT exemption reason text)\", while SystemVatExemptionCode (4768) is a closed CAUSE_n enum that indeed cannot carry a VATEX code. Row ubl|vatBreakdown.{i}.vatexCode|json (gap-report.json:3828) is severity should-fix per R2 (docs/gaps/README.md:52), and R1 blocking does not apply: the ubl syntax renders BT-121 (xml mapped), the term is optional, and the mandatory disjunctive rules are satisfiable with BT-120 which the JSON does carry. Caveat: no UBL transmission capture exists, so fiskaly rendering reason→cbc:TaxExemptionReason is unobserved, but the claim concerns the contract's capability, which the spec's own BT-120 annotation documents. Verdict grounded in EN 16931/Peppol BIS sources for the ubl format; no FatturaPA analogy used.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "BusinessRecipient has no trading name, no ISO 6523 scheme for company_id and no contact group",
+   "rowIds": [
+    "xrechnung|buyer.contact.email|json",
+    "xrechnung|buyer.contact.name|json",
+    "xrechnung|buyer.contact.phone|json",
+    "xrechnung|buyer.legalRegScheme|json",
+    "xrechnung|buyer.tradeName|json"
+   ],
+   "format": "xrechnung",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "XRechnung 3.0.2 CIUS model (xrechnung-cius-model.xml, bundle 2026-01-31): <m:term ref=\"BT-45\" min-occurs=\"0\"/>, <m:group ref=\"BG-9\" min-occurs=\"0\">, <m:term ref=\"BT-56\" min-occurs=\"0\"/>",
+   "source": {
+    "kind": "local",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/E-Invoicing-Formats-and-Profiles/Germany/xrechnung-3.0.2-bundle-2026-01-31/xrechnung-3.0.2-xrechnung-model-2026-01-31/model/xrechnung-cius-model.xml"
+   },
+   "summary": "Optional XRechnung terms; should-fix stands.",
+   "verifier": {
+    "refuted": false,
+    "reason": "Citation verified verbatim in the XRechnung 3.0.2 CIUS model (bundle 2026-01-31): BT-45 min-occurs=0 (line 3284), BG-9 min-occurs=0 (3298), BT-56 min-occurs=0 (3299); additionally BT-57/BT-58 (3300-3301), BT-47 (3286) and BT-47's scheme-id component (826-828) are all optional, covering all five rows. Severity should-fix is correct: R1 blocking fails on both prongs (terms are optional in XRechnung, and the rows are missingFrom=json with the XML mapped, not un-renderable); R3 note does not apply because gap-report.ts severityFor fires R2 (missingFrom=json && carriedInXml) before the R3 optional fallback, and the loss is real — UapiBusinessRecipient (uapi-map.ts:124-134) carries no trading name, contact group or ISO 6523 scheme, UAPI_LOSSY_FIELDS names exactly these five fields, and the fate table marks the reason \"lost\". Note the citation correctly cites buyer-side cardinality: XRechnung tightens seller BG-6 to mandatory but leaves buyer BG-9 optional. Judgment applies XRechnung 3.0.2's own CIUS cardinalities, not EN 16931 by analogy.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "BT-72 only travels inside recipients[].shipping, which requires BG-15: without a delivery address there is nowhere to put it",
+   "rowIds": [
+    "xrechnung|delivery.date|json"
+   ],
+   "format": "xrechnung",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "XRechnung 3.0.2 CIUS model (xrechnung-cius-model.xml): <m:group ref=\"BG-13\" min-occurs=\"0\">, <m:term ref=\"BT-72\" min-occurs=\"0\"/>",
+   "source": {
+    "kind": "local",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/E-Invoicing-Formats-and-Profiles/Germany/xrechnung-3.0.2-bundle-2026-01-31/xrechnung-3.0.2-xrechnung-model-2026-01-31/model/xrechnung-cius-model.xml"
+   },
+   "summary": "Optional term; should-fix stands.",
+   "verifier": {
+    "refuted": false,
+    "reason": "Citation verified verbatim: xrechnung-cius-model.xml lines 3322/3325 carry <m:group ref=\"BG-13\" min-occurs=\"0\"> and <m:term ref=\"BT-72\" min-occurs=\"0\"/> inside <m:structure id=\"invoice\"> of the XRechnung 3.0.2 CIUS model (XRechnungCIUS, 2024-06-20) — BT-72 is optional in XRechnung's own specification, ruling out R1 blocking (which per docs/gaps/README.md also requires the syntax to render no element, yet the row's xml side is mapped). The R2 should-fix trigger is real: frontend/src/uapi-map.ts UAPI_PARTIAL_FIELDS lists delivery.date (~line 742) with the row's exact reason, and shipping() (~line 434) drops the block without a delivery address. Not a note (R3): R3 covers optional terms with no mapping row (the cii/fatturapa siblings); here the syntax renders it and authored data can be lost. Refutation attempts failed: BR-IC-11 (CEN-EN16931-UBL.sch:112) is conditional (category K) and disjunctive (BT-72 or BG-14); XRechnung's BR-DE-TMP-32 (XRechnung-UBL-validation.xsl:1265) is a \"sollte\" warning with BG-14/BG-26 alternatives — neither makes BT-72 generally mandatory nor escalates past should-fix. \"Optional term; should-fix stands\" is correct on both halves.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "details.number is optional; without it the entry's position becomes the line id",
+   "rowIds": [
+    "xrechnung|lines.{i}.id|json"
+   ],
+   "format": "xrechnung",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "XRechnung 3.0.2 CIUS model (xrechnung-cius-model.xml): <m:term ref=\"BT-126\"/> (required)",
+   "source": {
+    "kind": "local",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/E-Invoicing-Formats-and-Profiles/Germany/xrechnung-3.0.2-bundle-2026-01-31/xrechnung-3.0.2-xrechnung-model-2026-01-31/model/xrechnung-cius-model.xml"
+   },
+   "summary": "Mandatory term but generator-assigned; should-fix stands.",
+   "verifier": {
+    "refuted": false,
+    "reason": "Citation verified and claim confirmed. The cited local file exists; `<m:term ref=\"BT-126\"/>` sits at line 3404 inside BG-25 in the invoice structure with no min-occurs=\"0\" (the model's convention for required, corroborated by explicit min-occurs=\"0\" on siblings BT-127/128 and by BR-21 restated at line ~2292), so BT-126 is 1..1 in XRechnung 3.0.2 — a true CIUS of EN 16931, so EN cardinality binds directly. \"Generator-assigned\" holds from the contract itself: /entries/{i}/details/number (EntryNumber) is optional in spec/fiskaly.unified-api.all.2026-06-01.yaml and its description documents the fallback \"print order defaults to the sequence of the array index, starting at one (1)\", so a BT-126 value is always rendered (XRECHNUNG_MAP inherits UBL_MAP's lines.{i}.id → cbc:ID row). Under the repo taxonomy R1-blocking requires the syntax to render no element for the mandatory term; here the element is rendered and only the authored value may be lost — partial carriage, R2 should-fix. Severity should-fix stands, matching the confirmed ubl sibling verdict.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "Only a VAT_RATE row has a percentage; an exemption or reverse-charge row carries none",
+   "rowIds": [
+    "xrechnung|lines.{i}.vat.rate|json",
+    "xrechnung|vatBreakdown.{i}.rate|json"
+   ],
+   "format": "xrechnung",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "XRechnung 3.0.2 CIUS model: BT-119 required, BT-152 min-occurs=\"0\"; CEN-EN16931-UBL.sch BR-E-05/BR-AE-05/BR-Z-05 (rate shall be 0)",
+   "source": {
+    "kind": "vendor",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/schematron/CEN-EN16931-UBL.sch"
+   },
+   "summary": "Derivable zero; should-fix stands.",
+   "verifier": {
+    "refuted": false,
+    "reason": "Claim confirmed. Both rows (xrechnung|lines.{i}.vat.rate|json BT-152, xrechnung|vatBreakdown.{i}.rate|json BT-119) carry severity should-fix, and \"derivable zero\" is sound. Citation verified on disk: vendor/schematron/CEN-EN16931-UBL.sch contains BR-AE-05 (line 246), BR-E-05 (260), BR-Z-05 (358) — \"Invoiced item VAT rate (BT-152) shall be 0 (zero)\", fatal — plus BR-G-05/BR-IC-05 (G/K also 0), BR-O-05 (rate forbidden for O) and BR-48 (BT-119 mandatory in BG-23 except O). The XRechnung 3.0.2 CIUS model (local bundle xrechnung-3.0.2-xrechnung-model-2026-01-31/model/xrechnung-cius-model.xml) shows exactly the cited cardinalities: bare <m:term ref=\"BT-119\"/> in BG-23 (line 3393, bare ref = required) and <m:term ref=\"BT-152\" min-occurs=\"0\"/> in BG-30 (line 3439); its BR-48 rendering (line 2432) and BT-119 usage note even instruct transmitting \"0\" when exempt. The only imprecision — the -05 rules govern BT-152, not the BT-119 breakdown row — does not refute: the co-cited CIUS model supplies the breakdown-zero rule directly, and BR-*-09 + BR-CO-17 in the same schematron pin the breakdown percent to 0. Severity logic holds: rows are xml-mapped, so R1 blocking (syntax renders no element) cannot apply; the UAPI spec's EntryVat union (only VAT_RATE carries percentage; VAT_EXEMPTION/VAT_REVERSE_CHARGE have none) means the un-carriable rows are exactly the categories whose rate EN 16931 fixes at 0 or forbids (O) — always derivable downstream. XRechnung is a genuine CIUS of EN 16931, so CEN rules apply directly, no analogy caveat; version 3.0.2 matches.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "The bank details only travel inside a CREDIT_TRANSFER instruction",
+   "rowIds": [
+    "xrechnung|payment.iban|json",
+    "xrechnung|payment.accountName|json",
+    "xrechnung|payment.bic|json"
+   ],
+   "format": "xrechnung",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "XRechnung 3.0.2 CIUS model: BG-16 required, <m:group ref=\"BG-17\" min-occurs=\"0\" max-occurs=\"unbounded\">, BT-84 required within, BT-85/BT-86 min-occurs=\"0\"",
+   "source": {
+    "kind": "local",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/E-Invoicing-Formats-and-Profiles/Germany/xrechnung-3.0.2-bundle-2026-01-31/xrechnung-3.0.2-xrechnung-model-2026-01-31/model/xrechnung-cius-model.xml"
+   },
+   "summary": "Conditional terms; should-fix stands.",
+   "verifier": {
+    "refuted": false,
+    "reason": "Citation verified verbatim in the XRechnung 3.0.2 CIUS model (file exists, 369 KB): BG-16 mandatory via BR-DE-1 (line 2997) and structure line 3340; line 3344 reads exactly <m:group ref=\"BG-17\" min-occurs=\"0\" max-occurs=\"unbounded\">; BT-84 required within (line 3345, corroborated by BR-61 line 2444); BT-85/BT-86 min-occurs=\"0\" (lines 3346-3347). The conditional-terms reading is correct and even stronger than cited: BG-17 is required only for payment means codes 30/58 (BR-DE-13a line 3100) and forbidden for card/direct-debit (BR-DE-13b/c), and the old always-required BR-DE-13 is commented out in 3.0.2. Blocking fails both prongs of the taxonomy: the terms are not unconditionally mandated, and the XRechnung UBL syntax renders them (presentIn: xml mapped) — the gap is JSON-side only. Note would be too weak: the active UAPI spec (fiskaly.unified-api.all.2026-06-01.yaml lines 8418-8452) carries account/name/payment_service_provider only inside CreditTransferPaymentInstruction, matching the rows' belongsAt pointers — the R2/UAPI_PARTIAL_FIELDS should-fix case. This is XRechnung's own specification, not EN 16931 by analogy. should-fix stands for all three rows.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "document.references carries neither BT-14 nor BT-18, and despatch_advice is a bare number without BT-16's date",
+   "rowIds": [
+    "xrechnung|references.invoicedObject|json",
+    "xrechnung|references.salesOrder|json"
+   ],
+   "format": "xrechnung",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "XRechnung 3.0.2 CIUS model: <m:term ref=\"BT-14\" min-occurs=\"0\"/>, <m:term ref=\"BT-18\" min-occurs=\"0\"/>",
+   "source": {
+    "kind": "local",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/E-Invoicing-Formats-and-Profiles/Germany/xrechnung-3.0.2-bundle-2026-01-31/xrechnung-3.0.2-xrechnung-model-2026-01-31/model/xrechnung-cius-model.xml"
+   },
+   "summary": "Optional terms; should-fix stands.",
+   "verifier": {
+    "refuted": false,
+    "reason": "Citation verified verbatim in the XRechnung 3.0.2 CIUS model (xrechnung-cius-model.xml): line 3239 <m:term ref=\"BT-14\" min-occurs=\"0\"/> and line 3243 <m:term ref=\"BT-18\" min-occurs=\"0\"/>, both in <m:structure id=\"invoice\">. The notation is proven in-file — mandatory terms (BT-1/2/3/5, and BT-10, the known XRechnung tightening) appear without min-occurs — so both terms are optional (0..1) in XRechnung 3.0.2, matching EN 16931. Refutation attempts failed: no BR-DE rule in the model mentions BT-14/BT-18; vendored XRechnung-UBL-validation.xsl has zero hits for SalesOrderID/BT-14/BT-18; syntax bindings carry no cardinality overrides; CEN-EN16931-UBL.sch's only SalesOrderID rule is UBL-CR-651 (warning against @schemeID, not a presence rule). Both gap-report rows (xrechnung|references.invoicedObject|json BT-18, xrechnung|references.salesOrder|json BT-14) carry severity should-fix, which is correct: blocking is reserved for mandatory terms the syntax cannot render, and these are optional terms genuinely lost on the UAPI JSON path while model and XML writer carry them.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
+   "rowIds": [
+    "xrechnung|seller.name|json",
+    "xrechnung|seller.tradeName|json",
+    "xrechnung|seller.vatId|json",
+    "xrechnung|seller.legalRegId|json",
+    "xrechnung|seller.legalRegScheme|json",
+    "xrechnung|seller.address.street|json",
+    "xrechnung|seller.address.number|json",
+    "xrechnung|seller.address.city|json",
+    "xrechnung|seller.address.postCode|json",
+    "xrechnung|seller.address.region|json",
+    "xrechnung|seller.address.country|json"
+   ],
+   "format": "xrechnung",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "XRechnung 3.0.2 CIUS model: BG-4/BT-27/BG-5 required, BT-28/BT-31 min-occurs=\"0\"; fiskaly spec GermanCompanyFiscalization required: [type]",
+   "source": {
+    "kind": "local",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/E-Invoicing-Formats-and-Profiles/Germany/xrechnung-3.0.2-bundle-2026-01-31/xrechnung-3.0.2-xrechnung-model-2026-01-31/model/xrechnung-cius-model.xml"
+   },
+   "summary": "Platform-rendered mandatory terms; should-fix stands.",
+   "verifier": {
+    "refuted": false,
+    "reason": "Citation verified against the cited file, which exists on disk. XRechnung 3.0.2 CIUS model (xrechnung-cius-model.xml, Invoice structure lines 3258-3275): BG-4, BT-27 and BG-5 carry no min-occurs (default 1..1, required — optional siblings explicitly carry min-occurs=\"0\"), while BT-28 and BT-31 are literally min-occurs=\"0\", exactly as cited; BT-30 is also min-occurs=\"0\". Active fiskaly spec (spec/fiskaly.unified-api.all.2026-06-01.yaml lines 3431-3445): GermanCompanyFiscalization required: [type] only, as cited. Severity should-fix stands for all five rows: blocking requires a mandatory term the mandated syntax cannot render, but XRechnung UBL renders all five (XPath bindings at model lines 3669-3705) and the platform sources the mandatory ones — CompanyTaxpayer requires name{legal,trade}+address (BT-27/BT-28/BG-5), and the spec itself annotates vat_id_number/tax_id_number as \"(BT-31 Seller VAT identifier)\"/\"(BT-32)\" for DE_EI, so platform sourcing is spec-evidenced, not merely FatturaPA analogy. BT-31 is only conditionally required (BR-DE-16, model line 3043), satisfiable from the taxpayer. Minor looseness that does not flip the verdict: GermanCompanyFiscalization has no legal-registration field, so BT-30/legalRegScheme are not platform-rendered — but BT-30 is optional and BR-CO-26 is satisfiable via BT-31, so should-fix (not blocking, not note) remains correct for those rows too.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
+   "rowIds": [
+    "xrechnung|seller.electronicAddress.id|json",
+    "xrechnung|seller.electronicAddress.scheme|json"
+   ],
+   "format": "xrechnung",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "XRechnung 3.0.2 CIUS model: <m:term ref=\"BT-34\"/> (required); fiskaly spec SystemAnnotations (peppol_id optional)",
+   "source": {
+    "kind": "local",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/E-Invoicing-Formats-and-Profiles/Germany/xrechnung-3.0.2-bundle-2026-01-31/xrechnung-3.0.2-xrechnung-model-2026-01-31/model/xrechnung-cius-model.xml"
+   },
+   "summary": "Mandatory but platform-rendered; should-fix stands.",
+   "verifier": {
+    "refuted": false,
+    "reason": "Claim confirmed. The cited local source exists and supports both halves: (1) xrechnung-cius-model.xml line 3266 has <m:term ref=\"BT-34\"/> in the invoice structure with no min-occurs=\"0\" (optional siblings carry it explicitly) → BT-34 required 1..1 in XRechnung 3.0.2, corroborated by PEPPOL-EN16931-R020 (line ~3148) and BR-62/scheme component min-occurs=\"1\" (lines ~698, ~2497), covering the scheme twin row too; (2) the active spec fiskaly.unified-api.all.2026-06-01.yaml defines SystemAnnotations (~line 4609) with peppol_id and no required list → optional. Severity should-fix is correct under the project's definition: the UBL syntax binding (cbc:EndpointID, line 3716) and the platform (System/Taxpayer entities) render BT-34, so not blocking; the operation's Seller object carries only BT-41/42/43 (contact point), matching the rows' reason, and the optional platform source justifies should-fix rather than nothing. This is XRechnung's own CIUS cardinality, not EN 16931 core applied by analogy. Minor looseness noted without effect on the verdict: the spec describes DE_EI peppol_id as the recipient's identifier (BT-49), so the DE seller BT-34 likely derives from the Taxpayer rather than SystemAnnotations — but mandatory + platform-rendered + optional platform source yields should-fix on either reading.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "totals.vat is a three-value VAT summary; the EN 16931 document-level sums and adjustments are not carried",
+   "rowIds": [
+    "xrechnung|totals.allowance|json",
+    "xrechnung|totals.charge|json",
+    "xrechnung|totals.rounding|json"
+   ],
+   "format": "xrechnung",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "XRechnung 3.0.2 CIUS model: BT-107/BT-108/BT-113/BT-114 all min-occurs=\"0\"",
+   "source": {
+    "kind": "local",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/E-Invoicing-Formats-and-Profiles/Germany/xrechnung-3.0.2-bundle-2026-01-31/xrechnung-3.0.2-xrechnung-model-2026-01-31/model/xrechnung-cius-model.xml"
+   },
+   "summary": "Optional terms; should-fix stands.",
+   "verifier": {
+    "refuted": false,
+    "reason": "Citation verified verbatim: in the XRechnung 3.0.2 CIUS model's invoice structure (m:structure id=\"invoice\", line 3217), BG-22 at lines 3377-3388 shows BT-107 (3379), BT-108 (3380), BT-113 (3385) and BT-114 (3386) all with min-occurs=\"0\". The three rows in scope (BT-107/BT-108/BT-114) each declare cardinality 0..1 and severity should-fix, matching the source. Refutation attempts failed: CEN BR-CO-11/12 (vendor/schematron/CEN-EN16931-UBL.sch lines 66-67) only require BT-107/108 conditionally when document-level allowances/charges exist (escape branch legalizes absence); BR-CO-16 (line 69) tolerates absent BT-113/114 via exists() branches; XRechnung's own schematron 2.5.0 adds no presence mandate (PrepaidAmount/PayableRoundingAmount only in exists()-defaulted variables, AllowanceTotalAmount/ChargeTotalAmount unreferenced). The rows say \"xml mapped\", so the syntax can render the terms — the blocking definition (mandatory term the syntax cannot render) cannot apply. BT-113 in the citation is surplus to these three rows (it belongs to xrechnung|totals.prepaid|json) but is accurate. XRechnung is a genuine CIUS of EN 16931, so the CIUS model cardinality binds directly.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "totals.vat is a three-value VAT summary; the EN 16931 document-level sums and adjustments are not carried",
+   "rowIds": [
+    "xrechnung|totals.prepaid|json"
+   ],
+   "format": "xrechnung",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "XRechnung 3.0.2 CIUS model: <m:term ref=\"BT-113\" min-occurs=\"0\"/>",
+   "source": {
+    "kind": "local",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/E-Invoicing-Formats-and-Profiles/Germany/xrechnung-3.0.2-bundle-2026-01-31/xrechnung-3.0.2-xrechnung-model-2026-01-31/model/xrechnung-cius-model.xml"
+   },
+   "summary": "Optional term; should-fix stands.",
+   "verifier": {
+    "refuted": false,
+    "reason": "Citation verified verbatim: xrechnung-cius-model.xml line 3385 contains <m:term ref=\"BT-113\" min-occurs=\"0\"/> inside <m:group ref=\"BG-22\"> of <m:structure id=\"invoice\"> (lines 3217-3456), the structure referenced by all syntax bindings in the XRechnung 3.0.2 bundle; term def line 1459 confirms BT-113 = Paid amount. Refutation attempts failed: no rule mandates BT-113 presence — CEN BR-CO-16 (vendor/schematron/CEN-EN16931-UBL.sch line 69) explicitly permits not(exists(cbc:PrepaidAmount)), BR-DEC-16 fires only when present, and XRechnung's own BR-DEX-09 (vendor/schematron/XRechnung-UBL-validation.xsl line 1996) substitutes 0 when absent. XRechnung is a genuine CIUS of EN 16931, so its model's min-occurs=\"0\" is authoritative, not analogical. An optional term the UAPI JSON cannot carry while the XML mapping exists is correctly should-fix under the blocking-means-mandatory ladder; bundle version 3.0.2 matches the row's stated version.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "BT-3 is derived by fiskaly; the operation only distinguishes INVOICE from CORRECTION",
+   "rowIds": [
+    "xrechnung|typeCode|json"
+   ],
+   "format": "xrechnung",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "XRechnung 3.0.2 CIUS model: <m:term ref=\"BT-3\"/> required with codelist untdid-1001",
+   "source": {
+    "kind": "local",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/E-Invoicing-Formats-and-Profiles/Germany/xrechnung-3.0.2-bundle-2026-01-31/xrechnung-3.0.2-xrechnung-model-2026-01-31/model/xrechnung-cius-model.xml"
+   },
+   "summary": "Mandatory but derived; should-fix stands.",
+   "verifier": {
+    "refuted": false,
+    "reason": "Claim confirmed on every particular. The cited CIUS model exists and says what the reviewer quotes: BT-3 is defined at line 296 with <m:codelist ref=\"untdid-1001\"/> (line 300), and appears in the INVOICE message structure at line 3229 as a bare <m:term ref=\"BT-3\"/> — this model marks optional terms with explicit min-occurs=\"0\" (cf. BT-6..BT-9 immediately below), so bare ref = mandatory. \"Derived\" is independently verified: uapi-map.ts UAPI_LOSSY_FIELDS carries the row's exact reason for typeCode, and the active spec offers no BT-3 carrier (InvoiceTransaction.type enum=[INVOICE], CorrectionTransaction.type=[CORRECTION], Document schema has no type-code property). Severity: the CIUS model binds BT-3 to /Invoice/cbc:InvoiceTypeCode (line 3578) and the row's presentIn says \"xml mapped\" — the syntax renders the element with a fiskaly-derived value, so R1 (\"renders no element\") does not apply; R2 (\"syntax renders it but the operation cannot carry it\") applies exactly, and docs/gaps/README.md lines 56-57 explicitly names BT-3 derivation as the canonical not-blocking case. \"Mandatory but derived; should-fix stands\" is correct for xrechnung|typeCode|json.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "rateCode/exemptionCode are many-to-one: the SystemVatRateCode and SystemVatExemptionCode enums cannot express Natura or a VATEX code",
+   "rowIds": [
+    "xrechnung|vatBreakdown.{i}.vatexCode|json"
+   ],
+   "format": "xrechnung",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "confirmed",
+   "severity": "should-fix",
+   "citation": "XRechnung 3.0.2 CIUS model: <m:term ref=\"BT-121\" min-occurs=\"0\"/>; CEN-EN16931-UBL.sch BR-E-10; fiskaly spec VatExemptionReason (BT-120)",
+   "source": {
+    "kind": "local",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/E-Invoicing-Formats-and-Profiles/Germany/xrechnung-3.0.2-bundle-2026-01-31/xrechnung-3.0.2-xrechnung-model-2026-01-31/model/xrechnung-cius-model.xml"
+   },
+   "summary": "Optional code with a deliverable text alternative; should-fix stands.",
+   "verifier": {
+    "refuted": false,
+    "reason": "Claim confirmed on all three citation legs. (1) The cited local file exists and contains the exact snippet: xrechnung-cius-model.xml line 3395 has <m:term ref=\"BT-121\" min-occurs=\"0\"/> inside the BG-23 group (3389-3396) — BT-121 is optional in XRechnung 3.0.2. (2) vendor/schematron/CEN-EN16931-UBL.sch:251 BR-E-10 (flag=fatal) is disjunctive — exists(cbc:TaxExemptionReason) or exists(cbc:TaxExemptionReasonCode) — so BT-120 text alone satisfies the exempt-category requirement; the CIUS model's own German rule texts (lines 2770/2805/2840/2881/2916) mirror this disjunction. (3) The DE spec (fiskaly.uapi.e-invoice-de.2026-06-01.yaml ~6830) delivers the text alternative via VatExemptionCategory.reason → VatExemptionReason, described as \"(BT-120 VAT exemption reason text)\", while the code slot is the closed SystemVatExemptionCode enum that cannot express VATEX — matching the row's reason. Refutation attempts failed: XRechnung 3.0.2's own Schematron (bundle XRechnung-UBL-validation.sch and vendored XRechnung-UBL-validation.xsl) contains no rule on exemption reasons, so no BR-DE assert requires BT-121 or escalates the row; and the xml-mapped half of R2 is real (XRECHNUNG_MAP derives from UBL_MAP, ubl-map.ts:397 maps vatBreakdown.{i}.vatexCode). With missingFrom=json, xml mapped, term optional, and a mandatory-when-exempt requirement still satisfiable through deliverable BT-120 text, should-fix (R2) is the correct severity for xrechnung|vatBreakdown.{i}.vatexCode|json.",
+    "citationVerified": true,
+    "sourceReachable": true
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "ubl|buyer.electronicAddress.id|json",
+    "ubl|buyer.electronicAddress.scheme|json"
+   ],
+   "format": "ubl",
+   "missingFrom": "json",
+   "proposition": "gap-is-real",
+   "status": "refuted",
+   "severity": null,
+   "citation": "PeppolIdentifierAnnotation: \"PEPPOL Network Identifier of the recipient (BT-49 Buyer electronic address)\", pattern ^[0-9]{4}:[a-zA-Z0-9._/, -]{1,59}$ — fiskaly Unified API spec 2026-06-01; frontend/src/uapi-map.ts SAME_DATUM + comment lines 616-618",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "BT-49 and its EAS scheme travel in recipients[].invoicing — the operation carries the datum; the mapping table just spells it buyer.channel.*",
+   "fix": "Teach gap-report.ts to treat a field as present in json when a SAME_DATUM alias resolves to a pointer (mirror of the existing XML-side alias check at gap-report.ts:222-225); these two rows then disappear.",
+   "verifier": {
+    "refuted": false,
+    "reason": "The contract itself annotates two pointers as BT-49: RecipientInvoicingPeppol.identifier → PeppolIdentifierAnnotation 'PEPPOL Network Identifier… (BT-49 Buyer electronic address)' with pattern ^[0-9]{4}:…$ — the 4-digit EAS scheme is the mandatory prefix — and RecipientInvoicingEmail.email '(BT-49 Buyer electronic address)'. The repo agrees: uapi-map.ts SAME_DATUM declares buyer.electronicAddress.id/scheme = buyer.channel.participantId (mapped at pointer /recipients/{i}/invoicing/identifier, line 1188), and the UAPI_LOSSY_FIELDS comment (lines 616-618, 703-706) says BT-49 was deliberately excluded because dropping it 'would make the predicted UBL fail Peppol's own mandatory-endpoint rule' (PEPPOL-EN16931-R010, fatal, verified in the vendored Peppol schematron). These two rows are artefacts of gap-report.ts applying SAME_DATUM only on the XML side (lines 222-225), never when deciding inJson.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "ubl|buyer.electronicAddress.id|json",
+    "ubl|buyer.electronicAddress.scheme|json"
+   ],
+   "format": "ubl",
+   "missingFrom": "json",
+   "proposition": "reason-true",
+   "status": "refuted",
+   "severity": null,
+   "citation": "RecipientInvoicingEmail: \"Buyer's email address for receiving e-invoice documents (BT-49 Buyer electronic address)\" — fiskaly Unified API spec 2026-06-01",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "'The operation has no pointer for this field' is false — /recipients/{i}/invoicing/identifier is that pointer",
+   "fix": null,
+   "verifier": {
+    "refuted": false,
+    "reason": "The generator's fallback sentence is contradicted by the contract: /recipients/{i}/invoicing/identifier (PEPPOL) and /recipients/{i}/invoicing/email (EMAIL) both carry the spec's own '(BT-49 Buyer electronic address)' annotation, and the scheme travels as the identifier's 4-digit EAS prefix (for the EMAIL channel the scheme is fixed by the channel type). uapi-map.ts maps the pointer (line 1188).",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "ubl|buyer.electronicAddress.id|json",
+    "ubl|buyer.electronicAddress.scheme|json"
+   ],
+   "format": "ubl",
+   "missingFrom": "json",
+   "proposition": "belongs-at-correct",
+   "status": "refuted",
+   "severity": null,
+   "citation": "frontend/src/gap-report.ts:267-270 (belongsAt fallback logic) vs frontend/src/uapi-map.ts:1188 (\"/recipients/{i}/invoicing/identifier\": \"buyer.channel.participantId\")",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/frontend/src/uapi-map.ts"
+   },
+   "summary": "belongsAt should name the existing pointer, not fall back to the bare term",
+   "fix": "If the rows are kept at all, set belongsAt to /recipients/{i}/invoicing/identifier (id) and note the scheme is its ^[0-9]{4}: prefix.",
+   "verifier": {
+    "refuted": false,
+    "reason": "Per the generator's own convention ('Where a pointer is known — a partial carry — name it'), belongsAt for the id row should be /recipients/{i}/invoicing/identifier (or /recipients/{i}/invoicing/email per channel), and for the scheme row the EAS prefix of that same identifier — not 'BT-49' / the model field id. The BT pairing itself (BT-49 = buyer electronic address) is correct; the emitted address is not.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "ubl|vatBreakdown.{i}.reason|json"
+   ],
+   "format": "ubl",
+   "missingFrom": "json",
+   "proposition": "gap-is-real",
+   "status": "refuted",
+   "severity": null,
+   "citation": "VatExemptionReason: \"🇧🇪🇩🇪🇮🇹 Belgium (BE_EI), Germany (DE_EI), Italy (IT_EI): Justification for the VAT exemption… (BT-120 VAT exemption reason text)\" — fiskaly Unified API spec 2026-06-01",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "BT-120 is carried by the operation at /entries/{i}/data/vat/reason — the spec annotates it as BT-120 for the e-invoice profiles",
+   "fix": "Add vatBreakdown.{i}.reason ↔ lines.{i}.vat.reason to SAME_DATUM (or map the pointer to both spellings); the row then falls out of the report.",
+   "verifier": {
+    "refuted": false,
+    "reason": "VatExemptionCategory (line-level EntryVat) has a reason property; its schema VatExemptionReason is annotated for Belgium (BE_EI), Germany (DE_EI) and Italy (IT_EI): '(BT-120 VAT exemption reason text)'. uapi-map.ts maps that pointer to the model's line spelling (line 1171: \"/entries/{i}/data/vat/reason\": \"lines.{i}.vat.reason\"). The model's vatBreakdown.{i}.reason is a second spelling of the same business term — EN 16931 defines the exemption reason text only at BG-23, and fiskaly's annotation binds the line-level field to exactly that term, implying line→breakdown aggregation server-side. Caveat: if two lines of one category carried different reasons the breakdown value would be ambiguous, but the model derives its breakdown from lines, so the datum reaches the operation.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "ubl|vatBreakdown.{i}.reason|json"
+   ],
+   "format": "ubl",
+   "missingFrom": "json",
+   "proposition": "reason-true",
+   "status": "refuted",
+   "severity": null,
+   "citation": "CEN-EN16931-UBL.sch: \"[BR-E-10]-A VAT breakdown (BG-23) with VAT Category code (BT-118) 'Exempt from VAT' shall have a VAT exemption reason code (BT-121) or a VAT exemption reason text (BT-120).\"",
+   "source": {
+    "kind": "vendor",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/schematron/CEN-EN16931-UBL.sch"
+   },
+   "summary": "There is a pointer carrying this business term; only the breakdown-level spelling lacks one",
+   "fix": null,
+   "verifier": {
+    "refuted": false,
+    "reason": "'The operation has no pointer for this field' is true only in the narrowest mapping-table sense (no pointer maps to the model field vatBreakdown.{i}.reason). As a statement about the operation it is false: /entries/{i}/data/vat/reason exists on every VAT_EXEMPTION line and is the spec's own BT-120 carrier. Note BR-E-10/BR-AE-10 (CEN-EN16931-UBL.sch, fatal) require BT-121 or BT-120 on exempt/reverse-charge breakdowns — precisely the term this pointer supplies.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "ubl|vatBreakdown.{i}.reason|json"
+   ],
+   "format": "ubl",
+   "missingFrom": "json",
+   "proposition": "belongs-at-correct",
+   "status": "refuted",
+   "severity": null,
+   "citation": "frontend/src/uapi-map.ts:1171: \"/entries/{i}/data/vat/reason\": \"lines.{i}.vat.reason\"",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/frontend/src/uapi-map.ts"
+   },
+   "summary": "belongsAt should be /entries/{i}/data/vat/reason, not the bare 'BT-120'",
+   "fix": "belongsAt → /entries/{i}/data/vat/reason.",
+   "verifier": {
+    "refuted": false,
+    "reason": "A known, spec-annotated pointer exists for the term; the generator fell back to the BT only because its pointer table addresses the line spelling. If the row survives, its belongsAt should name the pointer.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "An UNKNOWN instruction reuses `text` for the payment terms, so a remittance reference equal to the terms is indistinguishable",
+   "rowIds": [
+    "ubl|payment.remittanceInformation|json"
+   ],
+   "format": "ubl",
+   "missingFrom": "json",
+   "proposition": "gap-is-real",
+   "status": "refuted",
+   "severity": "note",
+   "citation": "PaymentInstructionText: \"Free-text description for the payment instruction. 🇧🇪🇩🇪🇮🇹 …: (BT-83 Remittance information)\" and DocumentPaymentTerms: \"(BT-20 Payment terms)\" — fiskaly Unified API spec 2026-06-01; frontend/src/uapi-map.ts:471,981-992,1197",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "BT-83 is not missing from the operation — instruction.text exists on every instruction shape; the ambiguity is created by the tool's own composer",
+   "fix": "Drop the `?? terms` fallback in toInvoiceTransaction (BT-20 already travels at /document/payment_terms), which removes the ambiguity entirely; or reclassify this row as a round-trip note rather than a missing field.",
+   "verifier": {
+    "refuted": false,
+    "reason": "/payments/{i}/instruction/text is present on CREDIT_TRANSFER, DIRECT_DEBIT and UNKNOWN alike and is annotated '(BT-83 Remittance information)' for BE_EI/DE_EI/IT_EI; uapi-map.ts maps it (line 1197). The round-trip ambiguity the reason describes exists only because toInvoiceTransaction defaults UNKNOWN.text to `remittanceInformation ?? terms` (uapi-map.ts:471) and the inverse then guesses (lines 981-992). The contract itself keeps BT-83 (instruction.text) and BT-20 (/document/payment_terms, annotated '(BT-20 Payment terms)') separate, and the tool already sends terms there (line 524). So 'missingFrom json' with presentIn 'json —' misstates the situation.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "An UNKNOWN instruction reuses `text` for the payment terms, so a remittance reference equal to the terms is indistinguishable",
+   "rowIds": [
+    "ubl|payment.remittanceInformation|json"
+   ],
+   "format": "ubl",
+   "missingFrom": "json",
+   "proposition": "reason-true",
+   "status": "confirmed",
+   "severity": null,
+   "citation": "frontend/src/uapi-map.ts:471: { type: \"UNKNOWN\", text: invoice.payment.remittanceInformation ?? terms }; :983-984 comment; :992 guard",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/frontend/src/uapi-map.ts"
+   },
+   "summary": "The sentence accurately describes the repo's composer — but the conflation is the tool's choice, not the contract's",
+   "fix": null,
+   "verifier": {
+    "refuted": false,
+    "reason": "uapi-map.ts:471 composes UNKNOWN as { type: \"UNKNOWN\", text: invoice.payment.remittanceInformation ?? terms }, and the inverse (line 992) restores remittanceInformation only when text !== terms — exactly the indistinguishability the reason states. As a claim about the fiskaly contract it would be false (text=BT-83 and payment_terms=BT-20 are separate pointers); as the UAPI_PARTIAL_FIELDS self-description it verifies.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "An UNKNOWN instruction reuses `text` for the payment terms, so a remittance reference equal to the terms is indistinguishable",
+   "rowIds": [
+    "ubl|payment.remittanceInformation|json"
+   ],
+   "format": "ubl",
+   "missingFrom": "json",
+   "proposition": "belongs-at-correct",
+   "status": "confirmed",
+   "severity": null,
+   "citation": "PaymentInstructionText annotation '(BT-83 Remittance information)' — fiskaly Unified API spec 2026-06-01",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "/payments/{i}/instruction/text is the spec's BT-83 home",
+   "fix": null,
+   "verifier": {
+    "refuted": false,
+    "reason": "Annotated '(BT-83 Remittance information)' for the e-invoice profiles and mapped by the repo to payment.remittanceInformation.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "An UNKNOWN instruction reuses `text` for the payment terms, so a remittance reference equal to the terms is indistinguishable",
+   "rowIds": [
+    "ubl|payment.remittanceInformation|json"
+   ],
+   "format": "ubl",
+   "missingFrom": "json",
+   "proposition": "applicability-correct",
+   "status": "confirmed",
+   "severity": null,
+   "citation": "PaymentInstructionText description names Belgium (BE_EI) with the BT-83 tag — fiskaly Unified API spec 2026-06-01",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "BE_EI: applicable matches the spec annotation and BIS 3.0's BT-83",
+   "fix": null,
+   "verifier": {
+    "refuted": false,
+    "reason": "PaymentInstructionText's description names Belgium (BE_EI); BT-83 (cac:PaymentMeans/cbc:PaymentID in the UBL binding) is part of EN 16931/Peppol BIS 3.0.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "xrechnung|buyer.electronicAddress.id|json",
+    "xrechnung|buyer.electronicAddress.scheme|json"
+   ],
+   "format": "xrechnung",
+   "missingFrom": "json",
+   "proposition": "gap-is-real",
+   "status": "refuted",
+   "severity": null,
+   "citation": "fiskaly Unified API (all countries) 2026-06-01, components.schemas.PeppolIdentifierAnnotation and RecipientInvoicingEmail (both '(BT-49 Buyer electronic address)' under Germany DE_EI); frontend/src/uapi-map.ts SAME_DATUM (lines 676-688) and comment at lines 616-618",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "BT-49 and its scheme ARE carried by the operation's invoicing block; the gap is an artefact.",
+   "fix": "Drop these two rows (or re-class as SAME_DATUM aliases): BT-49 and its EAS scheme are carried by /recipients/{i}/invoicing/identifier (scheme as the mandatory 4-digit prefix) or /recipients/{i}/invoicing/email.",
+   "verifier": {
+    "refuted": false,
+    "reason": "The operation carries BT-49 in the invoicing block the mapping table does not name. PeppolIdentifierAnnotation (used by /recipients/{i}/invoicing/identifier) is annotated for DE_EI: 'PEPPOL Network Identifier of the recipient (BT-49 Buyer electronic address)', with pattern ^[0-9]{4}:... that FORCES the 4-digit EAS scheme prefix — so the scheme (BT-49-1) travels inside the same value. RecipientInvoicingEmail is likewise annotated '(BT-49 Buyer electronic address)' for DE_EI (scheme EM implied by the channel). The tool itself already knows this: uapi-map.ts SAME_DATUM declares buyer.electronicAddress.id ≡ buyer.channel.participantId/email and the UAPI_LOSSY_FIELDS comment says 'BT-49 is deliberately absent from this list'. The gap-report.ts structural rows contradict the tool's own mapping knowledge.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "xrechnung|buyer.electronicAddress.id|json",
+    "xrechnung|buyer.electronicAddress.scheme|json"
+   ],
+   "format": "xrechnung",
+   "missingFrom": "json",
+   "proposition": "reason-true",
+   "status": "refuted",
+   "severity": null,
+   "citation": "fiskaly Unified API (all countries) 2026-06-01, PeppolIdentifierAnnotation description + pattern ^[0-9]{4}:[a-zA-Z0-9._/, -]{1,59}$; RecipientInvoicingEmail DE_EI description",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "Pointers annotated BT-49 exist; the quoted reason is contradicted by the contract.",
+   "fix": null,
+   "verifier": {
+    "refuted": false,
+    "reason": "'The operation has no pointer for this field' is false: two pointers exist whose contract-declared semantic is BT-49 for Germany — /recipients/{i}/invoicing/identifier (PEPPOL) and /recipients/{i}/invoicing/email (EMAIL). For the scheme there is no dedicated field, but the PEPPOL identifier pattern makes the scheme prefix mandatory, so the term is carried, fused with the id.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "xrechnung|buyer.electronicAddress.id|json",
+    "xrechnung|buyer.electronicAddress.scheme|json"
+   ],
+   "format": "xrechnung",
+   "missingFrom": "json",
+   "proposition": "belongs-at-correct",
+   "status": "refuted",
+   "severity": null,
+   "citation": "XRechnung 3.0.2 CIUS model (xrechnung-cius-model.xml): BT-49 required, BR-63; fiskaly spec 2026-06-01 RecipientInvoicing*",
+   "source": {
+    "kind": "local",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/E-Invoicing-Formats-and-Profiles/Germany/xrechnung-3.0.2-bundle-2026-01-31/xrechnung-3.0.2-xrechnung-model-2026-01-31/model/xrechnung-cius-model.xml"
+   },
+   "summary": "belongsAt should name the invoicing pointer, not the BT fallback.",
+   "fix": "If the rows are kept, set belongsAt to /recipients/{i}/invoicing/identifier (id + scheme prefix) and note the EMAIL alternative.",
+   "verifier": {
+    "refuted": false,
+    "reason": "belongsAt falls back to 'BT-49' / the model field id, but the semantically right home exists in the contract: /recipients/{i}/invoicing/identifier (PEPPOL, scheme embedded as prefix) or /recipients/{i}/invoicing/email (EMAIL). XRechnung makes BT-49 with scheme mandatory (structure ref without min-occurs; rule BR-63 'Im Element BT-49 muss die Komponente Scheme Identifier vorhanden sein'; PEPPOL-EN16931-R010 quoted in the model), so pointing users away from the real carrier is actively harmful.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "xrechnung|vatBreakdown.{i}.reason|json"
+   ],
+   "format": "xrechnung",
+   "missingFrom": "json",
+   "proposition": "gap-is-real",
+   "status": "refuted",
+   "severity": null,
+   "citation": "fiskaly Unified API (all countries) 2026-06-01, components.schemas.VatExemptionReason ('(BT-120 VAT exemption reason text)' for DE_EI); docs/reference/fatturapa/README.md (breakdown recomputed — FatturaPA path, by analogy)",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "BT-120 reaches the operation through the line-level exemption reason the mapping table does not name.",
+   "fix": "Re-map vatBreakdown.{i}.reason as carried-via /entries/{i}/data/vat/reason (aggregated per category by the gateway) instead of reporting it missing.",
+   "verifier": {
+    "refuted": false,
+    "reason": "The operation carries BT-120 at line level: VatExemptionReason (/entries/{i}/data/vat/reason on VatExemptionCategory) is annotated for BE_EI/DE_EI/IT_EI as 'Justification for the VAT exemption... (BT-120 VAT exemption reason text)'. BT-120 is by definition a BG-23 document-level term, so fiskaly's own annotation asserts the line value ends up as the breakdown exemption reason. The tool already sends it (uapi-map.ts lineVat(): reason: line.vat.reason), and the breakdown array is recomputed server-side anyway — proven for the FatturaPA path by the 2026-08-25 capture ('breakdown[] and totals are discarded — DatiRiepilogo is always recomputed'), applied here to XRechnung by analogy since no UBL capture exists.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "xrechnung|vatBreakdown.{i}.reason|json"
+   ],
+   "format": "xrechnung",
+   "missingFrom": "json",
+   "proposition": "reason-true",
+   "status": "refuted",
+   "severity": null,
+   "citation": "fiskaly Unified API (all countries) 2026-06-01, components.schemas.VatBreakdownExemptionEntry (no reason property) vs VatExemptionReason (BT-120 annotation for DE_EI)",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "A BT-120 pointer exists at line level; the reason overstates.",
+   "fix": null,
+   "verifier": {
+    "refuted": false,
+    "reason": "'The operation has no pointer for this field' is only true of the /breakdown/{i} subtree (VatBreakdownExemptionEntry = type/code/exclusive, no reason). The operation as a whole has a pointer whose declared semantic IS BT-120: /entries/{i}/data/vat/reason. Since the row's field is the business term BT-120, the blanket 'no pointer' claim is contradicted by the contract.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "xrechnung|vatBreakdown.{i}.reason|json"
+   ],
+   "format": "xrechnung",
+   "missingFrom": "json",
+   "proposition": "belongs-at-correct",
+   "status": "refuted",
+   "severity": null,
+   "citation": "fiskaly Unified API (all countries) 2026-06-01, components.schemas.VatExemptionCategory.reason → VatExemptionReason",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "belongsAt should name the line-level reason pointer.",
+   "fix": "Set belongsAt to /entries/{i}/data/vat/reason.",
+   "verifier": {
+    "refuted": false,
+    "reason": "belongsAt 'BT-120' (fallback) hides the real home. The semantically right home in the operation is /entries/{i}/data/vat/reason — the only field the contract annotates as BT-120 — mirroring how the other partial rows (e.g. delivery.date) name their conditional pointer.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "An UNKNOWN instruction reuses `text` for the payment terms, so a remittance reference equal to the terms is indistinguishable",
+   "rowIds": [
+    "xrechnung|payment.remittanceInformation|json"
+   ],
+   "format": "xrechnung",
+   "missingFrom": "json",
+   "proposition": "gap-is-real",
+   "status": "refuted",
+   "severity": null,
+   "citation": "fiskaly Unified API (all countries) 2026-06-01, PaymentInstructionText ('(BT-83 Remittance information)') and DocumentPaymentTerms ('(BT-20 Payment terms)'); frontend/src/uapi-map.ts payment() lines 460-482",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "BT-83 is fully carried; the ambiguity is self-inflicted by the composer's fallback.",
+   "fix": "Stop defaulting UNKNOWN.text to the payment terms in uapi-map.ts; then BT-83 round-trips unambiguously and the row disappears.",
+   "verifier": {
+    "refuted": false,
+    "reason": "BT-83 has an unconditional, dedicated slot: text exists on ALL three instruction shapes (CREDIT_TRANSFER, DIRECT_DEBIT, UNKNOWN) and PaymentInstructionText is annotated '(BT-83 Remittance information)' for DE_EI. Payment terms have their own separate pointer, /document/payment_terms, annotated '(BT-20 Payment terms)'. The claimed indistinguishability is created solely by the tool's own composition — uapi-map.ts payment() line 471 sets UNKNOWN text to `remittanceInformation ?? terms` — not by the operation contract.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "An UNKNOWN instruction reuses `text` for the payment terms, so a remittance reference equal to the terms is indistinguishable",
+   "rowIds": [
+    "xrechnung|payment.remittanceInformation|json"
+   ],
+   "format": "xrechnung",
+   "missingFrom": "json",
+   "proposition": "reason-true",
+   "status": "refuted",
+   "severity": null,
+   "citation": "fiskaly Unified API (all countries) 2026-06-01, UnknownPaymentInstruction, PaymentInstructionText, DocumentPaymentTerms; frontend/src/uapi-map.ts lines 471 and 524",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "The contract separates BT-83 from BT-20; the quoted reason describes the tool, not the operation.",
+   "fix": null,
+   "verifier": {
+    "refuted": false,
+    "reason": "'An UNKNOWN instruction reuses text for the payment terms' is false as a statement about the contract: UnknownPaymentInstruction is described as 'Unstructured payment instruction carrying a free-text reference only', its text field is BT-83 for DE_EI, and BT-20 travels separately in document.payment_terms (which the tool also populates — uapi-map.ts line 524). The reuse happens only inside the tool's own fallback expression.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "An UNKNOWN instruction reuses `text` for the payment terms, so a remittance reference equal to the terms is indistinguishable",
+   "rowIds": [
+    "xrechnung|payment.remittanceInformation|json"
+   ],
+   "format": "xrechnung",
+   "missingFrom": "json",
+   "proposition": "belongs-at-correct",
+   "status": "confirmed",
+   "severity": null,
+   "citation": "fiskaly Unified API (all countries) 2026-06-01, PaymentInstructionText DE_EI annotation",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "Pointer is correct.",
+   "fix": null,
+   "verifier": {
+    "refuted": false,
+    "reason": "/payments/{i}/instruction/text is the field the contract annotates as BT-83 for DE_EI — the right home.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "An UNKNOWN instruction reuses `text` for the payment terms, so a remittance reference equal to the terms is indistinguishable",
+   "rowIds": [
+    "xrechnung|payment.remittanceInformation|json"
+   ],
+   "format": "xrechnung",
+   "missingFrom": "json",
+   "proposition": "applicability-correct",
+   "status": "confirmed",
+   "severity": null,
+   "citation": "fiskaly Unified API (all countries) 2026-06-01, PaymentInstructionText; XRechnung 3.0.2 CIUS model BT-83 min-occurs=\"0\"",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "DE_EI applicability is right.",
+   "fix": null,
+   "verifier": {
+    "refuted": false,
+    "reason": "'DE_EI: applicable' matches PaymentInstructionText's DE_EI annotation, and BT-83 is legal (optional, min-occurs=\"0\") XRechnung content.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "cii|buyer.electronicAddress.id|json",
+    "cii|buyer.electronicAddress.scheme|json"
+   ],
+   "format": "cii",
+   "missingFrom": "json",
+   "proposition": "gap-is-real",
+   "status": "refuted",
+   "severity": null,
+   "citation": "spec/fiskaly.unified-api.all.2026-06-01.yaml lines 4624-4635 ('🇩🇪 Germany (DE_EI): PEPPOL Network Identifier of the recipient (BT-49 Buyer electronic address)', pattern ^[0-9]{4}:...) and 8066-8072; frontend/src/uapi-map.ts lines 616-618, 676-688",
+   "source": {
+    "kind": "repo",
+    "ref": "spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "Not a real gap: BT-49 (id and embedded EAS scheme) travels at recipients[].invoicing, spec-annotated for DE_EI; the rows contradict uapi-map.ts's own SAME_DATUM declaration.",
+   "fix": "Suppress these rows the way their xml-side twins are suppressed: apply SAME_DATUM (uapi-map.ts:676-688) on the json-presence check in gap-report.ts, or reclassify as partial with belongsAt=/recipients/{i}/invoicing/identifier (and email for the EMAIL channel).",
+   "verifier": {
+    "refuted": false,
+    "reason": "The operation does carry the buyer electronic address: the spec annotates PeppolIdentifierAnnotation '(BT-49 Buyer electronic address)' for DE_EI (lines 4624-4635) at /recipients/{i}/invoicing/identifier, and RecipientInvoicingEmail.email likewise '(BT-49 Buyer electronic address)' for DE_EI (lines 8066-8072). The EAS scheme is not lost either — the identifier pattern ^[0-9]{4}:...$ makes the 4-digit scheme prefix mandatory, and the EMAIL channel implies scheme EM. The repo itself says so: uapi-map.ts:616-618 deliberately excludes BT-49 from UAPI_LOSSY_FIELDS ('carried as the routing identifier under recipients[].invoicing'), and SAME_DATUM declares the two spellings one datum. The rows are a generator artifact: SAME_DATUM is applied only to the xml-carried check (gap-report.ts:222-225), not the json check.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "cii|vatBreakdown.{i}.reason|json"
+   ],
+   "format": "cii",
+   "missingFrom": "json",
+   "proposition": "gap-is-real",
+   "status": "refuted",
+   "severity": null,
+   "citation": "spec/fiskaly.unified-api.all.2026-06-01.yaml lines 7701-7717 ('🇧🇪🇩🇪🇮🇹 Belgium (BE_EI), Germany (DE_EI), Italy (IT_EI): ... (BT-120 VAT exemption reason text)') and 7850-7867 (VatBreakdownExemptionEntry); frontend/src/uapi-map.ts line 1171",
+   "source": {
+    "kind": "repo",
+    "ref": "spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "BT-120 has a spec-annotated JSON home at entry level; at most a partial gap (no breakdown-level override), not 'no pointer'.",
+   "fix": "Reclassify as a partial carry (belongsAt=/entries/{i}/data/vat/reason) noting the residual limitation: no per-breakdown override, and aggregation of differing per-line reasons into one BG-23 row is undefined.",
+   "verifier": {
+    "refuted": false,
+    "reason": "The operation carries BT-120: VatExemptionReason at /entries/{i}/data/vat/reason is annotated '(BT-120 VAT exemption reason text)' for BE_EI/DE_EI/IT_EI (spec lines 7701-7717), and UAPI_POINTER_FIELDS already maps that pointer to lines.{i}.vat.reason (uapi-map.ts:1171). Only the breakdown-level pointer is missing (VatBreakdownExemptionEntry = type/code/exclusive, lines 7850-7867) — but fiskaly rebuilds the breakdown from entries (breakdown[] is discarded and recomputed server-side per the FatturaPA capture, applied here by analogy), so the business term is carried, just at entry level.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "cii|buyer.electronicAddress.id|json",
+    "cii|buyer.electronicAddress.scheme|json",
+    "cii|vatBreakdown.{i}.reason|json"
+   ],
+   "format": "cii",
+   "missingFrom": "json",
+   "proposition": "reason-true",
+   "status": "refuted",
+   "severity": null,
+   "citation": "spec/fiskaly.unified-api.all.2026-06-01.yaml lines 4624-4635, 8066-8072 (BT-49 annotations), 7701-7717 (BT-120 annotation); frontend/src/gap-report.ts line 126 (NO_POINTER fallback)",
+   "source": {
+    "kind": "repo",
+    "ref": "spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "The quoted prose is untrue as a statement about the contract: pointers carrying these business terms exist and are spec-annotated.",
+   "fix": null,
+   "verifier": {
+    "refuted": false,
+    "reason": "'The operation has no pointer for this field' is the generator's fallback string, and it is false for all three business terms: BT-49 is carried at /recipients/{i}/invoicing/identifier and /recipients/{i}/invoicing/email (both spec-annotated BT-49 for DE_EI), the EAS scheme is the mandatory 4-digit prefix of the identifier, and BT-120 is carried at /entries/{i}/data/vat/reason (spec-annotated BT-120 for DE_EI). What is true is only that the specific model-field spellings have no dedicated uapi-map row — a mapping-table statement, not a contract fact.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "cii|buyer.electronicAddress.id|json",
+    "cii|buyer.electronicAddress.scheme|json",
+    "cii|vatBreakdown.{i}.reason|json"
+   ],
+   "format": "cii",
+   "missingFrom": "json",
+   "proposition": "belongs-at-correct",
+   "status": "refuted",
+   "severity": null,
+   "citation": "frontend/src/gap-report.ts lines 267-270; spec/fiskaly.unified-api.all.2026-06-01.yaml lines 4624-4635, 7701-7717, 8066-8072",
+   "source": {
+    "kind": "repo",
+    "ref": "frontend/src/gap-report.ts"
+   },
+   "summary": "belongsAt should name the existing JSON pointers, per the generator's own stated convention.",
+   "fix": "Set belongsAt to the known pointers: /recipients/{i}/invoicing/identifier (id; scheme rides its mandatory prefix; /recipients/{i}/invoicing/email for the EMAIL channel) and /entries/{i}/data/vat/reason (BT-120).",
+   "verifier": {
+    "refuted": false,
+    "reason": "The generator's own convention (gap-report.ts:267-270) is 'Where a pointer is known — a partial carry — name it; otherwise the business term is the semantic address'. Pointers ARE known for all three terms (spec-annotated BT-49 and BT-120), so falling back to 'BT-49', 'buyer.electronicAddress.scheme' and 'BT-120' names the wrong home by the report's own rule.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "cii|buyer.electronicAddress.id|json",
+    "cii|buyer.electronicAddress.scheme|json",
+    "cii|vatBreakdown.{i}.reason|json"
+   ],
+   "format": "cii",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "refuted",
+   "severity": "note",
+   "citation": "docs/gaps/README.md lines 49-57; frontend/src/uapi-map.ts lines 703-706",
+   "source": {
+    "kind": "repo",
+    "ref": "frontend/src/uapi-map.ts"
+   },
+   "summary": "should-fix is wrong because the R2 premise fails; these are false positives, not operation gaps.",
+   "fix": null,
+   "verifier": {
+    "refuted": false,
+    "reason": "R2's premise — 'the operation cannot carry it, so data the user authored never reaches fiskaly' (docs/gaps/README.md:52) — fails: all three terms reach fiskaly through spec-annotated pointers. uapi-map.ts:703-706 even warns that dropping BT-49 'would make the predicted UBL fail Peppol's own mandatory-endpoint rule' and says to split the reason before classifying. These rows should be suppressed or downgraded; at most a note about the entry-vs-breakdown level of BT-120 remains.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "An UNKNOWN instruction reuses `text` for the payment terms, so a remittance reference equal to the terms is indistinguishable",
+   "rowIds": [
+    "cii|payment.remittanceInformation|json"
+   ],
+   "format": "cii",
+   "missingFrom": "json",
+   "proposition": "gap-is-real",
+   "status": "refuted",
+   "severity": null,
+   "citation": "spec/fiskaly.unified-api.all.2026-06-01.yaml lines 8519-8527 ('(BT-83 Remittance information)') and 6876-6884 ('(BT-20 Payment terms)'); frontend/src/uapi-map.ts lines 462-471 and 1197",
+   "source": {
+    "kind": "repo",
+    "ref": "spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "Not an operation gap: BT-83 has a named, spec-annotated pointer; the ambiguity is the client's own fallback.",
+   "fix": "Fix is client-side: drop the `?? terms` fallback in uapi-map.ts:471 — terms already travel at /document/payment_terms (BT-20, spec lines 6876-6884) — then the row disappears or becomes a mere note.",
+   "verifier": {
+    "refuted": false,
+    "reason": "BT-83 is not absent from the operation: /payments/{i}/instruction/text exists on all three instruction shapes and is spec-annotated '(BT-83 Remittance information)' for BE_EI/DE_EI/IT_EI (lines 8519-8527); UAPI_POINTER_FIELDS already maps it to payment.remittanceInformation (uapi-map.ts:1197). The indistinguishability the reason describes is created by this client's own writer, which sets UNKNOWN.text to `remittanceInformation ?? terms` (uapi-map.ts:471) even though the terms have their own spec home at /document/payment_terms (BT-20). The operation itself keeps the two terms apart.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "An UNKNOWN instruction reuses `text` for the payment terms, so a remittance reference equal to the terms is indistinguishable",
+   "rowIds": [
+    "cii|payment.remittanceInformation|json"
+   ],
+   "format": "cii",
+   "missingFrom": "json",
+   "proposition": "belongs-at-correct",
+   "status": "confirmed",
+   "severity": null,
+   "citation": "spec/fiskaly.unified-api.all.2026-06-01.yaml lines 8519-8527 (PaymentInstructionText '(BT-83 Remittance information)')",
+   "source": {
+    "kind": "repo",
+    "ref": "spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "The pointer named is the spec's own BT-83 carrier.",
+   "fix": null,
+   "verifier": {
+    "refuted": false,
+    "reason": "/payments/{i}/instruction/text is exactly the spec's BT-83 home; naming it as belongsAt is right.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "An UNKNOWN instruction reuses `text` for the payment terms, so a remittance reference equal to the terms is indistinguishable",
+   "rowIds": [
+    "cii|payment.remittanceInformation|json"
+   ],
+   "format": "cii",
+   "missingFrom": "json",
+   "proposition": "reason-true",
+   "status": "confirmed",
+   "severity": null,
+   "citation": "frontend/src/uapi-map.ts line 471 (': { type: \"UNKNOWN\", text: invoice.payment.remittanceInformation ?? terms }') and lines 980-985",
+   "source": {
+    "kind": "repo",
+    "ref": "frontend/src/uapi-map.ts"
+   },
+   "summary": "The quoted sentence accurately describes the client's writer/parser behavior.",
+   "fix": null,
+   "verifier": {
+    "refuted": false,
+    "reason": "As a description of this codebase it is accurate: the writer emits UNKNOWN with `text: invoice.payment.remittanceInformation ?? terms` (uapi-map.ts:471) and the parser cannot tell a genuine remittance reference equal to the terms from the fallback (uapi-map.ts:980-985 comment states this). Note the sentence is true about the client mapping, not about the contract — the contract separates BT-83 (instruction.text) from BT-20 (document.payment_terms).",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "An UNKNOWN instruction reuses `text` for the payment terms, so a remittance reference equal to the terms is indistinguishable",
+   "rowIds": [
+    "cii|payment.remittanceInformation|json"
+   ],
+   "format": "cii",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "refuted",
+   "severity": "note",
+   "citation": "spec/fiskaly.unified-api.all.2026-06-01.yaml lines 8519-8527; frontend/src/uapi-map.ts line 471; docs/gaps/README.md line 52 (R2 definition)",
+   "source": {
+    "kind": "repo",
+    "ref": "frontend/src/uapi-map.ts"
+   },
+   "summary": "should-fix is over-graded: BT-83 is carried; the ambiguity is a client-side fallback choice.",
+   "fix": null,
+   "verifier": {
+    "refuted": false,
+    "reason": "R2's premise fails: the operation carries BT-83 at a dedicated, spec-annotated pointer, so authored remittance information does reach fiskaly whenever set. The only residue is a self-inflicted round-trip ambiguity in one corner case (text exactly equal to the terms when the instruction is UNKNOWN), fixable in the client. That is note-grade, or simply a client bug ticket, not an operation gap at should-fix.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "An UNKNOWN instruction reuses `text` for the payment terms, so a remittance reference equal to the terms is indistinguishable",
+   "rowIds": [
+    "cii|payment.remittanceInformation|json"
+   ],
+   "format": "cii",
+   "missingFrom": "json",
+   "proposition": "applicability-correct",
+   "status": "confirmed",
+   "severity": null,
+   "citation": "spec/fiskaly.unified-api.all.2026-06-01.yaml lines 8519-8527; xrechnung-cius-model.xml term BT-83",
+   "source": {
+    "kind": "local",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/E-Invoicing-Formats-and-Profiles/Germany/xrechnung-3.0.2-bundle-2026-01-31/xrechnung-3.0.2-xrechnung-model-2026-01-31/model/xrechnung-cius-model.xml"
+   },
+   "summary": "DE_EI: applicable is correct for BT-83.",
+   "fix": null,
+   "verifier": {
+    "refuted": false,
+    "reason": "'DE_EI: applicable' matches the spec (PaymentInstructionText's BT-83 annotation covers DE_EI) and the standard — BT-83 is a BG-16 core term present in the German CIUS model.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "fatturapa|buyer.electronicAddress.id|json"
+   ],
+   "format": "fatturapa",
+   "missingFrom": "json",
+   "proposition": "gap-is-real",
+   "status": "refuted",
+   "severity": null,
+   "citation": "spec/fiskaly.unified-api.all.2026-06-01.yaml (X-Api-Version 2026-06-01, sha256 fee9b16d…), components.schemas.SdiDestinationCode: \"🇮🇹 Italy (IT_EI): (BT-49 Buyer electronic address)\"; corroborated by docs/reference/fatturapa/tested-response.xml <CodiceDestinatario>ABC1234</CodiceDestinatario>",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "BT-49 is carried by the operation: the SDI invoicing block's destination_code is spec-labelled '(BT-49 Buyer electronic address)' for IT_EI",
+   "fix": "Add a uapi-map.ts row mapping buyer.electronicAddress.id → /recipients/{i}/invoicing/destination_code (SDI branch; pec → PECDestinatario for '0000000'), then regenerate the report — the row should disappear.",
+   "verifier": {
+    "refuted": false,
+    "reason": "The operation does carry the buyer electronic address for the FatturaPA path. components.schemas.RecipientInvoicingSDI requires type+destination_code (pec optional), and SdiDestinationCode's description reads 'Italy (IT_EI): (BT-49 Buyer electronic address)'. The captured transmission confirms /recipients/0/invoicing/destination_code 'ABC1234' rendered as <CodiceDestinatario>ABC1234</CodiceDestinatario> (docs/reference/fatturapa/tested-response.xml line 11). The mapping table simply has no row for it — the syntax/contract carries the same business term somewhere uapi-map.ts does not name.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "fatturapa|buyer.electronicAddress.id|json"
+   ],
+   "format": "fatturapa",
+   "missingFrom": "json",
+   "proposition": "reason-true",
+   "status": "refuted",
+   "severity": null,
+   "citation": "frontend/src/gap-report.ts:126 const NO_POINTER = \"The operation has no pointer for this field\"; refuted by spec components.schemas.RecipientInvoicingSDI (required: type, destination_code) and SdiDestinationCode's IT_EI BT-49 label",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "'The operation has no pointer for this field' is false — /recipients/{i}/invoicing/destination_code exists and is BT-49-labelled by the spec itself",
+   "fix": "The fix is the uapi-map row, not a reworded reason; once mapped, the fallback reason no longer fires.",
+   "verifier": {
+    "refuted": false,
+    "reason": "The quoted reason is gap-report.ts's NO_POINTER fallback (frontend/src/gap-report.ts line 126), emitted whenever uapi-map has no row. It asserts a contract fact that is false: RecipientInvoicingSDI.destination_code is a required pointer of the IT invoicing block and the spec annotates it as BT-49 for IT_EI.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "fatturapa|buyer.electronicAddress.id|json"
+   ],
+   "format": "fatturapa",
+   "missingFrom": "json",
+   "proposition": "belongs-at-correct",
+   "status": "refuted",
+   "severity": null,
+   "citation": "spec components.schemas.RecipientInvoicingSDI {type, destination_code, pec} with SdiDestinationCode annotated '(BT-49 Buyer electronic address)' for IT_EI",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "belongsAt should name the JSON home /recipients/{i}/invoicing/destination_code, not fall back to the bare BT id",
+   "fix": "Set belongsAt to /recipients/{i}/invoicing/destination_code.",
+   "verifier": {
+    "refuted": false,
+    "reason": "The report's convention is to name a JSON pointer when the operation has a home and only fall back to the BT id when none exists. A home exists (SDI destination_code, spec-labelled BT-49; pec for the 0000000 case), so belongsAt 'BT-49' points reviewers away from the correct location.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "fatturapa|buyer.electronicAddress.id|json"
+   ],
+   "format": "fatturapa",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "refuted",
+   "severity": "note",
+   "citation": "docs/reference/fatturapa/tested-response.xml line 11 (<CodiceDestinatario>ABC1234</CodiceDestinatario> from /recipients/0/invoicing/destination_code) against gap-report.ts R2 rule text",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/docs/reference/fatturapa/tested-response.xml"
+   },
+   "summary": "Severity is moot — the gap collapses, so should-fix (R2: 'operation cannot carry it') does not apply",
+   "fix": null,
+   "verifier": {
+    "refuted": false,
+    "reason": "R2's premise ('the syntax renders it but the operation cannot carry it') is false for this row: the operation carries and the capture shows fiskaly rendering it to CodiceDestinatario. The row should be removed by mapping, not re-severitied.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "fatturapa|vatBreakdown.{i}.reason|json"
+   ],
+   "format": "fatturapa",
+   "missingFrom": "json",
+   "proposition": "gap-is-real",
+   "status": "refuted",
+   "severity": null,
+   "citation": "spec components.schemas.VatExemptionReason: \"Belgium (BE_EI), Germany (DE_EI), Italy (IT_EI): … (BT-120 VAT exemption reason text)\"; breakdown discard: docs/reference/fatturapa/README.md 'breakdown[] and totals are discarded — DatiRiepilogo is always recomputed server-side'",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "BT-120 is carried by the operation at line level: VatExemptionCategory.reason is spec-labelled '(BT-120 VAT exemption reason text)' for IT_EI",
+   "fix": "Map the model's exemption reason to /entries/{i}/data/vat/reason (noting the per-line vs per-category granularity shift) and drop or re-scope this row.",
+   "verifier": {
+    "refuted": false,
+    "reason": "components.schemas.VatExemptionCategory has a `reason` property (VatExemptionReason) whose description for BE_EI/DE_EI/IT_EI reads '(BT-120 VAT exemption reason text)', reachable at /entries/{i}/data/vat/reason. EN puts BT-120 in BG-23, but the capture proves breakdown[] is discarded and DatiRiepilogo recomputed from lines — the line-level field is therefore the only viable carrier of the exemption reason, and the operation does have one. Whether the gateway writes it into RiferimentoNormativo is unobserved (no exemption line in the capture), so the term's *delivery* is unproven, but its *presence in the JSON* — which is what this missingFrom:json row asserts against — is refuted.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "fatturapa|vatBreakdown.{i}.reason|json"
+   ],
+   "format": "fatturapa",
+   "missingFrom": "json",
+   "proposition": "reason-true",
+   "status": "refuted",
+   "severity": null,
+   "citation": "spec components.schemas.VatExemptionCategory (properties type, code, reason) and VatBreakdownExemptionEntry (required type, code, exclusive; no reason property)",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "'The operation has no pointer for this field' is false — /entries/{i}/data/vat/reason exists and is BT-120-labelled by the spec",
+   "fix": "If a row is kept, reword to 'the breakdown rows carry no reason; the exemption reason travels per line at /entries/{i}/data/vat/reason'.",
+   "verifier": {
+    "refuted": false,
+    "reason": "Same NO_POINTER fallback as the BT-49 row: it conflates 'uapi-map has no row' with 'the operation has no pointer'. The contract defines VatExemptionCategory {type, code, reason} with reason explicitly tagged BT-120 for IT_EI. What is true is only the narrower statement that the breakdown rows (VatBreakdownExemptionEntry = {type, code, exclusive}) carry no reason — but that is not what the quoted prose says.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "fatturapa|vatBreakdown.{i}.reason|json"
+   ],
+   "format": "fatturapa",
+   "missingFrom": "json",
+   "proposition": "belongs-at-correct",
+   "status": "refuted",
+   "severity": null,
+   "citation": "spec VatExemptionCategory.reason ('(BT-120 VAT exemption reason text)' for IT_EI); frontend/src/fatturapa-map.ts row {field: vatBreakdown.{i}.reason, path …DatiRiepilogo/RiferimentoNormativo, fpa 2.2.2.8, bt BT-120}",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/spec/fiskaly.unified-api.all.2026-06-01.yaml"
+   },
+   "summary": "belongsAt should name /entries/{i}/data/vat/reason rather than the bare BT-120",
+   "fix": "Set belongsAt to /entries/{i}/data/vat/reason.",
+   "verifier": {
+    "refuted": false,
+    "reason": "A JSON home for the business term exists and is the only carrier that can survive the server-side DatiRiepilogo recompute. The bare BT id hides it. The local writer maps vatBreakdown.{i}.reason → DatiRiepilogo/RiferimentoNormativo (fatturapa-map.ts, fpa 2.2.2.8, bt BT-120), so the model term aggregates naturally from the per-line reasons of the same category.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  },
+  {
+   "reason": "The operation has no pointer for this field",
+   "rowIds": [
+    "fatturapa|vatBreakdown.{i}.reason|json"
+   ],
+   "format": "fatturapa",
+   "missingFrom": "json",
+   "proposition": "severity-correct",
+   "status": "refuted",
+   "severity": "note",
+   "citation": "spec VatExemptionCategory.reason vs docs/reference/fatturapa/tested-payload.json (only a VAT_RATE line, no exemption present)",
+   "source": {
+    "kind": "repo",
+    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/docs/reference/fatturapa/tested-payload.json"
+   },
+   "summary": "Severity moot — the operation carries the term; whether the gateway renders it to RiferimentoNormativo is a separate, unobserved question",
+   "fix": null,
+   "verifier": {
+    "refuted": false,
+    "reason": "R2 presumes the operation cannot carry the term; it can (line level). The residual open question — does the IT_EI gateway aggregate line reasons into RiferimentoNormativo? — is unobserved (no exemption line in the capture) and belongs in notCheckable, not in a should-fix row asserting a JSON gap.",
+    "citationVerified": false,
+    "sourceReachable": true,
+    "note": "reviewer-level verdict; the reviewer itself refuted or could not prove the report claim, so no adversarial verify pass ran"
+   }
+  }
+ ]
+}
