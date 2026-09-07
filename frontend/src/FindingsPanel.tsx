@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { MappingBadges } from "./Field";
 import type { FieldId } from "./model";
 import {
@@ -198,7 +198,20 @@ export function FindingsPanel({
     (row) =>
       !mutedSeverities.includes(row.finding.severity) && !mutedStages.includes(row.finding.source),
   );
-  const position = Math.min(active, Math.max(visible.length - 1, 0));
+  // A selection made in another pane moves the highlight here; the keyboard position and the
+  // scroll must follow it, or the match sits invisible at row 40 and ArrowDown jumps from
+  // wherever the keyboard last was.
+  const highlightedIndex = visible.findIndex(
+    (row) => row.key === selectedKey || (matchedField !== undefined && row.field === matchedField),
+  );
+  const position =
+    highlightedIndex >= 0 ? highlightedIndex : Math.min(active, Math.max(visible.length - 1, 0));
+
+  useEffect(() => {
+    if (highlightedIndex >= 0) {
+      options.current[highlightedIndex]?.scrollIntoView?.({ block: "nearest" });
+    }
+  }, [highlightedIndex, selectedKey, matchedField]);
 
   const move = (next: number) => {
     const clamped = Math.max(0, Math.min(visible.length - 1, next));

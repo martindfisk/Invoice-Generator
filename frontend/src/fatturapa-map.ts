@@ -658,8 +658,3 @@ export function categoryForNatura(natura: string | undefined, rate: string): Vat
   if (!category) throw new Error(`fatturapa-map: unknown Natura code "${natura}"`);
   return category;
 }
-
-export function meansForModalita(modalita: string | undefined): string {
-  if (!modalita) return "";
-  return MODALITA_PAGAMENTO_MEANS[modalita] ?? "1";
-}

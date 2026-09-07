@@ -195,7 +195,7 @@ XSD tier: `ubl-invoice-2.1` · declared validation stages: `model`, `well-formed
 
 ## UN/CEFACT CII (Factur-X / ZUGFeRD EN 16931) (`cii`)
 
-XSD tier: none vendored — Schematron is the structural tier · declared validation stages: `model`, `well-formed`
+XSD tier: none vendored — Schematron is the structural tier · declared validation stages: `model`, `well-formed`, `schematron`
 
 | Model field | Document path | BT / FPA | Meaning |
 | --- | --- | --- | --- |

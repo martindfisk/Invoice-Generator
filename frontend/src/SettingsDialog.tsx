@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import type { Persona } from "./api-log";
 import { FIELD_FATE_PROVENANCE } from "./field-fate";
 import { Modal } from "./Modal";
+import { IDENTIFIERS_SECTION_ID } from "./runner";
 import {
   loadSefManifest,
   ruleSetsByOrder,
@@ -49,6 +50,8 @@ export const NO_SETTINGS_API =
   "be changed from here.";
 
 export const VALIDATION_RULES_SECTION_ID = "settings-validation-rules";
+
+export const CREDENTIALS_SECTION_ID = "settings-credentials";
 
 export const RULES_FALLBACK_NOTE =
   "public/sef/manifest.json is not built yet — run make sef. Validation falls back to the " +
@@ -392,13 +395,21 @@ function SettingsBody({ onClose, focusSection }: { onClose: () => void; focusSec
   const currentEnvironment = settings?.environment ?? config?.environment ?? "test";
   const liveNeedsConfirmation = environment === "live" && !confirmLive;
 
-  const reseed = (next: Settings) => {
-    setEnvironment(next.environment);
-    setConfirmLive(false);
-    setIdentifiers({
-      seller: identifiersOf(next, null, "seller"),
-      buyer: identifiersOf(next, null, "buyer"),
-    });
+  // scope: reseed everything on open, but after a save only the persona that was saved —
+  // "Save seller identifiers" must not snap the buyer's unsaved drafts back to server values.
+  const reseed = (next: Settings, scope: "all" | Persona = "all") => {
+    if (scope === "all") {
+      setEnvironment(next.environment);
+      setConfirmLive(false);
+    }
+    setIdentifiers((current) => ({
+      seller:
+        scope === "all" || scope === "seller"
+          ? identifiersOf(next, null, "seller")
+          : current.seller,
+      buyer:
+        scope === "all" || scope === "buyer" ? identifiersOf(next, null, "buyer") : current.buyer,
+    }));
   };
 
   // The dialog mounts when it opens, so this is the "opened" hook: ask the backend what is true
@@ -418,14 +429,18 @@ function SettingsBody({ onClose, focusSection }: { onClose: () => void; focusSec
     document.getElementById(focusSection)?.scrollIntoView?.({ block: "start" });
   }, [focusSection]);
 
-  const run = async (action: () => Promise<Settings>, success: string): Promise<boolean> => {
+  const run = async (
+    action: () => Promise<Settings>,
+    success: string,
+    scope: "all" | Persona = "all",
+  ): Promise<boolean> => {
     setBusy(true);
     setError(null);
     setNotice(null);
     try {
       const next = await action();
       store.applySettings(next);
-      reseed(next);
+      reseed(next, scope);
       await store.refreshConfig();
       setNotice(success);
       return true;
@@ -482,6 +497,7 @@ function SettingsBody({ onClose, focusSection }: { onClose: () => void; focusSec
     const saved = await run(
       () => updateSettings({ personas: patchFor(persona, patch) }),
       `${persona} credentials saved on the backend. This browser kept nothing.`,
+      persona,
     );
     if (saved) {
       setSecrets((current) => ({ ...current, [persona]: { key: "", secret: "" } }));
@@ -492,6 +508,7 @@ function SettingsBody({ onClose, focusSection }: { onClose: () => void; focusSec
     const cleared = await run(
       () => clearCredentials(persona),
       `${persona} credentials cleared on the backend.`,
+      persona,
     );
     if (cleared) {
       setSecrets((current) => ({ ...current, [persona]: { key: "", secret: "" } }));
@@ -510,6 +527,7 @@ function SettingsBody({ onClose, focusSection }: { onClose: () => void; focusSec
     await run(
       () => updateSettings({ personas: patchFor(persona, patch) }),
       `${persona} identifiers saved.`,
+      persona,
     );
   };
 
@@ -636,9 +654,14 @@ function SettingsBody({ onClose, focusSection }: { onClose: () => void; focusSec
             >
               Apply environment
             </button>
-            {liveNeedsConfirmation && (
+            {liveNeedsConfirmation ? (
               <span className="text-[11px] text-muted">Tick the confirmation to switch.</span>
-            )}
+            ) : environment === currentEnvironment ? (
+              <span className="text-[11px] text-muted">
+                Already on {currentEnvironment?.toUpperCase() ?? "this environment"} — pick the
+                other one to switch.
+              </span>
+            ) : null}
           </div>
         </Section>
 
@@ -709,7 +732,7 @@ function SettingsBody({ onClose, focusSection }: { onClose: () => void; focusSec
           )}
         </Section>
 
-        <Section id="settings-credentials" title="Credentials" blurb={SECRET_BLURB}>
+        <Section id={CREDENTIALS_SECTION_ID} title="Credentials" blurb={SECRET_BLURB}>
           {PERSONAS.map(({ id, label }) => {
             const credentials = personaOf(settings, id)?.credentials;
             const draft = secrets[id];
@@ -779,7 +802,7 @@ function SettingsBody({ onClose, focusSection }: { onClose: () => void; focusSec
         </Section>
 
         <Section
-          id="settings-identifiers"
+          id={IDENTIFIERS_SECTION_ID}
           title="Identifiers"
           blurb="Routing identifiers, not secrets — shown in full so they can be checked against the invoice."
         >
@@ -879,9 +902,10 @@ function SettingsBody({ onClose, focusSection }: { onClose: () => void; focusSec
             </span>
           </div>
           <p className="text-[11px] text-muted">
-            This browser stores exactly three things: the theme, the pane layouts and the workflow
-            you left off at. No API key or secret is ever written to localStorage, sessionStorage or
-            the URL.
+            This browser stores UI state only: the theme, the pane layouts, the section and
+            collection you were on, and the workflow you left off at (invoice, edits, send record
+            ids). No API key, secret or token is ever written to localStorage, sessionStorage or the
+            URL.
           </p>
         </Section>
       </div>

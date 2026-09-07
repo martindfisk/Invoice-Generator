@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { CollectionNotesPanel, VariablePanel } from "../src/RunnerPane";
 import { RunnerStepRow } from "../src/RunnerStep";
 import type { StepResult } from "../src/runner";
+import { store } from "../src/store";
 import type { CollectionStep } from "../src/uapi-client";
 
 afterEach(cleanup);
@@ -158,6 +159,59 @@ describe("VariablePanel", () => {
     expect(
       within(panel).getByText(/needed by step 2 \(Retrieve a System\) but nothing sets it/),
     ).toBeInTheDocument();
+  });
+
+  it("links an unset identifier seed to its Settings section", () => {
+    render(
+      <VariablePanel
+        seeds={[
+          {
+            name: "eInvoiceSystemId",
+            value: "",
+            source: "Settings → Identifiers (seller, BE)",
+            section: "settings-identifiers",
+          },
+        ]}
+        captured={{}}
+        missing={[]}
+      />,
+    );
+    screen.getByRole("button", { name: "Settings → Identifiers (seller, BE)" }).click();
+    expect(store.getState().settingsRequest?.section).toBe("settings-identifiers");
+  });
+
+  it("tags captures with the persona that made them and offers clearing stale ones", () => {
+    const onClear = vi.fn();
+    render(
+      <VariablePanel
+        seeds={[]}
+        captured={{ eInvoiceId: "rec-1" }}
+        capturedBy="seller"
+        persona="buyer"
+        missing={[]}
+        onClearCaptured={onClear}
+      />,
+    );
+    const panel = screen.getByRole("region", { name: "Runner variables" });
+    expect(within(panel).getByText("captured at runtime as seller")).toBeInTheDocument();
+    expect(
+      within(panel).getByText(/captured as the seller — the next run as the buyer/),
+    ).toBeInTheDocument();
+    within(panel).getByRole("button", { name: "Clear captured" }).click();
+    expect(onClear).toHaveBeenCalled();
+  });
+
+  it("shows no stale-capture notice when the persona matches", () => {
+    render(
+      <VariablePanel
+        seeds={[]}
+        captured={{ eInvoiceId: "rec-1" }}
+        capturedBy="seller"
+        persona="seller"
+        missing={[]}
+      />,
+    );
+    expect(screen.queryByText(/the next run as the/)).not.toBeInTheDocument();
   });
 });
 

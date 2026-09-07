@@ -424,6 +424,14 @@ describe("seeding and analysis", () => {
     );
   });
 
+  it("marks identifier seeds with the Settings section that configures them", () => {
+    const seeds = seedVariables(settings, "seller", "it");
+    expect(seeds.find((seed) => seed.name === "eInvoiceSystemId")?.section).toBe(
+      "settings-identifiers",
+    );
+    expect(seeds.find((seed) => seed.name === "apiBaseUrl")?.section).toBeUndefined();
+  });
+
   it("asserts presence when equals is null", async () => {
     const transport: RunTransport = () =>
       Promise.resolve({ content: { annotations: { peppol_id: "0208:0123456789" } } });

@@ -39,6 +39,12 @@ export function ApiLogPane() {
   const handled = useRef(0);
 
   const knownSteps = useMemo(() => [...new Set(calls.map(stepLabel))].sort(), [calls]);
+  // The flow always sends as the seller; a buyer chip only means something when buyer calls
+  // exist (the runner ran as the buyer), so the chips are derived from the log, not hardcoded.
+  const knownPersonas = useMemo(
+    () => PERSONAS.filter((persona) => calls.some((call) => call.persona === persona)),
+    [calls],
+  );
 
   const filtered = useMemo(
     () =>
@@ -133,15 +139,19 @@ export function ApiLogPane() {
                 onClick={() => toggle(step)}
               />
             ))}
-            <span aria-hidden="true" className="mx-1 h-3 w-px bg-line" />
-            {PERSONAS.map((persona) => (
-              <FilterChip
-                key={persona}
-                label={persona}
-                active={personas.includes(persona)}
-                onClick={() => togglePersona(persona)}
-              />
-            ))}
+            {knownPersonas.length > 1 && (
+              <>
+                <span aria-hidden="true" className="mx-1 h-3 w-px bg-line" />
+                {knownPersonas.map((persona) => (
+                  <FilterChip
+                    key={persona}
+                    label={persona}
+                    active={personas.includes(persona)}
+                    onClick={() => togglePersona(persona)}
+                  />
+                ))}
+              </>
+            )}
           </div>
         )}
       </header>

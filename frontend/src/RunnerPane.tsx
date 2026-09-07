@@ -8,6 +8,7 @@ import { useIsWide } from "./use-media";
 import { ensureRunnerLoaded, selectCollection } from "./runner-actions";
 import {
   finishLine,
+  IDENTIFIERS_SECTION_ID,
   matchStepCalls,
   missingVariables,
   pendingResult,
@@ -44,7 +45,11 @@ async function startRun(from: number, until?: number, continueOnFailure = false)
   const to = until ?? collection.steps.length - 1;
   const persona = state.workflow.persona;
   const seeds = seedVariables(state.settings, persona, collection.id);
-  const variables: Vars = { ...seedValues(seeds), ...state.runner.captured };
+  // Captured ids belong to the persona whose run captured them; against the other persona's
+  // credentials they only produce 403/404s, so a persona switch starts from the seeds alone.
+  const staleCaptures = state.runner.capturedBy !== null && state.runner.capturedBy !== persona;
+  const carried = staleCaptures ? {} : state.runner.captured;
+  const variables: Vars = { ...seedValues(seeds), ...carried };
   const runId = crypto.randomUUID();
   const startedAt = Date.now();
   controller = new AbortController();
@@ -78,15 +83,27 @@ async function startRun(from: number, until?: number, continueOnFailure = false)
       });
     },
   });
-  const captured: Vars = { ...store.getState().runner.captured };
+  const captured: Vars = staleCaptures ? {} : { ...store.getState().runner.captured };
   for (const result of Object.values(outcome.results)) Object.assign(captured, result.captured);
   store.patchRunner({
     running: false,
     haltedAt: outcome.haltedAt,
     captured,
+    capturedBy: persona,
     status: finishLine(collection.steps, store.getState().runner.results, Date.now() - startedAt),
   });
   controller = null;
+}
+
+function clearRun(): void {
+  store.patchRunner({
+    results: {},
+    captured: {},
+    capturedBy: null,
+    haltedAt: null,
+    runId: null,
+    status: null,
+  });
 }
 
 function stopRun(): void {
@@ -97,13 +114,33 @@ function stopRun(): void {
 export function VariablePanel({
   seeds,
   captured,
+  capturedBy = null,
+  persona,
   missing,
+  onClearCaptured,
 }: {
   seeds: SeededVariable[];
   captured: Vars;
+  capturedBy?: Persona | null;
+  persona?: Persona;
   missing: MissingVariable[];
+  onClearCaptured?: () => void;
 }) {
   const capturedEntries = Object.entries(captured);
+  const staleCaptures =
+    capturedEntries.length > 0 &&
+    capturedBy !== null &&
+    persona !== undefined &&
+    capturedBy !== persona;
+  const settingsLink = (section: string, label: string) => (
+    <button
+      type="button"
+      className="underline decoration-dotted underline-offset-2 hover:text-ink"
+      onClick={() => store.openSettings(section)}
+    >
+      {label}
+    </button>
+  );
   return (
     <section aria-label="Runner variables" className="rounded-l border border-line bg-surface p-3">
       <h3 className="text-xs font-semibold tracking-wide text-muted uppercase">Variables</h3>
@@ -117,7 +154,8 @@ export function VariablePanel({
             <span className="font-mono text-ink">{seed.name}</span>
             {seed.value === "" ? (
               <span className="rounded-m bg-warning-soft px-1.5 py-0.5 text-[10px] font-medium text-warning-ink">
-                unset — configure it in {seed.source}
+                unset — configure it in{" "}
+                {seed.section ? settingsLink(seed.section, seed.source) : seed.source}
               </span>
             ) : (
               <span className="font-mono break-all text-muted">{seed.value}</span>
@@ -136,18 +174,36 @@ export function VariablePanel({
               {typeof value === "string" ? value : JSON.stringify(value)}
             </span>
             <span className="rounded-m bg-select-bg px-1.5 py-0.5 text-[10px] text-ink">
-              captured at runtime
+              captured at runtime{capturedBy ? ` as ${capturedBy}` : ""}
             </span>
           </li>
         ))}
       </ul>
+      {staleCaptures && (
+        <div className="mt-2 flex flex-wrap items-center gap-2 rounded-m bg-warning-soft px-2 py-1.5 text-[11px] text-warning-ink">
+          <p>
+            These values were captured as the {capturedBy} — the next run as the {persona} starts
+            from the seeds alone and ignores them.
+          </p>
+          {onClearCaptured && (
+            <button
+              type="button"
+              className="rounded-m border border-line bg-surface px-2 py-0.5 text-[10px] font-medium text-muted hover:border-brand hover:text-ink"
+              onClick={onClearCaptured}
+            >
+              Clear captured
+            </button>
+          )}
+        </div>
+      )}
       {missing.length > 0 && (
         <div className="mt-2 rounded-m bg-warning-soft px-2 py-1.5 text-[11px] text-warning-ink">
           {missing.map((entry) => (
             <p key={entry.name}>
               <span className="font-mono">{`{{${entry.name}}}`}</span> is needed by step{" "}
-              {entry.stepIndex + 1} ({entry.stepName}) but nothing sets it — configure it in
-              Settings → Identifiers or run the step that captures it first.
+              {entry.stepIndex + 1} ({entry.stepName}) but nothing sets it — configure it in{" "}
+              {settingsLink(IDENTIFIERS_SECTION_ID, "Settings → Identifiers")} or run the step that
+              captures it first.
             </p>
           ))}
         </div>
@@ -229,11 +285,13 @@ export function RunnerPane() {
 
   const missing = useMemo(() => {
     if (!runner.collection) return [];
+    // Stale captures are ignored by the next run, so they must not satisfy references here.
+    const stale = runner.capturedBy !== null && runner.capturedBy !== persona;
     return missingVariables(runner.collection.steps, {
       ...seedValues(seeds),
-      ...runner.captured,
+      ...(stale ? {} : runner.captured),
     });
-  }, [runner.collection, seeds, runner.captured]);
+  }, [runner.collection, seeds, runner.captured, runner.capturedBy, persona]);
 
   const matches = useMemo(
     () => (runner.collection ? matchStepCalls(runner.collection.steps, runner.results, calls) : {}),
@@ -248,13 +306,18 @@ export function RunnerPane() {
     [runner.collection, runner.results, matches],
   );
 
+  // null = no runnable step without a result — "Step" would only re-run step 1, so it disables
+  // instead; Clear results starts the collection over.
   const nextIndex = useMemo(() => {
-    if (!runner.collection) return 0;
+    if (!runner.collection) return null;
     const index = runner.collection.steps.findIndex(
       (step, i) => step.runnable && (runner.results[i]?.status ?? "pending") === "pending",
     );
-    return index === -1 ? 0 : index;
+    return index === -1 ? null : index;
   }, [runner.collection, runner.results]);
+
+  const hasRunState =
+    Object.keys(runner.results).length > 0 || Object.keys(runner.captured).length > 0;
 
   const requestRun = (from: number, to?: number) => {
     if (mode === "LIVE") setLiveGuard({ from, to });
@@ -351,7 +414,16 @@ export function RunnerPane() {
                 onDismiss={() => store.patchRunner({ notesDismissed: true })}
               />
             )}
-            <VariablePanel seeds={seeds} captured={runner.captured} missing={missing} />
+            <VariablePanel
+              seeds={seeds}
+              captured={runner.captured}
+              capturedBy={runner.capturedBy}
+              persona={persona as Persona}
+              missing={missing}
+              onClearCaptured={() =>
+                store.patchRunner({ captured: {}, capturedBy: null, status: null })
+              }
+            />
 
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -365,11 +437,23 @@ export function RunnerPane() {
               <button
                 type="button"
                 className={SECONDARY}
-                disabled={runner.running}
-                onClick={() => requestRun(nextIndex, nextIndex)}
+                disabled={runner.running || nextIndex === null}
+                title={
+                  nextIndex === null && !runner.running
+                    ? "Run finished — every runnable step has a result. Clear results to step through again."
+                    : undefined
+                }
+                onClick={() => {
+                  if (nextIndex !== null) requestRun(nextIndex, nextIndex);
+                }}
               >
                 Step
               </button>
+              {!runner.running && hasRunState && (
+                <button type="button" className={SECONDARY} onClick={clearRun}>
+                  Clear results
+                </button>
+              )}
               {runner.running && (
                 <button type="button" className={SECONDARY} onClick={stopRun}>
                   Stop

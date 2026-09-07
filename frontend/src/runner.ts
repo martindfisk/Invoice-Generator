@@ -351,7 +351,18 @@ export async function runSteps(options: RunOptions): Promise<RunOutcome> {
   return { results, variables, haltedAt: continueOnFailure ? null : haltedAt };
 }
 
-export type SeededVariable = { name: string; value: string; source: string };
+export type SeededVariable = {
+  name: string;
+  value: string;
+  source: string;
+  // Settings-dialog section that configures this seed, when one exists — the UI renders the
+  // source as a link there instead of asking the user to find it by prose.
+  section?: string;
+};
+
+// Owned here rather than in SettingsDialog so this pure-TS module never imports the component
+// graph; SettingsDialog renders its Identifiers section under this id.
+export const IDENTIFIERS_SECTION_ID = "settings-identifiers";
 
 const COLLECTION_COUNTRY: Record<string, SettingsCountry> = { it: "IT", be: "BE", de: "DE" };
 
@@ -370,16 +381,20 @@ export function seedVariables(
   const identifierSource = country
     ? `Settings → Identifiers (${persona}, ${country})`
     : "Settings → Identifiers";
-  const identifier = (name: keyof typeof MOCK_PLACEHOLDERS, value: string | null | undefined) => {
-    if (value) return { name, value, source: identifierSource };
+  const identifier = (
+    name: keyof typeof MOCK_PLACEHOLDERS,
+    value: string | null | undefined,
+  ): SeededVariable => {
+    if (value) return { name, value, source: identifierSource, section: IDENTIFIERS_SECTION_ID };
     if (settings?.mode === "mock") {
       return {
         name,
         value: MOCK_PLACEHOLDERS[name],
         source: `MOCK placeholder — the mock accepts any id; real ids live in ${identifierSource}`,
+        section: IDENTIFIERS_SECTION_ID,
       };
     }
-    return { name, value: "", source: identifierSource };
+    return { name, value: "", source: identifierSource, section: IDENTIFIERS_SECTION_ID };
   };
   return [
     { name: "apiBaseUrl", value: settings?.base_url ?? "", source: "backend settings" },
@@ -458,6 +473,9 @@ export type RunnerUiState = {
   loading: boolean;
   results: Record<number, StepResult>;
   captured: Vars;
+  // Which persona's run produced the captured values — ids captured as the seller are
+  // meaningless (403/404) against the buyer's credentials, so a persona switch drops them.
+  capturedBy: "seller" | "buyer" | null;
   running: boolean;
   runId: string | null;
   haltedAt: number | null;
@@ -493,6 +511,7 @@ export function initialRunnerUi(collectionId: string | null = null): RunnerUiSta
     loading: false,
     results: {},
     captured: {},
+    capturedBy: null,
     running: false,
     runId: null,
     haltedAt: null,

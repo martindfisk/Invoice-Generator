@@ -2,8 +2,10 @@ import type { ReactNode } from "react";
 import { JsonView } from "./JsonView";
 import type { Channel } from "./model";
 import type { Persona } from "./api-log";
+import { IDENTIFIERS_SECTION_ID } from "./runner";
+import { CREDENTIALS_SECTION_ID } from "./SettingsDialog";
 import { CORRECTION_PENDING_NOTE } from "./uapi-json";
-import type { Mode } from "./store";
+import { store, type Mode } from "./store";
 import type { Config, CredentialState } from "./uapi-client";
 import { countBySeverity, type StageResult } from "./validation";
 import type { CorrectionTarget, OperationView } from "./workflow";
@@ -94,19 +96,21 @@ export function SendPreflight({
       <div className="border-t border-line px-3 py-2">
         <Row label="Persona">
           <span className="font-mono">{persona}</span>
-          {persona === "buyer" && (
-            <span className="ml-2 text-warning-ink">
-              the buyer normally receives; sending as the buyer is a demo of the wrong direction
-            </span>
-          )}
         </Row>
         <Row label="Target system">
           {systemId ? (
             <span className="font-mono">{systemId}</span>
           ) : (
             <span className="text-warning-ink">
-              No system id for {country || "this country"} — set it under Settings → Identifiers, or
-              as{" "}
+              No system id for {country || "this country"} — set it under{" "}
+              <button
+                type="button"
+                className="underline decoration-dotted underline-offset-2 hover:text-ink"
+                onClick={() => store.openSettings(IDENTIFIERS_SECTION_ID)}
+              >
+                Settings → Identifiers
+              </button>
+              , or as{" "}
               <span className="font-mono">{`${persona.toUpperCase()}_SYSTEM_ID_${country || "?"}`}</span>{" "}
               in .env
             </span>
@@ -129,8 +133,15 @@ export function SendPreflight({
             </span>
           ) : credentials ? (
             <span className="text-warning-ink">
-              No API key for the {persona} — set one under Settings → Credentials, or as{" "}
-              <span className="font-mono">{persona.toUpperCase()}_API_KEY</span> in .env
+              No API key for the {persona} — set one under{" "}
+              <button
+                type="button"
+                className="underline decoration-dotted underline-offset-2 hover:text-ink"
+                onClick={() => store.openSettings(CREDENTIALS_SECTION_ID)}
+              >
+                Settings → Credentials
+              </button>
+              , or as <span className="font-mono">{persona.toUpperCase()}_API_KEY</span> in .env
               {mode === "LIVE" ? ". LIVE mode cannot call fiskaly without it." : ""}
             </span>
           ) : (
