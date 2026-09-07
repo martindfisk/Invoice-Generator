@@ -14,31 +14,31 @@ Spec: `fiskaly.unified-api.all.2026-06-01.yaml` (`fee9b16d1c7c`), `X-Api-Version
 
 ## Counts
 
-**335 rows across 20 distinct causes.** One ticket per cause, with the
-field list as its body — filing one ticket per row would be 335 tickets nobody triages.
+**321 rows across 18 distinct causes.** One ticket per cause, with the
+field list as its body — filing one ticket per row would be 321 tickets nobody triages.
 
 | by format | rows |
 |---|---|
-| fatturapa | 112 |
-| ubl | 76 |
-| xrechnung | 74 |
-| cii | 73 |
+| fatturapa | 110 |
+| ubl | 72 |
+| xrechnung | 70 |
+| cii | 69 |
 
 | missing from | rows |
 |---|---|
-| json | 159 |
+| json | 145 |
 | xml | 141 |
 | model | 35 |
 
 | severity | rows |
 |---|---|
-| should-fix | 171 |
 | note | 164 |
+| should-fix | 157 |
 
 | evidence | rows |
 |---|---|
-| unobserved | 219 |
-| none | 80 |
+| unobserved | 207 |
+| none | 78 |
 | captured | 36 |
 
 ## How severity is derived

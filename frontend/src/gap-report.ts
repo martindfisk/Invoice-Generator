@@ -226,7 +226,15 @@ export function modelGaps(snapshots: SpecSnapshot[] = []): GapRow[] {
       const concrete = pointerForField(field, "");
       const pointer = concrete ? (pointerTemplate(concrete)?.template ?? concrete) : undefined;
       const declared = declaredReason(field);
-      const inJson = pointer !== undefined && declared === undefined;
+      // The same aliasing applies to the operation: BT-49 travels as recipients[].invoicing and
+      // BT-120 as the line-level vat.reason, so a spelling whose alias the JSON fully carries is
+      // not a JSON gap either — reporting it was refuted by the 2026-09 gap audit
+      // (docs/gaps/verdicts.json: the NO_POINTER fallback asserted a contract fact that is false).
+      const aliasInJson = (alias: FieldId) =>
+        pointerForField(alias, "") !== undefined && declaredReason(alias) === undefined;
+      const inJson =
+        (pointer !== undefined && declared === undefined) ||
+        (SAME_DATUM[field] ?? []).some((alias) => aliasInJson(alias as FieldId));
       if (carried && inJson) continue;
 
       const missingFrom: MissingFrom = carried ? "json" : "xml";

@@ -260,12 +260,21 @@ describe("fromInvoiceTransaction edits", () => {
     expect(payment.remittanceInformation).toBe("REF-9");
   });
 
-  it("keeps the base bank details when the instruction is UNKNOWN", () => {
+  it("keeps the base bank details when the instruction is UNKNOWN, but honours its text as BT-83", () => {
     const edited = operation();
-    edited.payments[0].instruction = { type: "UNKNOWN", text: base.payment.terms };
+    edited.payments[0].instruction = { type: "UNKNOWN", text: "REF-42" };
     const payment = fromInvoiceTransaction(edited, base, IT_CONTEXT).payment;
     expect(payment.iban).toBe(base.payment.iban);
-    expect(payment.remittanceInformation).toBe(base.payment.remittanceInformation);
+    // text is the remittance reference on every instruction shape — even one equal to the terms
+    // is a reference now, since the composer no longer folds the terms into it.
+    expect(payment.remittanceInformation).toBe("REF-42");
+  });
+
+  it("treats an UNKNOWN instruction without text as a removed remittance reference", () => {
+    const edited = operation();
+    edited.payments[0].instruction = { type: "UNKNOWN" };
+    const payment = fromInvoiceTransaction(edited, base, IT_CONTEXT).payment;
+    expect(payment.remittanceInformation).toBeUndefined();
   });
 });
 

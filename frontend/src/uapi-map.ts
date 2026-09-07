@@ -458,7 +458,7 @@ function product(line: Line): UapiProduct | undefined {
 }
 
 function payment(invoice: Invoice): UapiPayment {
-  const { iban, accountName, bic, terms } = invoice.payment;
+  const { iban, accountName, bic } = invoice.payment;
   const instruction: UapiPaymentInstruction =
     iban && accountName && bic
       ? {
@@ -468,7 +468,9 @@ function payment(invoice: Invoice): UapiPayment {
           payment_service_provider: bic,
           text: invoice.payment.remittanceInformation,
         }
-      : { type: "UNKNOWN", text: invoice.payment.remittanceInformation ?? terms };
+      : // Only the remittance reference: the terms travel separately at document.payment_terms
+        // (BT-20), and folding them into text made a reference equal to the terms ambiguous.
+        { type: "UNKNOWN", text: invoice.payment.remittanceInformation };
   return {
     type: "OUTSTANDING",
     details: {
@@ -685,6 +687,12 @@ export const SAME_DATUM: Record<string, string[]> = {
   // writes Natura has written the category.
   "vatBreakdown.{i}.category": ["vatBreakdown.{i}.natura"],
   "lines.{i}.vat.category": ["lines.{i}.vat.natura"],
+  // BT-120 travels at line level: /entries/{i}/data/vat/reason is the spec's own BT-120 carrier
+  // and fiskaly recomputes the breakdown from the lines, so the per-line reason is the only
+  // viable carrier of the exemption reason (2026-09 gap audit, docs/gaps/verdicts.json). The
+  // residue — no per-breakdown override; aggregation of differing per-line reasons is fiskaly's,
+  // unobserved — is a property of the recompute, not a missing pointer.
+  "vatBreakdown.{i}.reason": ["lines.{i}.vat.reason"],
 };
 
 export type LossKind = "platform" | "lost" | "unknown";
@@ -734,8 +742,6 @@ export const UAPI_PARTIAL_FIELDS: Record<string, FieldId[]> = {
     "payment.accountName",
     "payment.bic",
   ],
-  "An UNKNOWN instruction reuses `text` for the payment terms, so a remittance reference equal to the terms is indistinguishable":
-    ["payment.remittanceInformation"],
   "details.number is optional; without it the entry's position becomes the line id": [
     "lines.{i}.id",
   ],
@@ -980,16 +986,15 @@ function paymentFrom(operation: InvoiceTransaction, base: Payment): Payment {
   const instruction = operation.payments[0]?.instruction;
   const terms = operation.document.payment_terms;
   const transfer = instruction?.type === "CREDIT_TRANSFER" ? instruction : undefined;
-  // An UNKNOWN instruction's text is `remittanceInformation ?? terms`, so a text equal to the
-  // payment terms cannot be told apart from an absent remittance reference; the base decides.
-  const text = instruction?.text;
   return {
     ...base,
     terms,
     iban: transfer ? transfer.account : base.iban,
     accountName: transfer ? transfer.name : base.accountName,
     bic: transfer ? transfer.payment_service_provider : base.bic,
-    remittanceInformation: transfer || text !== terms ? text : base.remittanceInformation,
+    // instruction.text is BT-83 on every instruction shape; an instruction without text means
+    // the reference was removed, not that the base should resurrect it.
+    remittanceInformation: instruction ? instruction.text : base.remittanceInformation,
   };
 }
 

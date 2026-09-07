@@ -27,7 +27,7 @@ Nothing delivers these, so the transmitted document will not contain them.
 | xrechnung | `buyer.legalRegScheme` | — | — | nothing delivers it |
 | xrechnung | `references.invoicedObject` | BT-18 | Invoiced object identifier | nothing delivers it |
 
-## Not matched (52)
+## Not matched (49)
 
 The syntax renders these and we cannot yet say whether the operation delivers them or fiskaly fills
 them in. **They are still shown** — absence of evidence is not evidence of absence — and they are
@@ -44,7 +44,6 @@ the list to settle, by review or by a captured transmission.
 | cii | `payment.accountName` | BT-85 | Payment account name | The bank details only travel inside a CREDIT_TRANSFER instruction |
 | cii | `payment.bic` | BT-86 | Payment service provider identifier | The bank details only travel inside a CREDIT_TRANSFER instruction |
 | cii | `payment.iban` | BT-84 | Payment account identifier | The bank details only travel inside a CREDIT_TRANSFER instruction |
-| cii | `payment.remittanceInformation` | BT-83 | Remittance information | An UNKNOWN instruction reuses `text` for the payment terms, so a remittance reference equal to the terms is indistinguishable |
 | cii | `vatBreakdown.0.rate` | BT-119 | VAT category rate | Only a VAT_RATE row has a percentage; an exemption or reverse-charge row carries none |
 | cii | `vatBreakdown.1.rate` | BT-119 | VAT category rate | Only a VAT_RATE row has a percentage; an exemption or reverse-charge row carries none |
 | fatturapa | `buyer.taxId` | — | — | identification names one identifier, so a buyer with a VAT id sends only that; its codice fiscale is preserved but not editable through the JSON |
@@ -72,7 +71,6 @@ the list to settle, by review or by a captured transmission.
 | ubl | `payment.accountName` | BT-85 | Payment account name | The bank details only travel inside a CREDIT_TRANSFER instruction |
 | ubl | `payment.bic` | BT-86 | Payment service provider identifier | The bank details only travel inside a CREDIT_TRANSFER instruction |
 | ubl | `payment.iban` | BT-84 | Payment account identifier | The bank details only travel inside a CREDIT_TRANSFER instruction |
-| ubl | `payment.remittanceInformation` | BT-83 | Remittance information | An UNKNOWN instruction reuses `text` for the payment terms, so a remittance reference equal to the terms is indistinguishable |
 | ubl | `vatBreakdown.0.rate` | BT-119 | VAT category rate | Only a VAT_RATE row has a percentage; an exemption or reverse-charge row carries none |
 | xrechnung | `buyer.electronicAddress.id` | BT-49 | Buyer electronic address | no pointer in the operation and no declared reason |
 | xrechnung | `buyer.electronicAddress.scheme` | — | — | no pointer in the operation and no declared reason |
@@ -84,6 +82,5 @@ the list to settle, by review or by a captured transmission.
 | xrechnung | `payment.accountName` | BT-85 | Payment account name | The bank details only travel inside a CREDIT_TRANSFER instruction |
 | xrechnung | `payment.bic` | BT-86 | Payment service provider identifier | The bank details only travel inside a CREDIT_TRANSFER instruction |
 | xrechnung | `payment.iban` | BT-84 | Payment account identifier | The bank details only travel inside a CREDIT_TRANSFER instruction |
-| xrechnung | `payment.remittanceInformation` | BT-83 | Remittance information | An UNKNOWN instruction reuses `text` for the payment terms, so a remittance reference equal to the terms is indistinguishable |
 | xrechnung | `vatBreakdown.0.rate` | BT-119 | VAT category rate | Only a VAT_RATE row has a percentage; an exemption or reverse-charge row carries none |
 | xrechnung | `vatBreakdown.1.rate` | BT-119 | VAT category rate | Only a VAT_RATE row has a percentage; an exemption or reverse-charge row carries none |

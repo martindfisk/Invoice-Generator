@@ -37,13 +37,17 @@ PresenceStrip quotes their verbatim reasons for the selected field.
 
 The systematic version of the loss tables: `make gap-report` folds the mapping tables, the loss
 tables and the spec field catalogue into a per-field report of what each **mandated syntax**
-requires but the model/JSON/XML cannot carry (335 rows currently; e.g. seller BG-4 coming from the
+requires but the model/JSON/XML cannot carry (321 rows currently; e.g. seller BG-4 coming from the
 taxpayer resource, document-level allowances, bank details outside `CREDIT_TRANSFER`). Every row's
 `reason` is quoted verbatim from a declared table so `make gap-check` can prove nothing was
 paraphrased. It is scoped to each country's mandated syntax. The current report grades no row
-`blocking` (171 should-fix, the rest notes), so the methodological caveat about applying EN 16931
+`blocking` (157 should-fix, the rest notes), so the methodological caveat about applying EN 16931
 cardinality to FatturaPA (which is _not_ a CIUS of EN 16931) appears in the generated README only
-when blocking rows exist; the `/gap-audit` verdicts are the place that question gets settled.
+when blocking rows exist; the `/gap-audit` verdicts (`docs/gaps/verdicts.json`) are the place that
+question gets settled. The 2026-09 audit refuted three of the report's own claims — BT-49, BT-120
+and BT-83 are carried by the operation after all — and the generator and composer were fixed
+accordingly (SAME_DATUM now applies to the JSON presence check; the UNKNOWN instruction no longer
+folds the payment terms into `text`).
 
 ## Known engine defects
 
