@@ -62,8 +62,8 @@ The two are diffed against each other: the local prediction vs. `GET /records/{t
 | Model rules           | browser, sync                   | `model-rules.ts`                                                                                                         | Σ lines = BT-106, breakdown vs. lines, tax = taxable × rate ± 0.01, channel constraints                                                                                               |
 | Well-formed           | browser                         | `DOMParser`                                                                                                              |                                                                                                                                                                                       |
 | XSD                   | proxy `POST /api/validate/xsd`  | lxml                                                                                                                     | Chosen over `libxml2-wasm`; `xsd-client.ts` keeps the seam for a WASM swap                                                                                                            |
-| Schematron            | browser, main thread            | SaxonJS 2 + build-time SEF: `cen-ubl` + `peppol-ubl` (UBL), `cen-ubl` + `xrechnung-ubl` (XRechnung), `en16931-cii` (CII) | Never compile `.sch` at runtime; SaxonJS 2.7 cannot load in a Web Worker, so the transform runs on the main thread with the parsed SEF cached (LRU 3) — see the ADR-0004 supersession |
-| SDI rules (FatturaPA) | browser                         | `fatturapa-rules.ts`                                                                                                     | Curated 004xx set (00400/00401 Natura↔Aliquota, 00403, 00417, 00419, 00421–00425, 00426/00427)                                                                                        |
+| Schematron            | browser, main thread            | SaxonJS 2 + build-time SEF: `cen-ubl` + `peppol-ubl` (UBL), `cen-ubl` + `xrechnung-ubl` (XRechnung), `en16931-cii` (CII) | Never compile `.sch` at runtime; SaxonJS 2.7 cannot load in a Web Worker, so the transform runs on the main thread with the parsed SEF cached (LRU 4) — see the ADR-0004 supersession |
+| SDI rules (FatturaPA) | browser                         | `fatturapa-rules.ts`                                                                                                     | Curated 004xx set (00400/00401 Natura↔Aliquota, 00403, 00417, 00419, 00421–00425, 00426/00427, 00429/00430, 00471)                                                                    |
 | fiskaly               | after send                      | record `state`, `logs[]`                                                                                                 | ERROR/WARNING logs become findings; SDI codes regex-linked to the rule catalog                                                                                                        |
 
 `Finding = {source, ruleId, severity fatal|error|warning|info, message, xpath?, range?, bt?, fpa?, field?, test?}`.
@@ -74,10 +74,7 @@ The two are diffed against each other: the local prediction vs. `GET /records/{t
 
 ## UAPI choreography
 
-**Setup** (read-only, per persona):
-
-1. `GET /systems/{id}` → `state`/`mode`, `compliance.state`, `annotations.peppol_id`, `vat_rates`, `vat_exemptions`.
-2. `GET /taxpayers/{id}` → seller party. A missing/`DEGRADED` system shows guidance instead of provisioning.
+**Setup** makes no UAPI calls — it only picks a preset. The account reads live in the Test runner's EntityTree (`GET /api/onboarding/status` → paginated `GET /organizations|/subjects|/taxpayers|/systems` per persona), and Send warns on a `DEGRADED` system in LIVE mode before transmitting.
 
 **Send** (IT, BE and DE presets; the flow always sends as the seller):
 

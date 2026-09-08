@@ -45,6 +45,9 @@ async def warm_spec(app, spec_dir):
     # Doing it lazily makes the first request a user makes the slow one; doing it here, off the
     # event loop and into the same caches the routes read, means nobody ever pays for it.
     log = logging.getLogger(__name__)
+    # The vendored XSDs take the same treatment: compiled here so the first
+    # /api/validate/xsd does not pay for it. warm() skips missing assets itself.
+    await asyncio.to_thread(app.state.validator.warm)
     for country in COUNTRIES:
         try:
             await asyncio.to_thread(app.state.uapi_schema.compile, country)

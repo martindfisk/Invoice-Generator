@@ -4,7 +4,6 @@ import { EntityTree, PersonaTree, ProvisionDialog } from "../src/EntityTree";
 import {
   DEGRADED_NO_CAUSE,
   availableCountries,
-  blockedByLine,
   countryRow,
   noCredentialsHint,
 } from "../src/onboarding";
@@ -160,6 +159,20 @@ describe("PersonaTree", () => {
     expect(document.querySelector("[data-missing='DE']")).toBeNull();
   });
 
+  it("names a listing the backend could not fetch instead of showing it as empty", () => {
+    renderTree(
+      status({
+        organizations: [],
+        counts: { organizations: 0, subjects: 1, taxpayers: 1, systems: 1 },
+        errors: { organizations: "403 E_FORBIDDEN: no access" },
+      }),
+    );
+    const block = document.querySelector("[data-listing-errors='seller']") as HTMLElement;
+    expect(block).not.toBeNull();
+    expect(within(block).getByText(/organizations could not be listed/)).toBeInTheDocument();
+    expect(within(block).getByText(/403 E_FORBIDDEN: no access/)).toBeInTheDocument();
+  });
+
   it("reduces Organization and Subject to one quiet line each", () => {
     renderTree(
       status({
@@ -181,19 +194,24 @@ describe("PersonaTree", () => {
     );
   });
 
-  it("renders DEGRADED unlike OPERATIVE and surfaces blocked_by in plain words", () => {
+  it("renders DEGRADED unlike OPERATIVE and surfaces blocked_by with the curated guidance", () => {
+    // The exact value the backend emits (onboarding.py PEPPOL_BLOCKER) — a made-up fixture
+    // value here once hid a key-normalization bug that made the curated string unreachable.
     renderTree(
       status({
-        systems: [system({ mode: "DEGRADED", blocked_by: "PROOF_OF_OWNERSHIP" })],
+        systems: [system({ mode: "DEGRADED", blocked_by: "peppol-proof-of-ownership" })],
         ready: { DE: false, IT: false, BE: false },
         missing: ["DE: system sys-de is COMMISSIONED/DEGRADED, needs COMMISSIONED/OPERATIVE"],
       }),
     );
     const row = document.querySelector("[data-entity='system-DE']") as HTMLElement;
     expect(row).toHaveAttribute("data-entity-state", "COMMISSIONED / DEGRADED");
-    const blocked = row.querySelector("[data-blocked-by='PROOF_OF_OWNERSHIP']") as HTMLElement;
-    expect(blocked).toHaveTextContent(blockedByLine("PROOF_OF_OWNERSHIP"));
-    expect(blocked).toHaveTextContent(/proof of ownership/);
+    const blocked = row.querySelector(
+      "[data-blocked-by='peppol-proof-of-ownership']",
+    ) as HTMLElement;
+    // The curated wording, not the generic "blocked by …" fallback.
+    expect(blocked).toHaveTextContent(/ownership verification unblocks transmission/);
+    expect(blocked).not.toHaveTextContent(/blocked by peppol proof of ownership/);
   });
 
   it("glosses a compliance state other than sends-and-receives visibly", () => {
@@ -507,5 +525,77 @@ describe("ProvisionDialog", () => {
       },
     });
     expect(screen.queryByLabelText("FISCONLINE PIN")).not.toBeInTheDocument();
+  });
+
+  it("keeps the secrets and offers Retry when the provision did not finish ready", async () => {
+    mocks.provisionCountry.mockResolvedValue({
+      steps: [{ name: "create taxpayer", method: "POST", path: "/taxpayers", status: "failed" }],
+      created: { taxpayer_id: null, location_id: null, system_id: null },
+      ready: false,
+    });
+    render(
+      <ProvisionDialog
+        persona="seller"
+        country={italy}
+        environment="test"
+        onClose={() => {}}
+        onDone={() => {}}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("FISCONLINE PIN"), { target: { value: "1234" } });
+    fireEvent.change(screen.getByLabelText("FISCONLINE password"), {
+      target: { value: "secret" },
+    });
+    fireEvent.change(screen.getByLabelText("FISCONLINE tax id (codice fiscale)"), {
+      target: { value: "99999999990" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Provision Italy" }));
+    await screen.findByText(/not ready yet/);
+    const retry = screen.getByRole("button", { name: "Retry" });
+    expect(retry).toBeEnabled();
+    expect((screen.getByLabelText("FISCONLINE PIN") as HTMLInputElement).value).toBe("1234");
+    fireEvent.click(retry);
+    await waitFor(() => expect(mocks.provisionCountry).toHaveBeenCalledTimes(2));
+    expect(mocks.provisionCountry).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        taxpayer: {
+          fiscalization: {
+            credentials: { pin: "1234", password: "secret", tax_id_number: "99999999990" },
+          },
+        },
+      }),
+    );
+  });
+
+  it("ignores dismissal while a provision is running", async () => {
+    let settle: (value: ProvisionResult) => void = () => {};
+    mocks.provisionCountry.mockReturnValue(
+      new Promise<ProvisionResult>((resolve) => {
+        settle = resolve;
+      }),
+    );
+    const onClose = vi.fn();
+    render(
+      <ProvisionDialog
+        persona="seller"
+        country={germany}
+        environment="test"
+        onClose={onClose}
+        onDone={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Provision Germany" }));
+    await screen.findByText("Provisioning…");
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    expect(onClose).not.toHaveBeenCalled();
+    settle({
+      steps: [],
+      created: { taxpayer_id: "tp-1", location_id: null, system_id: "sys-1" },
+      ready: true,
+    });
+    await screen.findByText(/Germany is ready/);
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(onClose).toHaveBeenCalled();
   });
 });

@@ -101,9 +101,23 @@ class Recorder:
                 except TimeoutError:
                     yield "event: ping\ndata: {}\n\n"
                     continue
-                if int(record.id) > last_sent:
-                    last_sent = int(record.id)
-                    yield _event(record)
+                if int(record.id) <= last_sent:
+                    continue
+                if int(record.id) > last_sent + 1:
+                    # The subscriber's queue overflowed and records were dropped from it. The
+                    # ring buffer usually still holds them — replay the gap from there; when
+                    # even the ring has rotated past, say how many are gone rather than skipping
+                    # silently.
+                    missed = self.list(since_id=last_sent)
+                    if missed and int(missed[0].id) > last_sent + 1:
+                        dropped = int(missed[0].id) - last_sent - 1
+                        yield f'event: notice\ndata: {{"dropped": {dropped}}}\n\n'
+                    for entry in missed:
+                        last_sent = int(entry.id)
+                        yield _event(entry)
+                    continue
+                last_sent = int(record.id)
+                yield _event(record)
 
 
 def _event(record):

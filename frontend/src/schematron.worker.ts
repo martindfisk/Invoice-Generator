@@ -35,9 +35,10 @@ type WorkerScope = { importScripts(...urls: string[]): void };
 
 // Parsed SEFs are big — the three largest ship as 4.9–8.2 MB of JSON each (see
 // public/sef/SOURCES.md), several times that once parsed — so the cache is a small LRU:
-// three entries cover a whole UBL + XRechnung session while capping the worst case at
-// roughly 20 MB of source JSON.
-const SEF_CACHE_LIMIT = 3;
+// four entries hold the whole working set (peppol + cen for UBL, xrechnung, cen-cii) so a
+// session that alternates formats never thrashes, while capping the worst case at roughly
+// 25 MB of source JSON.
+const SEF_CACHE_LIMIT = 4;
 const sefCache = new Map<string, unknown>();
 let runtime: Promise<SaxonApi> | undefined;
 
@@ -119,6 +120,17 @@ async function loadSef(ref: SefRef): Promise<unknown> {
   const parsed: unknown = await response.json();
   rememberSef(ref.key, parsed);
   return parsed;
+}
+
+// Load the runtime and fetch+parse the SEFs without transforming anything, so the first real
+// validation skips the 400–700 ms cold start. Failures are deliberately not surfaced here —
+// the actual run reports them with context.
+export async function prewarmSchematron(
+  ruleSets: (string | SefRef)[],
+  base = SEF_BASE,
+): Promise<void> {
+  await loadRuntime();
+  for (const ruleSet of ruleSets) await loadSef(toRef(ruleSet, base));
 }
 
 export async function runSchematron(

@@ -4,7 +4,7 @@ import { annotateKnownDefects } from "./known-defects";
 import type { FormatId, Invoice } from "./model";
 import { checkModel, type Severity } from "./model-rules";
 import { loadSefManifest, resolveRuleSets } from "./schematron-sets";
-import { runSchematron, type SchematronRun } from "./schematron.worker";
+import { prewarmSchematron, runSchematron, type SchematronRun } from "./schematron.worker";
 import { parseSvrl, type SvrlFinding } from "./svrl";
 import { buildFieldIndex, type FieldIndex } from "./xml-locate";
 import { fieldForPointer, toInvoiceTransaction, type UapiContext } from "./uapi-map";
@@ -59,11 +59,6 @@ const STAGE_LABELS: Record<FindingSource, string> = {
 // goldens test (and the format table it documents) address it here.
 export { SCHEMATRON_RULE_SETS } from "./schematron-sets";
 
-// formats.ts still lists CII as model + well-formedness only, from before the CEN CII rule set
-// was vendored. The SEF exists now, so the stage is appended here; drop this once the format
-// plugin lists it itself.
-const EXTRA_STAGES: Partial<Record<FormatId, FindingSource[]>> = { cii: ["schematron"] };
-
 // The UAPI operation is what an integrator actually authors, and fiskaly rejects a malformed one
 // before any syntax exists to check — so this stage runs first, for every format, ahead of the
 // stages that inspect the XML this browser predicts fiskaly will generate.
@@ -71,10 +66,7 @@ const UAPI_STAGE: FindingSource = "uapi-schema";
 
 export function stagesFor(formatId: FormatId): { id: FindingSource; label: string }[] {
   const declared = getFormat(formatId).validationStages as FindingSource[];
-  const extra = (EXTRA_STAGES[formatId] ?? []).filter((id) => !declared.includes(id));
-  const all = [UAPI_STAGE, ...declared, ...extra].filter(
-    (id, index, ids) => ids.indexOf(id) === index,
-  );
+  const all = [UAPI_STAGE, ...declared].filter((id, index, ids) => ids.indexOf(id) === index);
   return all.map((id) => ({ id, label: STAGE_LABELS[id] }));
 }
 
@@ -155,8 +147,9 @@ async function runStage(id: FindingSource, input: ValidationInput): Promise<Stag
   const startedAt = performance.now();
   if (id === "model") return settle(id, checkModel(input.invoice) as Finding[], startedAt);
   if (id === "well-formed") return settle(id, checkWellFormed(input.xml), startedAt);
-  const runner = RUNNERS[id];
-  if (!runner) return unavailable(id, `${STAGE_LABELS[id]} is not wired up yet.`);
+  // Every remaining FindingSource is registered below in this module at load time, so the
+  // lookup cannot miss — a stage id exists only because the type and the registrations agree.
+  const runner = RUNNERS[id]!;
   try {
     return await runner(input);
   } catch (error) {
@@ -254,6 +247,14 @@ registerStage("uapi-schema", async (input) => {
 registerStage("xsd", async (input) => {
   const startedAt = performance.now();
   const plugin = getFormat(input.formatId);
+  // Reachable only through a format-registry change that declares the xsd stage without
+  // vendoring a schema — today every format declaring xsd carries a key (CII declares neither).
+  if (plugin.xsdSchemaKey === null) {
+    return unavailable(
+      "xsd",
+      `No XSD is vendored for ${plugin.label}, so there is nothing to validate against.`,
+    );
+  }
   const outcome = await validateXsd(plugin.xsdSchemaKey, input.xml, input.signal);
   if (outcome.status === "unavailable") {
     return unavailable("xsd", outcome.reason);
@@ -303,6 +304,19 @@ function nameRun(run: SchematronRun, versions: Map<string, string | undefined>):
   return `${run.ruleSet}${version ? ` ${version}` : ""} (${run.loadMs + run.runMs} ms)`;
 }
 
+// Fetch and parse the active format's SEFs (and the SaxonJS runtime) ahead of the first run,
+// so the Mapper can hide the 400–700 ms Schematron cold start behind idle time. Best-effort:
+// any failure is left for the real validation run to report with context.
+export async function prewarmValidation(formatId: FormatId): Promise<void> {
+  try {
+    const ruleSets = resolveRuleSets(formatId, await loadSefManifest());
+    if (ruleSets.length === 0) return;
+    await prewarmSchematron(ruleSets);
+  } catch {
+    // Swallowed by design — see above.
+  }
+}
+
 registerStage("schematron", async (input) => {
   const startedAt = performance.now();
   const ruleSets = resolveRuleSets(input.formatId, await loadSefManifest());
@@ -343,6 +357,8 @@ export function transmissionFrom(xml: string): SdiTransmission | undefined {
 
 registerStage("sdi-rules", async (input) => {
   const startedAt = performance.now();
+  // Only FatturaPA declares this stage today; the guard is the seam for a format-registry
+  // change that declares sdi-rules on a non-SDI format by mistake.
   if (input.formatId !== "fatturapa") {
     return unavailable("sdi-rules", "The SDI checks only apply to FatturaPA.");
   }

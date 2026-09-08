@@ -11,6 +11,7 @@ import {
   LOSS_NOTICE,
   migratePanes,
   persistWorkflow,
+  RESTORED_ARTIFACTS_NOTE,
   stepLock,
   STEPS,
   VIEW_VERSION,
@@ -258,13 +259,155 @@ describe("workflow persistence", () => {
       workflowReducer,
       chosen(),
     );
-    expect(invoiceSent.correctionTarget).toBe("txn-1");
+    expect(invoiceSent.correctionTarget).toMatchObject({
+      id: "txn-1",
+      presetId: first.id,
+      country: preset(first.id).seller.address.country,
+      mode: "MOCK",
+    });
 
     const correctionSent = transmitted("TRANSACTION::CORRECTION", "txn-2").reduce(
       workflowReducer,
       invoiceSent,
     );
-    expect(correctionSent.correctionTarget).toBe("txn-1");
+    expect(correctionSent.correctionTarget?.id).toBe("txn-1");
+  });
+
+  it("a v3 blob keeps the cosmetics but silently drops the work — the documented migration", () => {
+    localStorage.setItem(
+      WORKFLOW_KEY,
+      JSON.stringify({
+        viewVersion: 3,
+        step: "send",
+        presetId: first.id,
+        formatId: "fatturapa",
+        persona: "seller",
+        panes: { human: true, xml: false },
+        invoice: { ...preset(first.id), number: "V3-EDITED" },
+        edit: { source: "human", xml: "<edited/>", error: null, lossy: false, json: null },
+        send: { phase: "settled", transactionId: "txn-old", nodes: [] },
+      }),
+    );
+    const restored = initialWorkflow();
+    // Cosmetics survive…
+    expect(restored.presetId).toBe(first.id);
+    expect(restored.step).toBe("send");
+    expect(restored.panes).toEqual({ human: true, xml: false });
+    // …the work does not (pre-v4 shapes are not trusted; documented in handbook ch. 09).
+    expect(restored.invoice?.number).toBe(preset(first.id).number);
+    expect(restored.edit.xml).toBeNull();
+    expect(restored.send.phase).toBe("idle");
+  });
+
+  it("a legacy string correction target is dropped on restore, not trusted", () => {
+    const state = chosen();
+    persistWorkflow(state);
+    const blob = JSON.parse(localStorage.getItem(WORKFLOW_KEY) ?? "{}") as Record<string, unknown>;
+    blob.correctionTarget = "txn-legacy";
+    localStorage.setItem(WORKFLOW_KEY, JSON.stringify(blob));
+    // The bare id carries no country/mode context, so the mismatch guards could not protect it.
+    expect(initialWorkflow().correctionTarget).toBeNull();
+  });
+
+  it("a restore keeps a terminal outcome instead of relabelling it as stopped", () => {
+    const state = chosen();
+    const actions: WorkflowAction[] = [
+      { type: "sendStarted", at: 1, localXml: "", label: "TRANSACTION::INVOICE" },
+      {
+        type: "sendCreated",
+        at: 2,
+        created: { intention_id: "int-9", transaction_id: "txn-9" },
+        transport: "backend",
+      },
+      {
+        type: "sendPolled",
+        at: 3,
+        wait: {
+          transaction_id: "txn-9",
+          finished: true,
+          transmission_id: "trn-9",
+          transmission: { id: "trn-9", state: "COMPLETED", mode: "FINISHED", logs: [] },
+        },
+      },
+    ];
+    const sent = actions.reduce(workflowReducer, state);
+    // Simulate a reload that happened during the artifact fetches (phase not yet settled).
+    persistWorkflow({ ...sent, send: { ...sent.send, phase: "artifacts" } });
+    const restored = initialWorkflow();
+    expect(restored.send.outcome).toBe("transmitted");
+    expect(restored.send.phase).toBe("settled");
+    // Artifacts are stripped from persistence, so the restored send says they are refetched
+    // instead of presenting an unexplained empty diff.
+    expect(restored.send.note).toBe(RESTORED_ARTIFACTS_NOTE);
+  });
+
+  it("a transmission-id poll slice with unknown logs keeps the transaction node's entries", () => {
+    const actions: WorkflowAction[] = [
+      { type: "sendStarted", at: 1, localXml: "", label: "TRANSACTION::INVOICE" },
+      {
+        type: "sendCreated",
+        at: 2,
+        created: {
+          intention_id: "int-1",
+          transaction_id: "txn-1",
+          logs: [{ severity: "ERROR", message: "00471 Cessionario uguale al cedente" }],
+        },
+        transport: "backend",
+      },
+      {
+        type: "sendPolled",
+        at: 3,
+        wait: {
+          transaction_id: "txn-1",
+          finished: false,
+          transmission_id: "trn-1",
+          transmission: { id: "trn-1", state: "ACCEPTED", mode: "PROCESSING", logs: [] },
+          // The backend's short-circuit slice: transaction not read, logs unknown.
+          state: null,
+          mode: null,
+          logs: null,
+        },
+      },
+    ];
+    const started = actions.reduce(workflowReducer, chosen());
+    const transaction = started.send.nodes.find((node) => node.stage === "transaction");
+    expect(transaction?.logs).toEqual([
+      { severity: "ERROR", message: "00471 Cessionario uguale al cedente" },
+    ]);
+  });
+
+  it("a rejected restored invoice also drops the saved hand edits", () => {
+    localStorage.setItem(
+      WORKFLOW_KEY,
+      JSON.stringify({
+        viewVersion: VIEW_VERSION,
+        step: "mapper",
+        presetId: first.id,
+        formatId: first.id === "be-peppol" ? "ubl" : "fatturapa",
+        persona: "seller",
+        panes: { human: true, xml: true },
+        // vatBreakdown missing — the restore guard must reject this blob…
+        invoice: { format: "fatturapa", lines: [] },
+        // …and the stale edits must not survive it, or the JSON pane would describe a
+        // different invoice than the fields and the XML.
+        edit: {
+          source: "json",
+          xml: null,
+          error: null,
+          lossy: false,
+          json: '{"type":"INVOICE"}',
+          jsonError: null,
+          jsonLossy: false,
+          notice: null,
+        },
+        send: null,
+        correctionTarget: null,
+      }),
+    );
+    const restored = initialWorkflow();
+    expect(restored.invoice?.number).toBe(preset(first.id).number);
+    expect(restored.edit.json).toBeNull();
+    expect(restored.edit.xml).toBeNull();
   });
 
   it("restores the edited invoice and the send's record ids after a reload", () => {

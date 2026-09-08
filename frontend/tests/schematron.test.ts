@@ -9,12 +9,9 @@ import { parseSvrl, type SvrlFinding } from "../src/svrl";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FRONTEND = join(HERE, "..");
 const SEF_DIR = join(FRONTEND, "public", "sef");
-const CEN_CLONE = join(
-  "/Users/martin.dutzler/Documents/GitHub/bodex/countries",
-  "e-invoicing (all countries)",
-  "EN16931 standard",
-);
-const UNIT_UBL = join(CEN_CLONE, "test", "Invoice-unit-UBL");
+// Vendored EUPL-1.2 CEN test documents (see fixtures/cen-br/SOURCES.md) — committed so this tier
+// runs everywhere the SEFs exist instead of silently skipping off one machine.
+const UNIT_UBL = join(HERE, "fixtures", "cen-br");
 
 type SaxonModule = {
   transform(
@@ -66,12 +63,13 @@ function unitCases(file: string, kind: "error" | "success"): UnitCase[] {
 }
 
 const UNIT_FIXTURES = ["BR-11", "BR-16", "BR-CO-10", "BR-CO-15", "BR-S-08-1", "BR-CL-01"];
-const unitReady = sefReady && existsSync(UNIT_UBL);
 
-describe.skipIf(!unitReady)("CEN EN 16931 BR-* unit fixtures", () => {
+// Gated only on the SEFs (make sef); the fixtures are committed, so a missing file is a broken
+// checkout and must FAIL, never skip.
+describe.skipIf(!sefReady)("CEN EN 16931 BR-* unit fixtures", () => {
   for (const name of UNIT_FIXTURES) {
     const file = join(UNIT_UBL, `${name}.xml`);
-    it.skipIf(!existsSync(file))(
+    it(
       `${name}: fires in the error case and stays silent in the success case`,
       { timeout: 120_000 },
       async () => {

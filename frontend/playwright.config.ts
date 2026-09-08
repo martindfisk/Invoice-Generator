@@ -21,7 +21,18 @@ export default defineConfig({
       url: `http://localhost:${backendPort}/api/health`,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
-      env: { UAPI_MODE: "mock" },
+      // System ids so the e2e exercises the typed backend choreography (POST /api/invoices and
+      // /correction) — the mock accepts any id. Without them every send silently took the
+      // /api/uapi passthrough fallback and the backend endpoints had zero e2e coverage.
+      env: {
+        UAPI_MODE: "mock",
+        SELLER_SYSTEM_ID_IT: "e2e-system-it",
+        SELLER_TAXPAYER_ID_IT: "e2e-taxpayer-it",
+        SELLER_SYSTEM_ID_BE: "e2e-system-be",
+        SELLER_TAXPAYER_ID_BE: "e2e-taxpayer-be",
+        SELLER_SYSTEM_ID_DE: "e2e-system-de",
+        SELLER_TAXPAYER_ID_DE: "e2e-taxpayer-de",
+      },
     },
     {
       command: "npm run dev",

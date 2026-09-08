@@ -5,10 +5,10 @@ PY := "$(ROOT)/backend/.venv/bin/python"
 PIP := "$(ROOT)/backend/.venv/bin/pip"
 NPM := npm --prefix "$(ROOT)/frontend"
 
-.PHONY: help setup doctor node spec spec-check spec-integrity gap-report gap-check gen-types schemas sef sef-check dev test e2e lint docker clean
+.PHONY: help setup doctor node spec spec-check spec-integrity gap-report gap-check gen-types schemas sef sef-check handbook handbook-check dev test e2e lint docker clean
 
 help:
-	echo "Targets: setup doctor spec spec-check gap-report gen-types schemas sef sef-check dev test e2e lint docker clean"
+	echo "Targets: setup doctor spec spec-check gap-report gen-types schemas sef sef-check handbook handbook-check dev test e2e lint docker clean"
 
 node:
 	command -v node >/dev/null 2>&1 || brew install node

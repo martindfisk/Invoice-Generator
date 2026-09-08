@@ -10,12 +10,22 @@ import { gzipSync } from "node:zlib";
 
 const FRONTEND = resolve(fileURLToPath(import.meta.url), "../..");
 const SEF_DIR = join(FRONTEND, "public", "sef");
-const EN16931 =
-  "/Users/martin.dutzler/Documents/GitHub/bodex/countries/e-invoicing (all countries)/EN16931 standard";
-const UNIT = join(EN16931, "test", "Invoice-unit-UBL");
-const POSITIVE = join(EN16931, "ubl", "examples", "BIS3_Invoice_positive.XML");
+// The unit fixtures are vendored (tests/fixtures/cen-br, EUPL-1.2). The positive full-invoice
+// document defaults to this repo's own schematron-clean golden; point EN16931_DIR at a clone of
+// the CEN validation artefacts to use the official BIS3_Invoice_positive example instead.
+const EN16931 = process.env.EN16931_DIR ?? "";
+const UNIT = join(FRONTEND, "tests", "fixtures", "cen-br");
+const POSITIVE = EN16931
+  ? join(EN16931, "ubl", "examples", "BIS3_Invoice_positive.XML")
+  : join(FRONTEND, "tests", "golden", "be-peppol.ubl.xml");
+const POSITIVE_NAME = EN16931 ? "BIS3_Invoice_positive" : "be-peppol golden";
 
-const SEFS = ["en16931-ubl.sef.json", "peppol-ubl.sef.json", "cen-ubl.sef.json"];
+// The SEFs actually shipped since 2026-09-03 (en16931-ubl/xrechnung-cii were dropped as
+// unreachable — ADR-0007).
+const SEFS = ["peppol-ubl.sef.json", "cen-ubl.sef.json", "xrechnung-ubl.sef.json"];
+// The BE golden is a Peppol invoice, so XRechnung's German CIUS rules rightly fire on it: only
+// assert "clean" for the rule sets the fixture actually targets. All three still must execute.
+const CLEAN_SEFS = new Set(["peppol-ubl.sef.json", "cen-ubl.sef.json"]);
 // One fixture per rule family: a plain BR-*, a calculation rule, a VAT-category rule.
 const UNIT_FIXTURES = ["BR-16.xml", "BR-CO-15.xml", "BR-S-08-1.xml"];
 
@@ -110,7 +120,7 @@ function table(rows) {
 async function main() {
   need(SEF_DIR, "run: make sef");
   SEFS.forEach((s) => need(join(SEF_DIR, s), "run: make sef"));
-  need(POSITIVE, "EN 16931 example fixtures not found - check the bodex clone path");
+  need(POSITIVE, "positive fixture not found - set EN16931_DIR or run from a full checkout");
   UNIT_FIXTURES.forEach((f) => need(join(UNIT, f), "EN 16931 unit fixtures not found"));
 
   console.log(`saxon-js ${require("saxon-js/package.json").version}, node ${process.version}\n`);
@@ -123,7 +133,7 @@ async function main() {
     const cold = await run(sef, positiveXml);
     const warm = await run(sef, positiveXml);
     rows.push({
-      fixture: "BIS3_Invoice_positive",
+      fixture: POSITIVE_NAME,
       sef,
       kind: "valid",
       expected: "",
@@ -136,11 +146,13 @@ async function main() {
       cold.root === "schematron-output" && cold.rootNs === SVRL && cold.fired > 0,
       `root {${cold.rootNs}}${cold.root}, ${cold.fired} fired-rule`,
     );
-    check(
-      `${sef} clean on BIS3_Invoice_positive`,
-      cold.findings.length === 0,
-      cold.findings.map((f) => f.id).join(", ") || "0 failed-assert",
-    );
+    if (CLEAN_SEFS.has(sef)) {
+      check(
+        `${sef} clean on positive fixture`,
+        cold.findings.length === 0,
+        cold.findings.map((f) => f.id).join(", ") || "0 failed-assert",
+      );
+    }
   }
 
   // (b) does a BR-xx fixture yield exactly its rule id (scoped to that id)?
@@ -153,7 +165,7 @@ async function main() {
         continue;
       }
       const c = cases[0];
-      for (const sef of ["en16931-ubl.sef.json", "cen-ubl.sef.json"]) {
+      for (const sef of ["cen-ubl.sef.json"]) {
         const r = await run(sef, c.xml);
         const fired = r.findings.some((f) => f.id === c.expected);
         const ok = kind === "error" ? fired : !fired;
@@ -171,7 +183,7 @@ async function main() {
           ok,
           `${r.findings.length} failed-assert, ${c.expected} ${fired ? "fired" : "absent"}`,
         );
-        if (sef === "en16931-ubl.sef.json" && kind === "error") {
+        if (sef === "cen-ubl.sef.json" && kind === "error") {
           detail.push({ file, expected: c.expected, description: c.description, ...r });
         }
       }
@@ -181,7 +193,7 @@ async function main() {
   console.log("Smoke table\n");
   table(rows);
 
-  console.log("\nFindings detail (en16931-ubl, <error> cases: @id / @flag / @location)\n");
+  console.log("\nFindings detail (cen-ubl, <error> cases: @id / @flag / @location)\n");
   for (const d of detail) {
     console.log(`  ${d.file} - expects ${d.expected} - "${d.description}"`);
     for (const f of d.findings) {

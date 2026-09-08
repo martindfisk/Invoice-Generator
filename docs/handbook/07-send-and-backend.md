@@ -52,9 +52,12 @@ The backend derives stable sub-keys per step (intention/transaction) from it.
 
 A credit note (`typeCode 381`) needs the record id of the invoice it corrects. The app tracks
 `correctionTarget` — the last **invoice** this browser transmitted (a transmitted correction never
-becomes its own target) — and routes the wrapped operation through
+becomes its own target), stored as a typed record `{id, presetId, country, mode, at}` and shown in
+the preflight's "Corrects" row. Send routes the wrapped operation through
 `POST /api/invoices/{id}/correction`, which builds the `TRANSACTION::CORRECTION` envelope
-server-side and echoes `corrected_record_id`. No target yet → Send is blocked with the explanation.
+server-side and echoes `corrected_record_id`. Guard rails: no target yet → blocked with an
+explanation; target from a different country or from the other MOCK/LIVE mode → blocked too (a
+mock-minted record id must never be referenced in LIVE).
 
 ### Two transports
 
@@ -92,7 +95,7 @@ The proxy exists because the browser must never hold credentials (and because
   dicts; the proxy never re-models fiskaly's schemas.
 - **`onboarding.py`** — the per-persona account tree (organizations → subjects → taxpayers →
   systems, fetched in parallel, pagination followed) and guided provisioning behind an explicit
-  confirmation, feeding the EntityTree in Setup.
+  confirmation, feeding the EntityTree in the Test runner section.
 - **`collections.py`** — parses the published fiskaly Postman collections into runnable steps for
   the Test runner: transmission folders run, account-mutating and reception steps are skipped with
   a stated reason, and known defects in the published collections are surfaced as notes rather

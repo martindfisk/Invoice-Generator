@@ -185,13 +185,16 @@ def _untransmitted(invoice):
 
 
 def _waited(transaction_id, invoice, transmission, *, finished):
+    # `logs` is None (unknown) when the transaction was not read this slice — the transmission-id
+    # short-circuit passes an empty invoice. An empty list would read as "the logs were cleared"
+    # and the frontend would wipe the entries it already shows.
     return {
         "transaction_id": transaction_id,
         "transmission_id": transmission and transmission.get("id"),
         "finished": finished,
         "state": invoice.get("state"),
         "mode": invoice.get("mode"),
-        "logs": invoice.get("logs") or [],
+        "logs": invoice.get("logs") if invoice else None,
         "transmission": transmission
         and {
             "id": transmission.get("id"),

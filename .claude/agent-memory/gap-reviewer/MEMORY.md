@@ -1,0 +1,21 @@
+# Memory index
+
+- [BT-72 / BR-IC-11 nuance](project-bt72-bric11-nuance.md) — ubl+xrechnung delivery.date severity rows confirmed should-fix; "no assert requires BT-72" citations are false (BR-IC-11)
+- [BT-34 xrechnung platform-rendered](project-bt34-xrechnung-platform-rendered.md) — seller.electronicAddress rows should-fix confirmed; DE peppol_id annotation = BT-49 recipient, trap
+- [Gap-report severity taxonomy](project-gap-report-severity-taxonomy.md) — R1-R4 semantics; R4 fatturapa-only; cii seller.address + BT-84/85/86 + BT-3 + IT extras bollo/CIG/CUP confirmed
+- [lines.{i}.id severity evidence](project-lines-id-severity-evidence.md) — BR-21/EntryNumber/R1-R4 chain; all four formats confirmed should-fix; fatturapa evidence strings live in uapi-field-fate.ts
+- [XRechnung CIUS model conventions](reference-xrechnung-cius-model-conventions.md) — semo-xml cardinality (bare ref = required), section line map, BR-DE corroboration via vendored XSL; BT-14/BT-18 optional
+- [XRechnung BG-22 cardinalities](reference-xrechnung-cius-model-bg22.md) — BT-107/108/110/111/113/114 all min-occurs=0 (lines 3377-3388); no XRechnung/CEN presence mandate; totals.* rows should-fix
+- [severityFor precedence](project-severity-rule-precedence.md) — R2 beats R3 "optional"; xrechnung + cii buyer.* rows confirmed; buyer BG-9 optional vs seller BG-6; CII-SR-356 = payee-only
+- [vatexCode severity evidence](project-vatexcode-severity-evidence.md) — BR-*-10 disjunctive, BT-120 via entries[].vat.reason; ubl+xrechnung+cii confirmed; fatturapa natura rows confirmed (family-only enum, sub-code gateway-derived)
+- [prepaid BT-113 severity evidence](project-prepaid-bt113-severity-evidence.md) — min-occurs=0 CIUS model, BR-CO-16 absence-tolerant; xrechnung + cii BT-107/108/113/114 + fatturapa rounding (Arrotondamento) confirmed
+- [buyer.taxId fatturapa evidence](project-buyer-taxid-fatturapa-evidence.md) — 00417 either-identifier; V1.4 PDF §1.4 'alternativa non esclusiva'; json row should-fix confirmed
+- [fatturapa payment TP/MP evidence](project-fatturapa-payment-tpmp-evidence.md) — conditions+italianMeansCode json rows should-fix; silent TP01/MP12→TP02/MP05 substitution, XSD 793/821 mandatory-within
+- [Verification technique](project-gap-verification-technique.md) — pitfalls/fast paths vs Schematron and UAPI spec
+- [CEN VAT rate rules](reference-cen-vat-rate-rules.md) — schematron rule-id map per VAT category; BT-119=0 pin; xrechnung rate pair confirmed 2026-09-07
+- [Verification toolchain](reference-verification-toolchain.md) — YAML parsing, grep targets, row id format
+- [BG-4 platform rows (xrechnung)](project-bg4-platform-rows-xrechnung.md) — seller.* json rows should-fix confirmed; CompanyTaxpayer = platform source for BT-27/28/BG-5; DE fiscalization has no BT-30 field
+- [references trio evidence](project-references-trio-evidence.md) — salesOrder/invoicedObject/despatchAdvice.issueDate lossy trio; DatiDDT needs both NumeroDDT+DataDDT; fatturapa json rows confirmed
+- [esigibilita severity evidence](project-esigibilita-severity-evidence.md) — fatturapa json row should-fix confirmed; closed VatBreakdown*Entry schemas, capture omits EsigibilitaIVA; BT-8/432 nuance for xml siblings
+- [Decisive sources](reference-decisive-sources.md) — which offline source settles which proposition; spec BT-label grep is the fastest refuter
+- [Known report defects](project-known-report-defects.md) — NO_POINTER overclaims, platform rows escaping R4, loose reason prose, zero-information should-fixes

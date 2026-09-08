@@ -204,7 +204,8 @@ class TransmissionWait(BaseModel):
     finished: bool
     state: str | None = None
     mode: str | None = None
-    logs: list[dict[str, Any]] = Field(default_factory=list)
+    # None means "not read this slice" (transmission-id short-circuit); [] would mean "cleared".
+    logs: list[dict[str, Any]] | None = None
     transmission: TransmissionRef | None = None
 
 
@@ -263,6 +264,9 @@ class OnboardingStatus(BaseModel):
     systems: list[OnboardingSystem]
     ready: dict[str, bool]
     missing: list[str]
+    # Resource name -> upstream failure, for listings that could not be fetched; those resources
+    # are unknown, not absent, and the UI must say so per resource.
+    errors: dict[str, str] = Field(default_factory=dict)
 
 
 class ProvisionRequest(BaseModel):

@@ -1,13 +1,13 @@
 # Demo Script
 
-A scripted showcase for a solutions engineer presenting the e-invoice lifecycle — create → validate → send — to sales, partners, or prospects. Total runtime: `<TBD>` (target ~15 minutes for Acts 1–3, +2 minutes for Act 4).
+A scripted showcase for a solutions engineer presenting the e-invoice lifecycle — create → validate → send — to sales, partners, or prospects. Total runtime: ~17 minutes (~15 for Acts 1–3, +2 for Act 4); leave a few minutes of buffer for questions.
 
 ## Setup checklist
 
 - [ ] `.env` populated with TEST keys for the Seller and Buyer organisations (see `README.md`).
-- [ ] `make dev` running; both panes load with no console errors.
-- [ ] Mode badge reads `<TBD>` (LIVE for a live demo, MOCK for a rehearsal or no-network fallback).
-- [ ] Browser window wide enough for Split view (≥ 1280 px) — Human view left, XML view right, API log pane visible.
+- [ ] `make dev` running; the workflow pane (left) and the API log pane (right) load with no console errors.
+- [ ] Mode badge reads **MOCK** for a rehearsal or no-network fallback; **LIVE** (against the TEST environment) for a live demo.
+- [ ] Browser window wide enough for the split (≥ 1280 px) — workflow left, API log right; the Mapper itself shows three panes: Human view, fiskaly JSON operation, predicted XML.
 
 ## Act 1 — Create (Italian B2B, SDI)
 
@@ -46,7 +46,6 @@ Repeat Acts 1–3 compressed, using preset **"Peppol BE"**: send as `TRANSACTION
 
 1. Preset **"B2G Kommune (XRechnung)"**: the same pipeline, third jurisdiction — XRechnung over Peppol with a Leitweg-ID (`0204:`), Schematron running CEN + KoSIT rules.
 2. Preset **"TD04 credit note"** after an invoice was sent: the JSON pane becomes a `TRANSACTION::CORRECTION` referencing the transmitted record, posted via `POST /api/invoices/{id}/correction`. Until an original invoice exists, Send is blocked with the explanation.
-
 
 ## Error demos
 

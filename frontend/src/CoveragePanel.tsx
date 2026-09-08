@@ -13,7 +13,8 @@ type CoveragePanelProps = {
   country: string | undefined;
   formatId: FormatId;
   jsonPrefix: string;
-  onInsert: (inserts: Insert[]) => void;
+  // Returns a failure notice when some pointers could not be inserted, null when all landed.
+  onInsert: (inserts: Insert[]) => string | null;
 };
 
 function describe(field: SpecField): string {
@@ -42,6 +43,7 @@ export function CoveragePanel({
     unavailable: string | null;
   }>({ country: undefined, spec: null, unavailable: null });
   const [attempt, setAttempt] = useState(0);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -56,7 +58,16 @@ export function CoveragePanel({
             : { country, spec: null, unavailable: outcome.reason },
         );
       },
-      () => undefined,
+      // A rejection (network failure, thrown before the client's own error mapping) must not
+      // leave the panel on "Measuring…" forever — it becomes the unavailable state with Retry.
+      (caught: unknown) => {
+        if (controller.signal.aborted) return;
+        setLoaded({
+          country,
+          spec: null,
+          unavailable: caught instanceof Error ? caught.message : String(caught),
+        });
+      },
     );
     return () => controller.abort();
   }, [country, attempt]);
@@ -157,15 +168,18 @@ export function CoveragePanel({
               ) : (
                 <button
                   type="button"
-                  onClick={() =>
-                    onInsert([
+                  onClick={() => {
+                    const failure = onInsert([
                       { pointer: field.pointer, value },
                       ...extra.map((sibling) => ({
                         pointer: sibling.pointer,
                         value: suggestedValue(sibling),
                       })),
-                    ])
-                  }
+                    ]);
+                    // A success does not clear an earlier failure notice — the user may not
+                    // have read it yet; only Dismiss or a newer failure replaces it.
+                    if (failure !== null) setNotice(failure);
+                  }}
                   className="rounded-m border border-line px-1.5 font-medium text-muted hover:border-brand hover:text-ink"
                 >
                   {fate ? `Insert anyway — ${fateLabel(fate.fate)}` : "Insert"}
@@ -176,6 +190,18 @@ export function CoveragePanel({
           );
         })}
       </ul>
+      {notice && (
+        <p
+          role="status"
+          data-insert-notice
+          className="mt-1 rounded-m bg-warning-soft px-2 py-1 text-[11px] text-warning-ink"
+        >
+          {notice}{" "}
+          <button type="button" onClick={() => setNotice(null)} className="font-medium underline">
+            Dismiss
+          </button>
+        </p>
+      )}
       {derived.notApplicable.length > 0 && (
         <p className="mt-1 text-[10px] text-muted">
           Not applicable for {spec.profile}:{" "}

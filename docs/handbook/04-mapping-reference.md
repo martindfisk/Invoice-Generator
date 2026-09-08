@@ -195,7 +195,7 @@ XSD tier: `ubl-invoice-2.1` · declared validation stages: `model`, `well-formed
 
 ## UN/CEFACT CII (Factur-X / ZUGFeRD EN 16931) (`cii`)
 
-XSD tier: none vendored — Schematron is the structural tier · declared validation stages: `model`, `well-formed`
+XSD tier: none vendored — Schematron is the structural tier · declared validation stages: `model`, `well-formed`, `schematron`
 
 | Model field | Document path | BT / FPA | Meaning |
 | --- | --- | --- | --- |
@@ -490,7 +490,6 @@ array index):
 | identification names one identifier, so a buyer with a VAT id sends only that; its codice fiscale is preserved but not editable through the JSON | `buyer.taxId` |
 | Only a CONSUMER recipient carries a PersonName; a BUSINESS recipient has one legal name and no forename, surname or gender | `buyer.person.forename`, `buyer.person.surname`, `buyer.person.gender` |
 | The bank details only travel inside a CREDIT_TRANSFER instruction | `payment.iban`, `payment.accountName`, `payment.bic` |
-| An UNKNOWN instruction reuses `text` for the payment terms, so a remittance reference equal to the terms is indistinguishable | `payment.remittanceInformation` |
 | details.number is optional; without it the entry's position becomes the line id | `lines.{i}.id` |
 | BT-72 only travels inside recipients[].shipping, which requires BG-15: without a delivery address there is nowhere to put it | `delivery.date` |
 

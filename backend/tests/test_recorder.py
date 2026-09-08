@@ -106,3 +106,55 @@ async def test_sse_streams_live_records_without_replay(monkeypatch):
     assert events[0].startswith("id: 2\nevent: call\n")
     assert '"step":"poll"' in events[0]
     assert events[1] == "event: ping\ndata: {}\n\n"
+
+
+async def test_sse_backfills_a_queue_overflow_from_the_ring(monkeypatch):
+    monkeypatch.setattr(recorder_module, "SUBSCRIBER_QUEUE_LIMIT", 1)
+    monkeypatch.setattr(recorder_module, "PING_INTERVAL_S", 0.05)
+    recorder = Recorder()
+    events = []
+
+    async def consume():
+        async for chunk in recorder.sse(FakeRequest(disconnect_after=3)):
+            events.append(chunk)
+
+    task = asyncio.create_task(consume())
+    await asyncio.sleep(0.01)
+    # Three adds with no await between them: the 1-slot queue keeps only the first.
+    recorder.add(make_record(step="setup"))
+    recorder.add(make_record(step="poll"))
+    recorder.add(make_record(step="artifact"))
+    await asyncio.sleep(0.01)
+    recorder.add(make_record(step="list"))
+    await task
+    ids = [chunk.split("\n", 1)[0] for chunk in events if chunk.startswith("id: ")]
+    # The dropped records 2 and 3 are replayed from the ring buffer, in order, no notice needed.
+    assert ids == ["id: 1", "id: 2", "id: 3", "id: 4"]
+    assert not any("event: notice" in chunk for chunk in events)
+
+
+async def test_sse_names_the_records_lost_beyond_the_ring(monkeypatch):
+    monkeypatch.setattr(recorder_module, "SUBSCRIBER_QUEUE_LIMIT", 1)
+    monkeypatch.setattr(recorder_module, "PING_INTERVAL_S", 0.05)
+    recorder = Recorder(capacity=2)
+    events = []
+
+    async def consume():
+        async for chunk in recorder.sse(FakeRequest(disconnect_after=4)):
+            events.append(chunk)
+
+    task = asyncio.create_task(consume())
+    await asyncio.sleep(0.01)
+    recorder.add(make_record(step="setup"))  # 1 — delivered
+    await asyncio.sleep(0.01)
+    recorder.add(make_record(step="poll"))  # 2 — delivered
+    recorder.add(make_record(step="poll"))  # 3 — dropped, then rotated out of the ring
+    recorder.add(make_record(step="poll"))  # 4 — dropped, then rotated out of the ring
+    recorder.add(make_record(step="poll"))  # 5 — dropped from the queue, still in the ring
+    await asyncio.sleep(0.01)
+    recorder.add(make_record(step="list"))  # 6 — delivered, exposes the gap
+    await task
+    ids = [chunk.split("\n", 1)[0] for chunk in events if chunk.startswith("id: ")]
+    assert ids == ["id: 1", "id: 2", "id: 5", "id: 6"]
+    # Records 3 and 4 are gone for good; the stream says so instead of skipping silently.
+    assert any(chunk == 'event: notice\ndata: {"dropped": 2}\n\n' for chunk in events)

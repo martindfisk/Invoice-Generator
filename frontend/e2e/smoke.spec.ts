@@ -679,12 +679,24 @@ test.describe("send · correction", () => {
     await stepper(page)
       .getByRole("button", { name: /Setup$/ })
       .click();
+    await expect(page.getByText(/Last invoice transmitted/)).toBeVisible();
     await picker(page).locator("[data-preset='it-restaurant-td04-credit']").click();
     await stepper(page).getByRole("button", { name: /Send$/ }).click();
     await expect(page.getByText(/TRANSACTION::CORRECTION — the operation posted/)).toBeVisible();
+    // The preflight names the record this credit note corrects.
+    await expect(page.getByText("Corrects", { exact: true })).toBeVisible();
     await expect(send).toBeEnabled();
     await send.click();
     await expect(page.locator('[data-outcome="transmitted"]')).toBeVisible({ timeout: 90_000 });
+    // Through the typed backend endpoint (POST /api/invoices/{id}/correction), not the
+    // passthrough fallback: the upstream calls are recorded under the "correction" step.
+    // Two matches prove the point twice: the step-filter chip and the call card's step chip.
+    await expect(
+      page
+        .getByRole("region", { name: "API log" })
+        .getByRole("button", { name: "correction", exact: true })
+        .first(),
+    ).toBeVisible();
   });
 });
 

@@ -51,40 +51,6 @@
     "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
   },
   {
-    "id": "cii|buyer.electronicAddress.id|json",
-    "field": "buyer.electronicAddress.id",
-    "bt": "BT-49",
-    "bg": "BG-7",
-    "term": "Buyer electronic address",
-    "cardinality": "1..1",
-    "format": "cii",
-    "missingFrom": "json",
-    "belongsAt": "BT-49",
-    "presentIn": "model BT-49; json —; xml mapped",
-    "reason": "The operation has no pointer for this field",
-    "evidence": "Unobserved: no transmission capture exists for UN/CEFACT CII (Factur-X / ZUGFeRD EN 16931); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
-    "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · gap-report.ts · R2"
-  },
-  {
-    "id": "cii|buyer.electronicAddress.scheme|json",
-    "field": "buyer.electronicAddress.scheme",
-    "bt": null,
-    "bg": null,
-    "term": null,
-    "cardinality": null,
-    "format": "cii",
-    "missingFrom": "json",
-    "belongsAt": "buyer.electronicAddress.scheme",
-    "presentIn": "model Electronic address scheme; json —; xml mapped",
-    "reason": "The operation has no pointer for this field",
-    "evidence": "Unobserved: no transmission capture exists for UN/CEFACT CII (Factur-X / ZUGFeRD EN 16931); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
-    "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · gap-report.ts · R2"
-  },
-  {
     "id": "cii|buyer.legalRegScheme|json",
     "field": "buyer.legalRegScheme",
     "bt": null,
@@ -204,23 +170,6 @@
     "source": "structural · uapi-map.UAPI_PARTIAL_FIELDS · R2"
   },
   {
-    "id": "cii|payment.remittanceInformation|json",
-    "field": "payment.remittanceInformation",
-    "bt": "BT-83",
-    "bg": "BG-16",
-    "term": "Remittance information",
-    "cardinality": "0..1",
-    "format": "cii",
-    "missingFrom": "json",
-    "belongsAt": "/payments/{i}/instruction/text",
-    "presentIn": "model BT-83; json —; xml mapped",
-    "reason": "An UNKNOWN instruction reuses `text` for the payment terms, so a remittance reference equal to the terms is indistinguishable",
-    "evidence": "Unobserved: no transmission capture exists for UN/CEFACT CII (Factur-X / ZUGFeRD EN 16931); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
-    "applicability": "DE_EI: applicable",
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_PARTIAL_FIELDS · R2"
-  },
-  {
     "id": "cii|references.invoicedObject|json",
     "field": "references.invoicedObject",
     "bt": "BT-18",
@@ -266,10 +215,10 @@
     "belongsAt": "BT-37",
     "presentIn": "model BT-37; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for UN/CEFACT CII (Factur-X / ZUGFeRD EN 16931); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /address/city — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "cii|seller.address.country|json",
@@ -283,10 +232,10 @@
     "belongsAt": "BT-40",
     "presentIn": "model BT-40; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for UN/CEFACT CII (Factur-X / ZUGFeRD EN 16931); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /address/country — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "cii|seller.address.number|json",
@@ -300,10 +249,10 @@
     "belongsAt": "BT-36",
     "presentIn": "model BT-36; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for UN/CEFACT CII (Factur-X / ZUGFeRD EN 16931); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /address/line — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "cii|seller.address.postCode|json",
@@ -317,10 +266,10 @@
     "belongsAt": "BT-38",
     "presentIn": "model BT-38; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for UN/CEFACT CII (Factur-X / ZUGFeRD EN 16931); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /address/code — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "cii|seller.address.region|json",
@@ -334,10 +283,10 @@
     "belongsAt": "BT-39",
     "presentIn": "model BT-39; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for UN/CEFACT CII (Factur-X / ZUGFeRD EN 16931); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /address/region — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "cii|seller.address.street|json",
@@ -351,10 +300,10 @@
     "belongsAt": "BT-35",
     "presentIn": "model BT-35; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for UN/CEFACT CII (Factur-X / ZUGFeRD EN 16931); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /address/line — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "cii|seller.electronicAddress.id|json",
@@ -368,10 +317,10 @@
     "belongsAt": "BT-34",
     "presentIn": "model BT-34; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for UN/CEFACT CII (Factur-X / ZUGFeRD EN 16931); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from System::E_INVOICE_SERVICE annotations.peppol_id (Peppol registration) — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "cii|seller.electronicAddress.scheme|json",
@@ -385,10 +334,10 @@
     "belongsAt": "seller.electronicAddress.scheme",
     "presentIn": "model Electronic address scheme; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for UN/CEFACT CII (Factur-X / ZUGFeRD EN 16931); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from System::E_INVOICE_SERVICE annotations.peppol_id (Peppol registration) — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "cii|seller.legalRegId|json",
@@ -436,10 +385,10 @@
     "belongsAt": "BT-27",
     "presentIn": "model BT-27; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for UN/CEFACT CII (Factur-X / ZUGFeRD EN 16931); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /name/legal — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "cii|seller.taxId|json",
@@ -453,10 +402,10 @@
     "belongsAt": "BT-32",
     "presentIn": "model BT-32; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for UN/CEFACT CII (Factur-X / ZUGFeRD EN 16931); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /fiscalization/tax_id_number — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "cii|seller.tradeName|json",
@@ -470,10 +419,10 @@
     "belongsAt": "BT-28",
     "presentIn": "model BT-28; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for UN/CEFACT CII (Factur-X / ZUGFeRD EN 16931); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /name/trade — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "cii|seller.vatId|json",
@@ -487,10 +436,10 @@
     "belongsAt": "BT-31",
     "presentIn": "model BT-31; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for UN/CEFACT CII (Factur-X / ZUGFeRD EN 16931); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /fiscalization/vat_id_number — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "cii|totals.allowance|json",
@@ -610,23 +559,6 @@
     "applicability": null,
     "severity": "should-fix",
     "source": "structural · uapi-map.UAPI_PARTIAL_FIELDS · R2"
-  },
-  {
-    "id": "cii|vatBreakdown.{i}.reason|json",
-    "field": "vatBreakdown.{i}.reason",
-    "bt": "BT-120",
-    "bg": "BG-23",
-    "term": "VAT exemption reason text",
-    "cardinality": "0..1",
-    "format": "cii",
-    "missingFrom": "json",
-    "belongsAt": "BT-120",
-    "presentIn": "model BT-120; json —; xml mapped",
-    "reason": "The operation has no pointer for this field",
-    "evidence": "Unobserved: no transmission capture exists for UN/CEFACT CII (Factur-X / ZUGFeRD EN 16931); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
-    "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · gap-report.ts · R2"
   },
   {
     "id": "cii|vatBreakdown.{i}.vatexCode|json",
@@ -1768,23 +1700,6 @@
     "source": "spec · fiskaly.unified-api.all.2026-06-01.yaml · R2"
   },
   {
-    "id": "fatturapa|buyer.electronicAddress.id|json",
-    "field": "buyer.electronicAddress.id",
-    "bt": "BT-49",
-    "bg": "BG-7",
-    "term": "Buyer electronic address",
-    "cardinality": "1..1",
-    "format": "fatturapa",
-    "missingFrom": "json",
-    "belongsAt": "BT-49",
-    "presentIn": "model BT-49; json —; xml mapped",
-    "reason": "The operation has no pointer for this field",
-    "evidence": null,
-    "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · gap-report.ts · R2"
-  },
-  {
     "id": "fatturapa|buyer.person.forename|json",
     "field": "buyer.person.forename",
     "bt": null,
@@ -1847,10 +1762,10 @@
     "belongsAt": "it.bollo.amount",
     "presentIn": "model Stamp duty amount; json —; xml mapped",
     "reason": "The Italian document extras (bollo virtuale, CUP, CIG) have no counterpart in the operation",
-    "evidence": null,
+    "evidence": "Derived: fiskaly adds DatiBollo automatically once the invoice's VAT-exempt amounts reach EUR 77.47 (imposta di bollo EUR 2.00, DPR 642/1972 tariffa art. 13; bollo virtuale per DM 17 giugno 2014).",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "fatturapa|it.bollo.virtuale|json",
@@ -1864,10 +1779,10 @@
     "belongsAt": "it.bollo.virtuale",
     "presentIn": "model Virtual stamp duty indicator; json —; xml mapped",
     "reason": "The Italian document extras (bollo virtuale, CUP, CIG) have no counterpart in the operation",
-    "evidence": null,
+    "evidence": "Derived: fiskaly adds DatiBollo automatically once the invoice's VAT-exempt amounts reach EUR 77.47 (imposta di bollo EUR 2.00, DPR 642/1972 tariffa art. 13; bollo virtuale per DM 17 giugno 2014).",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "fatturapa|it.cig|json",
@@ -2153,10 +2068,10 @@
     "belongsAt": "BT-37",
     "presentIn": "model BT-37; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": null,
+    "evidence": "Derived: fiskaly fills this from Taxpayer /address/city — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "fatturapa|seller.address.country|json",
@@ -2170,10 +2085,10 @@
     "belongsAt": "BT-40",
     "presentIn": "model BT-40; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": null,
+    "evidence": "Derived: fiskaly fills this from Taxpayer /address/country — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "fatturapa|seller.address.number|json",
@@ -2187,10 +2102,10 @@
     "belongsAt": "BT-36",
     "presentIn": "model BT-36; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": null,
+    "evidence": "Derived: fiskaly fills this from Taxpayer /address/line — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "fatturapa|seller.address.postCode|json",
@@ -2204,10 +2119,10 @@
     "belongsAt": "BT-38",
     "presentIn": "model BT-38; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": null,
+    "evidence": "Derived: fiskaly fills this from Taxpayer /address/code — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "fatturapa|seller.address.region|json",
@@ -2221,10 +2136,10 @@
     "belongsAt": "BT-39",
     "presentIn": "model BT-39; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": null,
+    "evidence": "Derived: fiskaly fills this from Taxpayer /address/region — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "fatturapa|seller.address.street|json",
@@ -2238,10 +2153,10 @@
     "belongsAt": "BT-35",
     "presentIn": "model BT-35; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": null,
+    "evidence": "Derived: fiskaly fills this from Taxpayer /address/line — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "fatturapa|seller.it.rea.capital|json",
@@ -2255,10 +2170,10 @@
     "belongsAt": "seller.it.rea.capital",
     "presentIn": "model Share capital; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": null,
+    "evidence": "Derived: fiskaly fills this from Taxpayer /fiscalization/registration/capital (IT) — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "fatturapa|seller.it.rea.liquidation|json",
@@ -2272,10 +2187,10 @@
     "belongsAt": "seller.it.rea.liquidation",
     "presentIn": "model Liquidation status; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": null,
+    "evidence": "Derived: fiskaly fills this from Taxpayer /fiscalization/registration/liquidation_status (IT) — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "fatturapa|seller.it.rea.number|json",
@@ -2289,10 +2204,10 @@
     "belongsAt": "seller.it.rea.number",
     "presentIn": "model REA registration number; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": null,
+    "evidence": "Derived: fiskaly fills this from Taxpayer /fiscalization/registration/entry (IT) — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "fatturapa|seller.it.rea.office|json",
@@ -2306,10 +2221,10 @@
     "belongsAt": "seller.it.rea.office",
     "presentIn": "model REA registration office; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": null,
+    "evidence": "Derived: fiskaly fills this from Taxpayer /fiscalization/registration/office (IT) — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "fatturapa|seller.it.rea.soleShareholder|json",
@@ -2323,10 +2238,10 @@
     "belongsAt": "seller.it.rea.soleShareholder",
     "presentIn": "model Sole shareholder indicator; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": null,
+    "evidence": "Derived: fiskaly fills this from Taxpayer /fiscalization/registration/shareholder_status (IT) — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "fatturapa|seller.it.regimeFiscale|json",
@@ -2340,10 +2255,10 @@
     "belongsAt": "seller.it.regimeFiscale",
     "presentIn": "model Tax regime (RegimeFiscale); json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": null,
+    "evidence": "Derived: fiskaly fills this from Taxpayer /fiscalization/registration/tax_regime (IT) — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "fatturapa|seller.name|json",
@@ -2357,10 +2272,10 @@
     "belongsAt": "BT-27",
     "presentIn": "model BT-27; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": null,
+    "evidence": "Derived: fiskaly fills this from Taxpayer /name/legal — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "fatturapa|seller.person.forename|json",
@@ -2374,10 +2289,10 @@
     "belongsAt": "seller.person.forename",
     "presentIn": "model Forename; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": null,
+    "evidence": "Derived: fiskaly fills this from Taxpayer::INDIVIDUAL /name/person/forename — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "fatturapa|seller.person.surname|json",
@@ -2391,10 +2306,10 @@
     "belongsAt": "seller.person.surname",
     "presentIn": "model Surname; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": null,
+    "evidence": "Derived: fiskaly fills this from Taxpayer::INDIVIDUAL /name/person/surname — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "fatturapa|seller.taxId|json",
@@ -2408,10 +2323,10 @@
     "belongsAt": "BT-32",
     "presentIn": "model BT-32; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": null,
+    "evidence": "Derived: fiskaly fills this from Taxpayer /fiscalization/tax_id_number — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "fatturapa|seller.vatId|json",
@@ -2425,10 +2340,10 @@
     "belongsAt": "BT-31",
     "presentIn": "model BT-31; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": null,
+    "evidence": "Derived: fiskaly fills this from Taxpayer /fiscalization/vat_id_number — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "fatturapa|totals.rounding|json",
@@ -2514,23 +2429,6 @@
     "applicability": null,
     "severity": "should-fix",
     "source": "structural · uapi-map.UAPI_PARTIAL_FIELDS · R2"
-  },
-  {
-    "id": "fatturapa|vatBreakdown.{i}.reason|json",
-    "field": "vatBreakdown.{i}.reason",
-    "bt": "BT-120",
-    "bg": "BG-23",
-    "term": "VAT exemption reason text",
-    "cardinality": "0..1",
-    "format": "fatturapa",
-    "missingFrom": "json",
-    "belongsAt": "BT-120",
-    "presentIn": "model BT-120; json —; xml mapped",
-    "reason": "The operation has no pointer for this field",
-    "evidence": null,
-    "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · gap-report.ts · R2"
   },
   {
     "id": "fatturapa|buyer.channel.email|xml",
@@ -2831,7 +2729,7 @@
     "format": "fatturapa",
     "missingFrom": "xml",
     "belongsAt": "BT-83",
-    "presentIn": "model BT-83; json —; xml —",
+    "presentIn": "model BT-83; json /payments/{i}/instruction/text; xml —",
     "reason": "The format's mapping table carries no row for this field",
     "evidence": null,
     "applicability": "IT_EI: applicable",
@@ -3247,40 +3145,6 @@
     "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
   },
   {
-    "id": "ubl|buyer.electronicAddress.id|json",
-    "field": "buyer.electronicAddress.id",
-    "bt": "BT-49",
-    "bg": "BG-7",
-    "term": "Buyer electronic address",
-    "cardinality": "1..1",
-    "format": "ubl",
-    "missingFrom": "json",
-    "belongsAt": "BT-49",
-    "presentIn": "model BT-49; json —; xml mapped",
-    "reason": "The operation has no pointer for this field",
-    "evidence": "Unobserved: no transmission capture exists for Peppol BIS Billing 3.0 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
-    "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · gap-report.ts · R2"
-  },
-  {
-    "id": "ubl|buyer.electronicAddress.scheme|json",
-    "field": "buyer.electronicAddress.scheme",
-    "bt": null,
-    "bg": null,
-    "term": null,
-    "cardinality": null,
-    "format": "ubl",
-    "missingFrom": "json",
-    "belongsAt": "buyer.electronicAddress.scheme",
-    "presentIn": "model Electronic address scheme; json —; xml mapped",
-    "reason": "The operation has no pointer for this field",
-    "evidence": "Unobserved: no transmission capture exists for Peppol BIS Billing 3.0 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
-    "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · gap-report.ts · R2"
-  },
-  {
     "id": "ubl|buyer.legalRegScheme|json",
     "field": "buyer.legalRegScheme",
     "bt": null,
@@ -3417,23 +3281,6 @@
     "source": "structural · uapi-map.UAPI_PARTIAL_FIELDS · R2"
   },
   {
-    "id": "ubl|payment.remittanceInformation|json",
-    "field": "payment.remittanceInformation",
-    "bt": "BT-83",
-    "bg": "BG-16",
-    "term": "Remittance information",
-    "cardinality": "0..1",
-    "format": "ubl",
-    "missingFrom": "json",
-    "belongsAt": "/payments/{i}/instruction/text",
-    "presentIn": "model BT-83; json —; xml mapped",
-    "reason": "An UNKNOWN instruction reuses `text` for the payment terms, so a remittance reference equal to the terms is indistinguishable",
-    "evidence": "Unobserved: no transmission capture exists for Peppol BIS Billing 3.0 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
-    "applicability": "BE_EI: applicable",
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_PARTIAL_FIELDS · R2"
-  },
-  {
     "id": "ubl|references.invoicedObject|json",
     "field": "references.invoicedObject",
     "bt": "BT-18",
@@ -3479,10 +3326,10 @@
     "belongsAt": "BT-37",
     "presentIn": "model BT-37; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for Peppol BIS Billing 3.0 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /address/city — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "ubl|seller.address.country|json",
@@ -3496,10 +3343,10 @@
     "belongsAt": "BT-40",
     "presentIn": "model BT-40; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for Peppol BIS Billing 3.0 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /address/country — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "ubl|seller.address.number|json",
@@ -3513,10 +3360,10 @@
     "belongsAt": "BT-36",
     "presentIn": "model BT-36; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for Peppol BIS Billing 3.0 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /address/line — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "ubl|seller.address.postCode|json",
@@ -3530,10 +3377,10 @@
     "belongsAt": "BT-38",
     "presentIn": "model BT-38; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for Peppol BIS Billing 3.0 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /address/code — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "ubl|seller.address.region|json",
@@ -3547,10 +3394,10 @@
     "belongsAt": "BT-39",
     "presentIn": "model BT-39; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for Peppol BIS Billing 3.0 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /address/region — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "ubl|seller.address.street|json",
@@ -3564,10 +3411,10 @@
     "belongsAt": "BT-35",
     "presentIn": "model BT-35; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for Peppol BIS Billing 3.0 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /address/line — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "ubl|seller.electronicAddress.id|json",
@@ -3581,10 +3428,10 @@
     "belongsAt": "BT-34",
     "presentIn": "model BT-34; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for Peppol BIS Billing 3.0 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from System::E_INVOICE_SERVICE annotations.peppol_id (Peppol registration) — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "ubl|seller.electronicAddress.scheme|json",
@@ -3598,10 +3445,10 @@
     "belongsAt": "seller.electronicAddress.scheme",
     "presentIn": "model Electronic address scheme; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for Peppol BIS Billing 3.0 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from System::E_INVOICE_SERVICE annotations.peppol_id (Peppol registration) — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "ubl|seller.legalRegId|json",
@@ -3649,10 +3496,10 @@
     "belongsAt": "BT-27",
     "presentIn": "model BT-27; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for Peppol BIS Billing 3.0 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /name/legal — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "ubl|seller.tradeName|json",
@@ -3666,10 +3513,10 @@
     "belongsAt": "BT-28",
     "presentIn": "model BT-28; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for Peppol BIS Billing 3.0 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /name/trade — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "ubl|seller.vatId|json",
@@ -3683,10 +3530,10 @@
     "belongsAt": "BT-31",
     "presentIn": "model BT-31; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for Peppol BIS Billing 3.0 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /fiscalization/vat_id_number — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "ubl|totals.allowance|json",
@@ -3806,23 +3653,6 @@
     "applicability": null,
     "severity": "should-fix",
     "source": "structural · uapi-map.UAPI_PARTIAL_FIELDS · R2"
-  },
-  {
-    "id": "ubl|vatBreakdown.{i}.reason|json",
-    "field": "vatBreakdown.{i}.reason",
-    "bt": "BT-120",
-    "bg": "BG-23",
-    "term": "VAT exemption reason text",
-    "cardinality": "0..1",
-    "format": "ubl",
-    "missingFrom": "json",
-    "belongsAt": "BT-120",
-    "presentIn": "model BT-120; json —; xml mapped",
-    "reason": "The operation has no pointer for this field",
-    "evidence": "Unobserved: no transmission capture exists for Peppol BIS Billing 3.0 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
-    "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · gap-report.ts · R2"
   },
   {
     "id": "ubl|vatBreakdown.{i}.vatexCode|json",
@@ -4505,40 +4335,6 @@
     "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
   },
   {
-    "id": "xrechnung|buyer.electronicAddress.id|json",
-    "field": "buyer.electronicAddress.id",
-    "bt": "BT-49",
-    "bg": "BG-7",
-    "term": "Buyer electronic address",
-    "cardinality": "1..1",
-    "format": "xrechnung",
-    "missingFrom": "json",
-    "belongsAt": "BT-49",
-    "presentIn": "model BT-49; json —; xml mapped",
-    "reason": "The operation has no pointer for this field",
-    "evidence": "Unobserved: no transmission capture exists for XRechnung 3.0.2 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
-    "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · gap-report.ts · R2"
-  },
-  {
-    "id": "xrechnung|buyer.electronicAddress.scheme|json",
-    "field": "buyer.electronicAddress.scheme",
-    "bt": null,
-    "bg": null,
-    "term": null,
-    "cardinality": null,
-    "format": "xrechnung",
-    "missingFrom": "json",
-    "belongsAt": "buyer.electronicAddress.scheme",
-    "presentIn": "model Electronic address scheme; json —; xml mapped",
-    "reason": "The operation has no pointer for this field",
-    "evidence": "Unobserved: no transmission capture exists for XRechnung 3.0.2 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
-    "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · gap-report.ts · R2"
-  },
-  {
     "id": "xrechnung|buyer.legalRegScheme|json",
     "field": "buyer.legalRegScheme",
     "bt": null,
@@ -4675,23 +4471,6 @@
     "source": "structural · uapi-map.UAPI_PARTIAL_FIELDS · R2"
   },
   {
-    "id": "xrechnung|payment.remittanceInformation|json",
-    "field": "payment.remittanceInformation",
-    "bt": "BT-83",
-    "bg": "BG-16",
-    "term": "Remittance information",
-    "cardinality": "0..1",
-    "format": "xrechnung",
-    "missingFrom": "json",
-    "belongsAt": "/payments/{i}/instruction/text",
-    "presentIn": "model BT-83; json —; xml mapped",
-    "reason": "An UNKNOWN instruction reuses `text` for the payment terms, so a remittance reference equal to the terms is indistinguishable",
-    "evidence": "Unobserved: no transmission capture exists for XRechnung 3.0.2 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
-    "applicability": "DE_EI: applicable",
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_PARTIAL_FIELDS · R2"
-  },
-  {
     "id": "xrechnung|references.invoicedObject|json",
     "field": "references.invoicedObject",
     "bt": "BT-18",
@@ -4737,10 +4516,10 @@
     "belongsAt": "BT-37",
     "presentIn": "model BT-37; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for XRechnung 3.0.2 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /address/city — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "xrechnung|seller.address.country|json",
@@ -4754,10 +4533,10 @@
     "belongsAt": "BT-40",
     "presentIn": "model BT-40; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for XRechnung 3.0.2 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /address/country — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "xrechnung|seller.address.number|json",
@@ -4771,10 +4550,10 @@
     "belongsAt": "BT-36",
     "presentIn": "model BT-36; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for XRechnung 3.0.2 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /address/line — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "xrechnung|seller.address.postCode|json",
@@ -4788,10 +4567,10 @@
     "belongsAt": "BT-38",
     "presentIn": "model BT-38; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for XRechnung 3.0.2 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /address/code — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "xrechnung|seller.address.region|json",
@@ -4805,10 +4584,10 @@
     "belongsAt": "BT-39",
     "presentIn": "model BT-39; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for XRechnung 3.0.2 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /address/region — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "xrechnung|seller.address.street|json",
@@ -4822,10 +4601,10 @@
     "belongsAt": "BT-35",
     "presentIn": "model BT-35; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for XRechnung 3.0.2 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /address/line — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "xrechnung|seller.electronicAddress.id|json",
@@ -4839,10 +4618,10 @@
     "belongsAt": "BT-34",
     "presentIn": "model BT-34; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for XRechnung 3.0.2 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from System::E_INVOICE_SERVICE annotations.peppol_id (Peppol registration) — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "xrechnung|seller.electronicAddress.scheme|json",
@@ -4856,10 +4635,10 @@
     "belongsAt": "seller.electronicAddress.scheme",
     "presentIn": "model Electronic address scheme; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for XRechnung 3.0.2 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from System::E_INVOICE_SERVICE annotations.peppol_id (Peppol registration) — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "xrechnung|seller.legalRegId|json",
@@ -4907,10 +4686,10 @@
     "belongsAt": "BT-27",
     "presentIn": "model BT-27; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for XRechnung 3.0.2 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /name/legal — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "xrechnung|seller.tradeName|json",
@@ -4924,10 +4703,10 @@
     "belongsAt": "BT-28",
     "presentIn": "model BT-28; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for XRechnung 3.0.2 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /name/trade — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "xrechnung|seller.vatId|json",
@@ -4941,10 +4720,10 @@
     "belongsAt": "BT-31",
     "presentIn": "model BT-31; json —; xml mapped",
     "reason": "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)",
-    "evidence": "Unobserved: no transmission capture exists for XRechnung 3.0.2 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
+    "evidence": "Derived: fiskaly fills this from Taxpayer /fiscalization/vat_id_number — provided when the account is onboarded (POST /taxpayers, system commissioning), not per invoice.",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "xrechnung|totals.allowance|json",
@@ -5064,23 +4843,6 @@
     "applicability": null,
     "severity": "should-fix",
     "source": "structural · uapi-map.UAPI_PARTIAL_FIELDS · R2"
-  },
-  {
-    "id": "xrechnung|vatBreakdown.{i}.reason|json",
-    "field": "vatBreakdown.{i}.reason",
-    "bt": "BT-120",
-    "bg": "BG-23",
-    "term": "VAT exemption reason text",
-    "cardinality": "0..1",
-    "format": "xrechnung",
-    "missingFrom": "json",
-    "belongsAt": "BT-120",
-    "presentIn": "model BT-120; json —; xml mapped",
-    "reason": "The operation has no pointer for this field",
-    "evidence": "Unobserved: no transmission capture exists for XRechnung 3.0.2 (UBL 2.1); the evidence in docs/reference/fatturapa/ covers the FatturaPA path only.",
-    "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · gap-report.ts · R2"
   },
   {
     "id": "xrechnung|vatBreakdown.{i}.vatexCode|json",

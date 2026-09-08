@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DiffView } from "./DiffView";
+import { Modal } from "./Modal";
+import { blockedByLine, DEGRADED_NO_CAUSE } from "./onboarding";
 import { getFormat } from "./formats";
 import type { Invoice } from "./model";
 import { listPresets, type PresetId } from "./presets";
@@ -8,6 +10,7 @@ import { SendTimeline } from "./SendTimeline";
 import { store, useStore } from "./store";
 import {
   fetchArtifact,
+  getOnboardingStatus,
   fetchRecordFiles,
   POLL_DELAY_MS,
   sendCorrection,
@@ -77,6 +80,10 @@ const OUTCOME: Record<SendOutcome, { tone: string; headline: string; body: strin
 
 let activeRun = 0;
 
+// Whether any send ran in this browser session (vs. one restored from localStorage) — a restored
+// send has no calls in the log, only startup backfill, so arrival clears the pane.
+let sendRanThisSession = false;
+
 function reason(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -86,6 +93,21 @@ function delay(ms: number): Promise<void> {
 }
 
 function ModeBanner({ mode, environment }: { mode: string; environment?: string }) {
+  // "unknown" is the boot value and the state while /api/config is unreachable. Falling through
+  // to the MOCK copy here would assert "no request leaves this machine" exactly when that
+  // cannot be verified.
+  if (mode !== "LIVE" && mode !== "MOCK") {
+    return (
+      <p
+        role="status"
+        className="shrink-0 rounded-l bg-error-soft px-3 py-2 text-xs text-error-ink"
+      >
+        <span className="font-mono font-bold">MODE UNKNOWN</span> — the backend has not answered{" "}
+        <span className="font-mono">/api/config</span> yet, so whether a send would be mocked or
+        real cannot be determined. Nothing can be sent until it does.
+      </p>
+    );
+  }
   if (mode === "LIVE") {
     return (
       <p
@@ -130,6 +152,7 @@ export function StepSend() {
 
 function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }) {
   const mode = useStore((state) => state.mode);
+  const offline = useStore((state) => state.offline);
   const workflow = useStore((state) => state.workflow);
   const { formatId, send } = workflow;
   // The flow sends as the seller, always: with no Receive step the buyer persona exists only for
@@ -140,9 +163,12 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
   const focus = useStore((state) => state.focus);
   // Arriving at Send starts the call log empty, so what appears below is this send and nothing
   // else — startup backfill and earlier attempts would otherwise be indistinguishable from it.
-  // Only on a fresh arrival: coming back after a send keeps that send's calls on screen.
+  // Coming back after a send in *this session* keeps that send's calls on screen; a restored
+  // send from a previous session has no calls here, only backfill, so it clears too.
   useEffect(() => {
-    if (store.getState().workflow.send.phase === "idle") store.clearCalls();
+    if (store.getState().workflow.send.phase === "idle" || !sendRanThisSession) {
+      store.clearCalls();
+    }
   }, []);
 
   // Read from the store, not fetched here: saving a system id in Settings has to reach this
@@ -151,14 +177,30 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
   const settings = useStore((state) => state.settings);
   const [filesError, setFilesError] = useState<string | null>(null);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [confirmLive, setConfirmLive] = useState(false);
+  const [degradedNote, setDegradedNote] = useState<string | null>(null);
   const attemptKey = useRef<string | null>(null);
 
   const meta = listPresets().find((candidate) => candidate.id === presetId);
-  const country = meta?.country ?? "";
+  // The invoice decides the country — hand edits can move it away from the preset's. The preset
+  // is only the fallback for a blob with no seller country.
+  const country = invoice.seller.address.country || (meta?.country ?? "");
+  const countryDiverges = meta !== undefined && country !== meta.country;
   const format = getFormat(formatId);
   const systemId = config?.personas?.[persona]?.[country as SettingsCountry]?.system_id;
 
   const operation = composeOperation(workflow);
+  const target = workflow.correctionTarget;
+  const isCorrection = operation.label === "TRANSACTION::CORRECTION";
+  const callMode: "MOCK" | "LIVE" = mode === "MOCK" ? "MOCK" : "LIVE";
+  const targetMismatch =
+    isCorrection && target !== null
+      ? target.country !== country
+        ? `This credit note would reference record ${target.id}, which was transmitted for ${target.country} — the invoice at hand is for ${country}. Send the original invoice for this country first.`
+        : target.mode !== callMode
+          ? `This credit note would reference record ${target.id}, which exists only in ${target.mode} mode — the app is now in ${callMode}. Send the original invoice in this mode first.`
+          : null
+      : null;
 
   const localXml = useMemo(() => {
     if (editXml !== null) return editXml;
@@ -172,12 +214,15 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
   const supported = SEND_COUNTRIES.includes(country);
   const busy = send.phase === "creating" || send.phase === "polling" || send.phase === "artifacts";
   const blocked =
-    operation.error ??
-    (operation.correctionPending
-      ? CORRECTION_BLOCKED_NOTE
-      : supported
-        ? null
-        : unsupportedCountry(country));
+    offline || mode === "unknown"
+      ? "The backend is unreachable, so nothing can be sent — and the API log would not show the exchange."
+      : (operation.error ??
+        targetMismatch ??
+        (operation.correctionPending
+          ? CORRECTION_BLOCKED_NOTE
+          : supported
+            ? null
+            : unsupportedCountry(country)));
 
   const loadArtifact = async (
     kind: ArtifactKind,
@@ -201,6 +246,49 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
     }
   };
 
+  // In LIVE, a DEGRADED system (typically Peppol proof-of-ownership outstanding for BE/DE) means
+  // the transmission will not go out — say so before Send, not after. LIVE-only: in MOCK the
+  // fixture account is always OPERATIVE and the extra listing calls would be noise.
+  useEffect(() => {
+    if (mode !== "LIVE" || !systemId) return;
+    let cancelled = false;
+    getOnboardingStatus(persona).then(
+      (status) => {
+        if (cancelled) return;
+        const system = status.systems.find((entry) => entry.id === systemId);
+        setDegradedNote(
+          system && system.mode === "DEGRADED"
+            ? system.blocked_by
+              ? blockedByLine(system.blocked_by)
+              : DEGRADED_NO_CAUSE
+            : null,
+        );
+      },
+      () => undefined,
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, systemId, persona]);
+
+  // A restored terminal send lost its artifacts (they are stripped from persistence); the record
+  // ids survive, so refetch instead of showing a transmitted invoice without its diff.
+  useEffect(() => {
+    const current = store.getState().workflow.send;
+    if (
+      current.phase === "settled" &&
+      current.outcome === "transmitted" &&
+      current.transmissionId !== null &&
+      current.transport !== null &&
+      current.compliance === null
+    ) {
+      const alive = () => true;
+      void loadArtifact("compliance", current.transmissionId, current.transport, alive);
+      void loadArtifact("archive", current.transmissionId, current.transport, alive);
+    }
+    // Mount-only by design: the ids come from the restored snapshot, not from render state.
+  }, []);
+
   const run = async (resume: boolean) => {
     const runId = (activeRun += 1);
     const alive = () => activeRun === runId;
@@ -218,8 +306,14 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
             ? attemptKey.current
             : crypto.randomUUID();
         attemptKey.current = idempotencyKey;
-        store.dispatch({ type: "sendStarted", at: Date.now(), localXml, label: operation.label });
-        const callMode = mode === "MOCK" ? "MOCK" : "LIVE";
+        sendRanThisSession = true;
+        store.dispatch({
+          type: "sendStarted",
+          at: Date.now(),
+          localXml,
+          label: operation.label,
+          callMode,
+        });
         const correction =
           operation.label === "TRANSACTION::CORRECTION"
             ? (operation.value as {
@@ -331,7 +425,22 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
           mode={mode}
           stages={stages}
           operation={operation}
+          correction={target}
         />
+
+        {mode === "LIVE" && degradedNote && (
+          <p className="shrink-0 rounded-l bg-warning-soft px-3 py-2 text-[11px] text-warning-ink">
+            System <span className="font-mono">{systemId}</span> is DEGRADED — {degradedNote}
+          </p>
+        )}
+
+        {countryDiverges && (
+          <p className="shrink-0 rounded-l bg-warning-soft px-3 py-2 text-[11px] text-warning-ink">
+            The invoice's seller country is <span className="font-mono">{country}</span>, but the
+            preset was written for <span className="font-mono">{meta?.country}</span> — the send
+            uses the invoice's country for the system id and support checks.
+          </p>
+        )}
 
         {send.phase !== "idle" && (
           <SendTimeline send={send} focusedRecordId={focus?.recordId ?? null} />
@@ -419,7 +528,9 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
           type="button"
           disabled={busy || blocked !== null}
           title={blocked ?? undefined}
-          onClick={() => void run(false)}
+          // LIVE creates real records; the runner already guards this with a counting modal, so
+          // the flow's Send gets the same standard. MOCK stays one click.
+          onClick={() => (mode === "LIVE" ? setConfirmLive(true) : void run(false))}
           className="rounded-m bg-brand px-3 py-1.5 text-xs font-semibold text-bunker disabled:cursor-not-allowed disabled:opacity-60"
         >
           {send.phase === "idle" ? "Send to fiskaly" : "Send again"}
@@ -482,6 +593,51 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
           </button>
         )}
       </div>
+
+      <Modal
+        open={confirmLive}
+        labelledBy="send-live-guard-title"
+        describedBy="send-live-guard-blurb"
+        onClose={() => setConfirmLive(false)}
+        className="max-w-md p-4"
+      >
+        <h3 id="send-live-guard-title" className="text-sm font-semibold text-ink">
+          Send to LIVE fiskaly?
+        </h3>
+        <p id="send-live-guard-blurb" className="mt-2 text-xs text-muted">
+          {send.outcome === "transmitted" && (
+            <span className="mb-1 block font-medium text-error-ink">
+              {operation.label === "TRANSACTION::CORRECTION"
+                ? "This document was already transmitted — sending again files a second TRANSACTION::CORRECTION against the same original."
+                : "This invoice was already transmitted — sending again files a duplicate invoice."}
+            </span>
+          )}
+          This creates an INTENTION and a {operation.label} record at fiskaly, and a transmission
+          the moment fiskaly hands the generated document to the network.{" "}
+          {config?.environment === "live"
+            ? "The environment is PRODUCTION: the document is transmitted for real and cannot be recalled."
+            : "The TEST environment simulates validation and transmits nothing to a tax authority."}
+        </p>
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setConfirmLive(false)}
+            className="rounded-m border border-line px-3 py-1.5 text-xs font-medium text-muted hover:border-brand hover:text-ink"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setConfirmLive(false);
+              void run(false);
+            }}
+            className="rounded-m bg-brand px-3 py-1.5 text-xs font-semibold text-bunker"
+          >
+            {send.phase === "idle" ? "Send it" : "Send it again"}
+          </button>
+        </div>
+      </Modal>
     </section>
   );
 }

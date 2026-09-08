@@ -64,8 +64,9 @@ export const FORMATS: Record<FormatId, FormatPlugin> = {
     write: writeCii,
     parse: parseCii,
     map: CII_MAP,
+    // No XSD is vendored for CII, so the format declares no xsd stage.
     xsdSchemaKey: null,
-    validationStages: ["model", "well-formed"],
+    validationStages: ["model", "well-formed", "schematron"],
   },
   fatturapa: {
     id: "fatturapa",
@@ -87,15 +88,7 @@ export function getFormat(id: FormatId): FormatPlugin {
   return plugin;
 }
 
-export function formatSupports(id: FormatId, invoice: Invoice): boolean {
-  return unsupportedReason(id, invoice) === null;
-}
-
 export function unsupportedReason(id: FormatId, invoice: Invoice): string | null {
   const plugin = getFormat(id);
   return plugin.unsupportedReason ? plugin.unsupportedReason(invoice) : null;
-}
-
-export function formatsFor(invoice: Invoice): FormatId[] {
-  return FORMAT_IDS.filter((id) => formatSupports(id, invoice));
 }

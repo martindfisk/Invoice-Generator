@@ -11,7 +11,7 @@ description: Frontend conventions for this repo — Vite + React 19 + TypeScript
 - **Money**: decimal strings through `decimal.ts` (`add`, `mul`, `round2`, `cmp`); never `Number` arithmetic on amounts.
 - **Types**: UAPI shapes from `src/gen/uapi.d.ts` only; domain types from `model.ts`.
 - **CodeMirror 6**: `EditorState.create({doc, extensions: [xml(), lineNumbers(), highlightDecorations, readOnlyCompartment]})`; highlights are `Decoration.mark`/`Decoration.line` in a `StateField` updated via a `StateEffect` from the store selection; locate elements through `syntaxTree(state)` (`xml-locate.ts`). Diff via `@codemirror/merge` `MergeView`.
-- **Styling**: Tailwind v4 utilities + `theme.css` tokens (`--fsk-*` mapped in `@theme`). No inline hex colours. Components from the shadcn subset (tabs, tooltip, resizable panels) copied into `src/`; no new UI libraries.
+- **Styling**: Tailwind v4 utilities + `theme.css` tokens (`--fsk-*` mapped in `@theme`). No inline hex colours. UI stack: React 19, CodeMirror 6 (XML/JSON views), `react-resizable-panels` (splits), hand-rolled components (`Modal.tsx`, `Split.tsx`, chips/buttons as Tailwind classes); no new UI libraries.
 - **Accessibility**: focus-visible rings, keyboard-operable stepper and toggles, `aria-live="polite"` for polling/status text, `aria-selected` on the active view.
 - **Errors**: backend offline → non-blocking pill; UAPI errors shown with `code` + `message`; never swallow.
 - **Scripts**: `npm run dev|build|preview|lint|format|typecheck|test|test:e2e|gen-types`. All of `lint`, `typecheck`, `test`, `build` must pass before handing over.

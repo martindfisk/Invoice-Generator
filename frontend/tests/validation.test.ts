@@ -111,7 +111,7 @@ describe("stagesFor", () => {
     for (const id of FORMAT_IDS) expect(stagesFor(id)[0].id).toBe("uapi-schema");
   });
 
-  it("adds the CII Schematron stage the format plugin does not list yet", () => {
+  it("takes the CII Schematron stage from the format plugin's own declaration", () => {
     expect(stagesFor("cii").map((s) => s.id)).toEqual([
       "uapi-schema",
       "model",

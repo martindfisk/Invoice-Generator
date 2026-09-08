@@ -321,7 +321,10 @@ export function PersonaTree({
       <header className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-2">
         <h4 className="text-xs font-semibold text-ink">{label}</h4>
         {active && (
-          <span className="rounded-m bg-select-bg px-1.5 py-0.5 text-[10px] font-medium text-ink">
+          <span
+            title="The workflow currently acts as this persona — sends and runner calls use its credentials and identifiers. Switch with the persona control in the workflow header."
+            className="rounded-m bg-select-bg px-1.5 py-0.5 text-[10px] font-medium text-ink"
+          >
             active persona
           </span>
         )}
@@ -356,6 +359,19 @@ export function PersonaTree({
           >
             {noCredentialsHint(persona)}
           </p>
+        )}
+        {status && !withheld && Object.entries(status.errors ?? {}).length > 0 && (
+          <div data-listing-errors={persona} className="mx-2 my-1 flex flex-col gap-1">
+            {Object.entries(status.errors ?? {}).map(([resource, message]) => (
+              <p
+                key={resource}
+                className="rounded-m bg-warning-soft px-2 py-1.5 text-[11px] text-warning-ink"
+              >
+                {resource} could not be listed — shown as empty below, but actually unknown:{" "}
+                <span className="font-mono break-all">{message}</span>
+              </p>
+            ))}
+          </div>
         )}
         {status && !withheld && (
           <ul aria-label={`${label} entity tree`}>
@@ -465,9 +481,13 @@ export function ProvisionDialog({
         };
       }
       const outcome = await provisionCountry(body);
-      setPin("");
-      setPassword("");
-      setTaxId("");
+      // Secrets are cleared only once they are no longer needed — a failed provision keeps
+      // them in the fields so Retry does not force the user to re-enter them.
+      if (outcome.ready) {
+        setPin("");
+        setPassword("");
+        setTaxId("");
+      }
       setResult(outcome);
       onDone();
     } catch (caught) {
@@ -482,7 +502,9 @@ export function ProvisionDialog({
       open
       labelledBy="provision-title"
       describedBy="provision-blurb"
-      onClose={onClose}
+      // Provisioning creates real entities; dismissing mid-flight would hide its outcome, so
+      // Escape/backdrop are inert while a request is running.
+      onClose={busy ? () => {} : onClose}
       className="max-w-lg p-4"
     >
       <h3 id="provision-title" className="text-sm font-semibold text-ink">
@@ -509,7 +531,7 @@ export function ProvisionDialog({
         )}
       </div>
 
-      {needsSecrets && result === null && (
+      {needsSecrets && (result === null || !result.ready) && (
         <fieldset className="mt-3 rounded-m border border-line px-3 pt-1 pb-3">
           <legend className="px-1 text-[11px] font-semibold text-ink">
             FISCONLINE credentials
@@ -596,10 +618,10 @@ export function ProvisionDialog({
       </p>
 
       <div className="mt-3 flex justify-end gap-2">
-        <button type="button" className={SECONDARY} onClick={onClose}>
+        <button type="button" className={SECONDARY} disabled={busy} onClick={onClose}>
           {result ? "Close" : "Cancel"}
         </button>
-        {result === null && (
+        {result === null ? (
           <button
             type="button"
             className={PRIMARY}
@@ -608,6 +630,17 @@ export function ProvisionDialog({
           >
             Provision {country.label}
           </button>
+        ) : (
+          !result.ready && (
+            <button
+              type="button"
+              className={PRIMARY}
+              disabled={busy || secretsMissing}
+              onClick={() => void submit()}
+            >
+              Retry
+            </button>
+          )
         )}
       </div>
     </Modal>

@@ -107,6 +107,9 @@ export type OnboardingStatus = {
   systems: OnboardingSystem[];
   ready: Partial<Record<OnboardingCountry, boolean>>;
   missing: string[];
+  // Resource name → upstream failure for listings that could not be fetched; those resources
+  // are unknown, not absent.
+  errors?: Record<string, string> | null;
 };
 
 export type ProvisionStep = {
@@ -166,7 +169,8 @@ export type TransmissionWait = {
   finished: boolean;
   state?: string | null;
   mode?: string | null;
-  logs?: RecordLog[];
+  // null = the transaction was not read this slice (transmission-id short-circuit).
+  logs?: RecordLog[] | null;
   transmission?: TransmissionRef | null;
 };
 

@@ -31,9 +31,11 @@ class XsdValidator:
         self.vendor_dir = Path(vendor_dir)
         self._schemas = {}
         # validate() runs in a threadpool (asyncio.to_thread) and an XMLSchema's error_log is
-        # instance state — two concurrent validations against the same schema would read each
-        # other's findings without this.
-        self._lock = threading.Lock()
+        # instance state — two concurrent validations against the SAME schema would read each
+        # other's findings. One lock per schema key keeps that safety while letting a UBL and a
+        # FatturaPA validation run in parallel; the registry lock only guards the dicts.
+        self._locks = {}
+        self._registry_lock = threading.Lock()
 
     def validate(self, schema_key, xml):
         parser = etree.XMLParser(no_network=True, resolve_entities=False)
@@ -41,9 +43,24 @@ class XsdValidator:
             document = etree.fromstring(xml, parser)
         except etree.XMLSyntaxError:
             return {"valid": False, "findings": _findings(parser.error_log)}
-        with self._lock:
+        with self._registry_lock:
             schema = self._schema(schema_key)
+            lock = self._locks.setdefault(schema_key, threading.Lock())
+        with lock:
             return {"valid": schema.validate(document), "findings": _findings(schema.error_log)}
+
+    def warm(self):
+        # Compiling the vendored XSDs costs a visible pause on the first validation; at boot the
+        # cost hides in startup. Missing vendor assets stay a first-request error with its
+        # existing message, not a boot failure.
+        for schema_key in SCHEMAS:
+            try:
+                with self._registry_lock:
+                    self._schema(schema_key)
+            except (FileNotFoundError, etree.XMLSyntaxError, etree.XMLSchemaParseError):
+                # XMLSyntaxError covers a malformed vendored file; anything escaping here would
+                # kill the whole warm_spec task and silently skip the spec warmups after it.
+                continue
 
     def _schema(self, schema_key):
         pattern = SCHEMAS[schema_key]

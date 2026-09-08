@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { memo, useState, type ReactNode } from "react";
 import {
   headerEntries,
   otherHeaders,
@@ -183,7 +183,7 @@ export type ApiCallCardProps = {
   onToggle: () => void;
 };
 
-export function ApiCallCard({ group, open, focused, onToggle }: ApiCallCardProps) {
+function ApiCallCardImpl({ group, open, focused, onToggle }: ApiCallCardProps) {
   const [tab, setTab] = useState<Tab>("response");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const call = group.calls.find((entry) => entry.id === selectedId) ?? group.latest;
@@ -303,3 +303,17 @@ export function ApiCallCard({ group, open, focused, onToggle }: ApiCallCardProps
     </div>
   );
 }
+
+// The log can hold up to 1000 cards and every SSE event re-renders the pane; a card only needs
+// to re-render when its own group gained a call or its open/focused state flipped. onToggle is
+// deliberately not compared: its closure reads the same open/focused inputs the props carry, so
+// any change that would alter its behaviour also changes a compared prop.
+export const ApiCallCard = memo(
+  ApiCallCardImpl,
+  (prev, next) =>
+    prev.group.key === next.group.key &&
+    prev.group.latest === next.group.latest &&
+    prev.group.repeats === next.group.repeats &&
+    prev.open === next.open &&
+    prev.focused === next.focused,
+);

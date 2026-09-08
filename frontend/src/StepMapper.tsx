@@ -1,9 +1,23 @@
+import { useEffect } from "react";
 import { InvoiceWorkbench } from "./InvoiceWorkbench";
 import { store, useStore } from "./store";
+import { prewarmValidation } from "./validation";
 
 export function StepMapper() {
   const workflow = useStore((state) => state.workflow);
-  const { invoice, presetId } = workflow;
+  const { invoice, presetId, formatId } = workflow;
+
+  // Warm the active format's Schematron SEFs (and the SaxonJS runtime) while the user edits,
+  // so the first Validate run does not pay the cold start. Idle-scheduled to stay out of the
+  // way of the Mapper's own first paint.
+  useEffect(() => {
+    if (typeof window.requestIdleCallback === "function") {
+      const handle = window.requestIdleCallback(() => void prewarmValidation(formatId));
+      return () => window.cancelIdleCallback(handle);
+    }
+    const handle = window.setTimeout(() => void prewarmValidation(formatId), 250);
+    return () => window.clearTimeout(handle);
+  }, [formatId]);
 
   if (!invoice || !presetId) {
     return (

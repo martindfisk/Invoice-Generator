@@ -458,7 +458,7 @@ function product(line: Line): UapiProduct | undefined {
 }
 
 function payment(invoice: Invoice): UapiPayment {
-  const { iban, accountName, bic, terms } = invoice.payment;
+  const { iban, accountName, bic } = invoice.payment;
   const instruction: UapiPaymentInstruction =
     iban && accountName && bic
       ? {
@@ -468,7 +468,9 @@ function payment(invoice: Invoice): UapiPayment {
           payment_service_provider: bic,
           text: invoice.payment.remittanceInformation,
         }
-      : { type: "UNKNOWN", text: invoice.payment.remittanceInformation ?? terms };
+      : // Only the remittance reference: the terms travel separately at document.payment_terms
+        // (BT-20), and folding them into text made a reference equal to the terms ambiguous.
+        { type: "UNKNOWN", text: invoice.payment.remittanceInformation };
   return {
     type: "OUTSTANDING",
     details: {
@@ -685,6 +687,12 @@ export const SAME_DATUM: Record<string, string[]> = {
   // writes Natura has written the category.
   "vatBreakdown.{i}.category": ["vatBreakdown.{i}.natura"],
   "lines.{i}.vat.category": ["lines.{i}.vat.natura"],
+  // BT-120 travels at line level: /entries/{i}/data/vat/reason is the spec's own BT-120 carrier
+  // and fiskaly recomputes the breakdown from the lines, so the per-line reason is the only
+  // viable carrier of the exemption reason (2026-09 gap audit, docs/gaps/verdicts.json). The
+  // residue — no per-breakdown override; aggregation of differing per-line reasons is fiskaly's,
+  // unobserved — is a property of the recompute, not a missing pointer.
+  "vatBreakdown.{i}.reason": ["lines.{i}.vat.reason"],
 };
 
 export type LossKind = "platform" | "lost" | "unknown";
@@ -696,6 +704,11 @@ export const LOSS_KIND: Record<string, LossKind> = {
     "platform",
   "document.references carries neither BT-14 nor BT-18, and despatch_advice is a bare number without BT-16's date":
     "lost",
+  // Bundles fields with different fates: CUP and CIG really are lost (nothing supplies them),
+  // while DatiBollo is added by fiskaly once the VAT-exempt total reaches EUR 77.47 — see
+  // RULE_DERIVED_FIELDS, which regrades the bollo rows in the gap report. The kind stays "lost"
+  // so the predicted XML remains conservative: the predictor does not model the threshold, and
+  // CUP/CIG must not be rendered.
   "The Italian document extras (bollo virtuale, CUP, CIG) have no counterpart in the operation":
     "lost",
   "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)":
@@ -718,6 +731,62 @@ export const LOSS_KIND: Record<string, LossKind> = {
 
 export const UAPI_LOSSY_FIELD_IDS: FieldId[] = Object.values(UAPI_LOSSY_FIELDS).flat();
 
+/**
+ * Where fiskaly actually takes each seller (BG-4) datum from: the account resources, per the
+ * spec's own schemas — `POST /taxpayers` masters the company identity (CompanyName, Address,
+ * CompanyFiscalization incl. the Italian REA registration), and the seller's Peppol endpoint
+ * (BT-34) comes from the commissioned System's registration. These fields are provided, just
+ * not per invoice — so their absence from the operation is by design, not data loss.
+ *
+ * Deliberately absent: `seller.legalRegId` / `seller.legalRegScheme` (BT-30) — only the Italian
+ * fiscalization carries a registry identifier (`registration/company_id`); the German and
+ * Belgian taxpayer schemas have no slot for it, so for those paths the datum really has no home.
+ */
+export const ACCOUNT_SUPPLIED_FIELDS: Record<string, string> = {
+  "seller.name": "Taxpayer /name/legal",
+  "seller.tradeName": "Taxpayer /name/trade",
+  "seller.person.forename": "Taxpayer::INDIVIDUAL /name/person/forename",
+  "seller.person.surname": "Taxpayer::INDIVIDUAL /name/person/surname",
+  "seller.person.gender": "Taxpayer::INDIVIDUAL /name/person/gender",
+  "seller.vatId": "Taxpayer /fiscalization/vat_id_number",
+  "seller.taxId": "Taxpayer /fiscalization/tax_id_number",
+  "seller.address.street": "Taxpayer /address/line",
+  "seller.address.number": "Taxpayer /address/line",
+  "seller.address.city": "Taxpayer /address/city",
+  "seller.address.postCode": "Taxpayer /address/code",
+  "seller.address.region": "Taxpayer /address/region",
+  "seller.address.country": "Taxpayer /address/country",
+  "seller.electronicAddress.id":
+    "System::E_INVOICE_SERVICE annotations.peppol_id (Peppol registration)",
+  "seller.electronicAddress.scheme":
+    "System::E_INVOICE_SERVICE annotations.peppol_id (Peppol registration)",
+  "seller.it.regimeFiscale": "Taxpayer /fiscalization/registration/tax_regime (IT)",
+  "seller.it.rea.office": "Taxpayer /fiscalization/registration/office (IT)",
+  "seller.it.rea.number": "Taxpayer /fiscalization/registration/entry (IT)",
+  "seller.it.rea.capital": "Taxpayer /fiscalization/registration/capital (IT)",
+  "seller.it.rea.soleShareholder": "Taxpayer /fiscalization/registration/shareholder_status (IT)",
+  "seller.it.rea.liquidation": "Taxpayer /fiscalization/registration/liquidation_status (IT)",
+};
+
+/**
+ * Fields fiskaly computes per invoice from the document itself — no input carries them because
+ * the platform applies the rule. Keyed by model field; the value is the rule, cited, and becomes
+ * the row's evidence in the gap report.
+ *
+ * The Italian stamp duty is the one entry so far: DatiBollo (BolloVirtuale/ImportoBollo) is added
+ * automatically once the invoice's VAT-exempt amounts reach EUR 77.47 — imposta di bollo of
+ * EUR 2.00 per DPR 642/1972 (tariffa art. 13), assolvimento virtuale per DM 17 giugno 2014 —
+ * so an operation-level field would only invite values that contradict the computation.
+ */
+export const RULE_DERIVED_FIELDS: Record<string, string> = {
+  "it.bollo.virtuale":
+    "fiskaly adds DatiBollo automatically once the invoice's VAT-exempt amounts reach EUR 77.47 " +
+    "(imposta di bollo EUR 2.00, DPR 642/1972 tariffa art. 13; bollo virtuale per DM 17 giugno 2014)",
+  "it.bollo.amount":
+    "fiskaly adds DatiBollo automatically once the invoice's VAT-exempt amounts reach EUR 77.47 " +
+    "(imposta di bollo EUR 2.00, DPR 642/1972 tariffa art. 13; bollo virtuale per DM 17 giugno 2014)",
+};
+
 // Fields the operation carries for some shapes and drops for others. They survive the round trip
 // because the base supplies them, but an edit only reaches the model in the shape named here.
 export const UAPI_PARTIAL_FIELDS: Record<string, FieldId[]> = {
@@ -734,8 +803,6 @@ export const UAPI_PARTIAL_FIELDS: Record<string, FieldId[]> = {
     "payment.accountName",
     "payment.bic",
   ],
-  "An UNKNOWN instruction reuses `text` for the payment terms, so a remittance reference equal to the terms is indistinguishable":
-    ["payment.remittanceInformation"],
   "details.number is optional; without it the entry's position becomes the line id": [
     "lines.{i}.id",
   ],
@@ -980,16 +1047,15 @@ function paymentFrom(operation: InvoiceTransaction, base: Payment): Payment {
   const instruction = operation.payments[0]?.instruction;
   const terms = operation.document.payment_terms;
   const transfer = instruction?.type === "CREDIT_TRANSFER" ? instruction : undefined;
-  // An UNKNOWN instruction's text is `remittanceInformation ?? terms`, so a text equal to the
-  // payment terms cannot be told apart from an absent remittance reference; the base decides.
-  const text = instruction?.text;
   return {
     ...base,
     terms,
     iban: transfer ? transfer.account : base.iban,
     accountName: transfer ? transfer.name : base.accountName,
     bic: transfer ? transfer.payment_service_provider : base.bic,
-    remittanceInformation: transfer || text !== terms ? text : base.remittanceInformation,
+    // instruction.text is BT-83 on every instruction shape; an instruction without text means
+    // the reference was removed, not that the base should resurrect it.
+    remittanceInformation: instruction ? instruction.text : base.remittanceInformation,
   };
 }
 

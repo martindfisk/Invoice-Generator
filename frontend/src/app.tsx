@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { ApiLogPane } from "./ApiLogPane";
 import { Split } from "./Split";
 import { subscribeApiLog } from "./api-log";
@@ -47,7 +47,7 @@ export function App() {
   const section = useStore((state) => state.section);
   const layoutNonce = useStore((state) => state.layoutNonce);
   const environment = useStore((state) => state.settings?.environment ?? state.config?.environment);
-  const [offline, setOffline] = useState(false);
+  const offline = useStore((state) => state.offline);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,11 +57,11 @@ export function App() {
       try {
         await store.refreshBackend();
         if (cancelled) return;
-        setOffline(false);
+        store.setOffline(false);
         for (const call of await listCalls()) store.addCall(call);
       } catch {
         if (cancelled) return;
-        setOffline(true);
+        store.setOffline(true);
         retry = setTimeout(loadConfig, CONFIG_RETRY_MS);
       }
     };

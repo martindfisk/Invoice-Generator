@@ -14,6 +14,8 @@ import type { SpecFields } from "./uapi-fields-client";
 import { coverage } from "./uapi-fields";
 import { lostFields, unmatchedFields } from "./transmittable";
 import {
+  ACCOUNT_SUPPLIED_FIELDS,
+  RULE_DERIVED_FIELDS,
   UAPI_DERIVED_PATHS,
   UAPI_LOSSY_FIELDS,
   UAPI_PARTIAL_FIELDS,
@@ -226,7 +228,15 @@ export function modelGaps(snapshots: SpecSnapshot[] = []): GapRow[] {
       const concrete = pointerForField(field, "");
       const pointer = concrete ? (pointerTemplate(concrete)?.template ?? concrete) : undefined;
       const declared = declaredReason(field);
-      const inJson = pointer !== undefined && declared === undefined;
+      // The same aliasing applies to the operation: BT-49 travels as recipients[].invoicing and
+      // BT-120 as the line-level vat.reason, so a spelling whose alias the JSON fully carries is
+      // not a JSON gap either — reporting it was refuted by the 2026-09 gap audit
+      // (docs/gaps/verdicts.json: the NO_POINTER fallback asserted a contract fact that is false).
+      const aliasInJson = (alias: FieldId) =>
+        pointerForField(alias, "") !== undefined && declaredReason(alias) === undefined;
+      const inJson =
+        (pointer !== undefined && declared === undefined) ||
+        (SAME_DATUM[field] ?? []).some((alias) => aliasInJson(alias as FieldId));
       if (carried && inJson) continue;
 
       const missingFrom: MissingFrom = carried ? "json" : "xml";
@@ -234,13 +244,21 @@ export function modelGaps(snapshots: SpecSnapshot[] = []): GapRow[] {
       const { bg, term, cardinality } = catalogue(bt);
       const { text: applicability, applicable, required } = applicabilityOf(snapshot, pointer);
       const fate = pointer ? fateFor(format, pointer) : undefined;
+      // The datum is provided — mastered on an account resource (Taxpayer, System) or computed
+      // per invoice by a platform rule — so its absence from the operation is by design (R4),
+      // not loss.
+      const accountSource =
+        missingFrom === "json" ? ACCOUNT_SUPPLIED_FIELDS[genericField(field)] : undefined;
+      const ruleDerived =
+        missingFrom === "json" ? RULE_DERIVED_FIELDS[genericField(field)] : undefined;
       const { severity, rule } = severityFor({
         missingFrom,
         cardinality,
         required,
         applicable,
         carriedInXml: carried,
-        platform: fate?.fate === "platform",
+        platform:
+          fate?.fate === "platform" || accountSource !== undefined || ruleDerived !== undefined,
         bindsEn16931: CIUS_OF_EN16931.includes(format),
       });
       const reason = missingFrom === "xml" ? NO_ELEMENT : (declared?.reason ?? NO_POINTER);
@@ -248,12 +266,16 @@ export function modelGaps(snapshots: SpecSnapshot[] = []): GapRow[] {
         missingFrom === "xml"
           ? `structural · ${format}-map.ts · ${rule}`
           : `structural · ${declared?.source ?? "gap-report.ts"} · ${rule}`;
-      const evidence =
-        format === "fatturapa"
-          ? fate
-            ? `${fate.fate}: ${fate.note}`
-            : null
-          : unobserved(plugin.label);
+      const evidence = accountSource
+        ? `Derived: fiskaly fills this from ${accountSource} — provided when the account is ` +
+          "onboarded (POST /taxpayers, system commissioning), not per invoice."
+        : ruleDerived
+          ? `Derived: ${ruleDerived}.`
+          : format === "fatturapa"
+            ? fate
+              ? `${fate.fate}: ${fate.note}`
+              : null
+            : unobserved(plugin.label);
 
       rows.push({
         id: `${format}|${field}|${missingFrom}`,
@@ -266,7 +288,9 @@ export function modelGaps(snapshots: SpecSnapshot[] = []): GapRow[] {
         missingFrom,
         // The address that is missing is exactly what does not exist. Where a pointer is known —
         // a partial carry — name it; otherwise the business term is the semantic address, and
-        // proposing the syntax binding is the work the ticket asks for.
+        // proposing the syntax binding is the work the ticket asks for. An account-supplied
+        // field keeps the BT here (a vocabulary gap-check can verify) and names the Taxpayer/
+        // System property that masters it in `evidence`.
         belongsAt: missingFrom === "json" && pointer ? pointer : (bt ?? field),
         presentIn: presentInText([
           { structure: "model", address: bt ?? spec.label },

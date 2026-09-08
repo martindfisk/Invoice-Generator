@@ -37,17 +37,10 @@ function reason(error: unknown): string {
 }
 
 export async function validateXsd(
-  schema: string | null,
+  schema: string,
   xml: string,
   signal?: AbortSignal,
 ): Promise<XsdOutcome> {
-  if (!schema) {
-    return {
-      status: "unavailable",
-      reason:
-        "This format has no XSD in the vendored schema set, so there is nothing to validate against.",
-    };
-  }
   let response: Response;
   try {
     response = await fetch(XSD_ENDPOINT, {

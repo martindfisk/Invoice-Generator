@@ -215,6 +215,7 @@ function CountryList({ presets, presetId }: { presets: PresetMeta[]; presetId: s
 
 export function StepSetup() {
   const presetId = useStore((state) => state.workflow.presetId);
+  const transmitted = useStore((state) => state.workflow.send.outcome === "transmitted");
   const wide = useIsWide("(min-width: 1024px)");
   const presets = listPresets();
 
@@ -228,6 +229,15 @@ export function StepSetup() {
         works on the invoice it loads; you can come back and switch at any time. The format and the
         legal basis of the chosen scenario are shown in the Mapper.
       </p>
+      {transmitted && (
+        <p
+          role="status"
+          className="rounded-l border border-success bg-brand-soft px-3 py-2 text-xs text-brand-ink"
+        >
+          Last invoice transmitted. Pick any scenario to start the next one — re-picking the
+          highlighted card resumes what you just sent, diff and all.
+        </p>
+      )}
       {presetId && (
         <p className="flex flex-wrap items-center gap-2 rounded-l border border-line bg-surface px-3 py-2 text-xs text-muted">
           Clicking the chosen preset again keeps your work and returns to the Mapper.
@@ -238,7 +248,7 @@ export function StepSetup() {
           >
             Reset preset
           </button>
-          starts it over, discarding every edit, validation run and send result.
+          starts the scenario fresh (clears edits, validation and the send result).
         </p>
       )}
       {presets.length === 0 ? (

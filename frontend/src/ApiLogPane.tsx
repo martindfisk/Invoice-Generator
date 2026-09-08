@@ -39,15 +39,25 @@ export function ApiLogPane() {
   const handled = useRef(0);
 
   const knownSteps = useMemo(() => [...new Set(calls.map(stepLabel))].sort(), [calls]);
+  // The flow always sends as the seller; a buyer chip only means something when buyer calls
+  // exist (the runner ran as the buyer), so the chips are derived from the log, not hardcoded.
+  const knownPersonas = useMemo(
+    () => PERSONAS.filter((persona) => calls.some((call) => call.persona === persona)),
+    [calls],
+  );
 
+  // The persona filter only applies while its chips are rendered (>1 persona in the log): a
+  // selection left over from a runner session must not silently hide a later single-persona
+  // log with no visible control to undo it.
+  const activePersonas = knownPersonas.length > 1 ? personas : [];
   const filtered = useMemo(
     () =>
       calls.filter(
         (call) =>
           (steps.length === 0 || steps.includes(stepLabel(call))) &&
-          (personas.length === 0 || personas.includes(call.persona)),
+          (activePersonas.length === 0 || activePersonas.includes(call.persona)),
       ),
-    [calls, steps, personas],
+    [calls, steps, activePersonas],
   );
 
   const groups = useMemo(() => groupCalls(filtered), [filtered]);
@@ -133,15 +143,19 @@ export function ApiLogPane() {
                 onClick={() => toggle(step)}
               />
             ))}
-            <span aria-hidden="true" className="mx-1 h-3 w-px bg-line" />
-            {PERSONAS.map((persona) => (
-              <FilterChip
-                key={persona}
-                label={persona}
-                active={personas.includes(persona)}
-                onClick={() => togglePersona(persona)}
-              />
-            ))}
+            {knownPersonas.length > 1 && (
+              <>
+                <span aria-hidden="true" className="mx-1 h-3 w-px bg-line" />
+                {knownPersonas.map((persona) => (
+                  <FilterChip
+                    key={persona}
+                    label={persona}
+                    active={personas.includes(persona)}
+                    onClick={() => togglePersona(persona)}
+                  />
+                ))}
+              </>
+            )}
           </div>
         )}
       </header>

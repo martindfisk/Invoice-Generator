@@ -14,32 +14,32 @@ Spec: `fiskaly.unified-api.all.2026-06-01.yaml` (`fee9b16d1c7c`), `X-Api-Version
 
 ## Counts
 
-**335 rows across 20 distinct causes.** One ticket per cause, with the
-field list as its body — filing one ticket per row would be 335 tickets nobody triages.
+**321 rows across 18 distinct causes.** One ticket per cause, with the
+field list as its body — filing one ticket per row would be 321 tickets nobody triages.
 
 | by format | rows |
 |---|---|
-| fatturapa | 112 |
-| ubl | 76 |
-| xrechnung | 74 |
-| cii | 73 |
+| fatturapa | 110 |
+| ubl | 72 |
+| xrechnung | 70 |
+| cii | 69 |
 
 | missing from | rows |
 |---|---|
-| json | 159 |
+| json | 145 |
 | xml | 141 |
 | model | 35 |
 
 | severity | rows |
 |---|---|
-| should-fix | 171 |
-| note | 164 |
+| note | 217 |
+| should-fix | 104 |
 
 | evidence | rows |
 |---|---|
-| unobserved | 219 |
-| none | 80 |
-| captured | 36 |
+| unobserved | 173 |
+| captured | 89 |
+| none | 59 |
 
 ## How severity is derived
 
@@ -94,9 +94,6 @@ home, and whether `blocking` is the right call — is settled by the `/gap-audit
 runs a reviewer over each cause against the standards and then adversarially tries to refute it.
 Save its output as `docs/gaps/verdicts.json`; `backend/tests/test_gap_verdicts.py` then keeps it
 honest, failing when a verdict outlives its row or the reason it judged is re-worded.
-
-Note that the blocking rows apply EN 16931 cardinality to FatturaPA, which is **not** a CIUS of
-EN 16931. Whether that is a gap or a category error is exactly what the research run should decide.
 
 ## Jira mapping
 

@@ -122,14 +122,32 @@ async def onboarding_status(client, store):
         "systems": [],
         "ready": dict.fromkeys(COUNTRIES, False),
         "missing": ["no API credentials configured"],
+        "errors": {},
     }
     if client.mode == "live" and client.persona.missing_credentials:
         return payload
-    org_rows, subject_rows, taxpayer_rows, system_rows = await asyncio.gather(
+    # One failing listing (a 403 on /organizations, say) must not blank the whole tree — the
+    # other resources still render, and the failed one is named per resource.
+    outcomes = await asyncio.gather(
         _list(client, "/organizations"),
         _list(client, "/subjects"),
         _list(client, "/taxpayers"),
         _list(client, "/systems"),
+        return_exceptions=True,
+    )
+    errors = {}
+
+    def rows(name, outcome):
+        if isinstance(outcome, BaseException):
+            errors[name] = str(outcome)
+            return []
+        return outcome
+
+    org_rows, subject_rows, taxpayer_rows, system_rows = (
+        rows(name, outcome)
+        for name, outcome in zip(
+            ("organizations", "subjects", "taxpayers", "systems"), outcomes, strict=True
+        )
     )
     organizations = [_entity_entry(content) for content in org_rows]
     subjects = [_entity_entry(content) for content in subject_rows]
@@ -142,6 +160,10 @@ async def onboarding_status(client, store):
         "systems": len(systems),
     }
     ready, missing = _readiness(taxpayers, systems)
+    # A resource that failed to list is unknown, not absent — readiness derived from an empty
+    # taxpayer/system list would be a lie, so those countries stay not-ready and the failure
+    # is carried per resource for the UI to show.
+    missing += [f"{name} could not be listed: {message}" for name, message in errors.items()]
     payload.update(
         counts=counts,
         organizations=organizations,
@@ -150,6 +172,7 @@ async def onboarding_status(client, store):
         systems=systems,
         ready=ready,
         missing=missing,
+        errors=errors,
     )
     return payload
 

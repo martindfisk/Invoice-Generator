@@ -349,7 +349,12 @@ function Validating({ invoice, presetId }: { invoice: Invoice; presetId: PresetI
   const { xml, error } = source;
   const value = operation.value ?? undefined;
   const stamp = useMemo(() => JSON.stringify(invoice), [invoice]);
-  const key = `${nonce} ${formatId} ${digest(`${stamp} ${xml} ${operation.text}`)}`;
+  // The digest hashes the whole XML + operation text on every render otherwise — cheap FNV,
+  // but the inputs run to hundreds of KB and this component re-renders on every selection.
+  const key = useMemo(
+    () => `${nonce} ${formatId} ${digest(`${stamp} ${xml} ${operation.text}`)}`,
+    [nonce, formatId, stamp, xml, operation.text],
+  );
   const stored = validation.key;
 
   useEffect(() => {
@@ -380,7 +385,19 @@ function Validating({ invoice, presetId }: { invoice: Invoice; presetId: PresetI
     return () => clearTimeout(timer);
   }, [invoice, formatId, xml, error, key, stored, value]);
 
-  useEffect(() => () => controller.current?.abort(), []);
+  useEffect(
+    () => () => {
+      // Leaving the step aborts the in-flight run AND invalidates it: without the run.current
+      // bump the aborted result would be dispatched as final, and a partial (or one-stage
+      // "backend not reachable") pipeline would stick because the run key still matches.
+      run.current += 1;
+      controller.current?.abort();
+      if (store.getState().workflow.validation.running) {
+        store.dispatch({ type: "validationReset" });
+      }
+    },
+    [],
+  );
 
   const stages = useMemo(
     () => (validation.stages.length > 0 ? validation.stages : emptyRun(formatId)),

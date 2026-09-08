@@ -22,7 +22,10 @@ jobs:
       - name: Frontend deps
         run: npm ci --prefix frontend
       - name: Spec (falls back to committed cache with a warning)
-        run: python3 tools/fetch_spec.py
+        # --frozen: CI builds against the committed spec/ exactly as spec.json records it. A new
+        # CalVer publication on workspace.fiskaly.com must be ingested deliberately (make spec),
+        # never change what CI sees on its own.
+        run: python3 tools/fetch_spec.py --frozen
       - name: Vendor XSD/XSLT assets
         run: make schemas
       - name: Compile Schematron to SEF

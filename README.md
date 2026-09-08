@@ -1,6 +1,6 @@
 # Invoice Generator
 
-A browser-based showcase of the e-invoice lifecycle — **create → validate → send** — built for demos (sales, solution engineering, partners) and doubling as a test harness for the fiskaly Unified API (UAPI). The tool is dual-track: a **client-side e-invoice lab** generates and validates the XML a user expects locally, while a **UAPI harness** sends the same invoice through fiskaly, follows its lifecycle, and diffs the locally predicted XML against the XML fiskaly actually transmitted. The UI is a split screen: the workflow the user drives on the left, the live UAPI HTTP calls each step produces on the right.
+A browser-based showcase of the e-invoice lifecycle — **Mapper → Validate → Send** — built for demos (sales, solution engineering, partners) and doubling as a test harness for the fiskaly Unified API (UAPI). The tool is dual-track: a **client-side e-invoice lab** generates and validates the XML a user expects locally, while a **UAPI harness** sends the same invoice through fiskaly, follows its lifecycle, and diffs the locally predicted XML against the XML fiskaly actually transmitted. The UI is a split screen: the workflow the user drives on the left, the live UAPI HTTP calls each step produces on the right.
 
 ## Run it
 
@@ -21,7 +21,9 @@ Then open **http://localhost:8080**.
   response is replayed from committed fixtures through the same client code as a live call.
 - **Talking to the real TEST API** (`test.api.fiskaly.com`): open **Settings** in the app and paste
   your fiskaly TEST API key — it is held in backend memory only, never persisted. Alternatively,
-  copy `.env.example` to `.env` and fill in the seller key before `docker compose up`.
+  copy `.env.example` to `.env` and fill in the seller key before `docker compose up`. (The
+  optional `.env` is wired via `env_file: required: false`, which needs Docker Compose ≥ v2.24 —
+  Docker Desktop from 2024 on ships it.)
 - **Windows**: same two commands from PowerShell.
 
 **Troubleshooting**
@@ -52,7 +54,7 @@ make sef        # compile Schematron XSLT to SEF for the browser validator
 make dev        # run frontend (:5173) + backend (:8000) natively, with hot reload
 ```
 
-Other targets: `make test` (Vitest + pytest), `make e2e` (Playwright against MOCK), `make lint`, `make gap-report` / `make gap-check` (field-coverage gap report + CI gate), `make sef-check` / `make spec-check` (asset freshness), `make docker` (same as `docker compose up --build`).
+Other targets: `make test` (Vitest + pytest), `make e2e` (Playwright against MOCK), `make lint`, `make gap-report` / `make gap-check` (field-coverage gap report + CI gate), `make handbook` / `make handbook-check` (generated mapping reference + CI gate), `make sef-check` / `make spec-check` (asset freshness), `make docker` (same as `docker compose up --build`).
 
 ## Updating the OpenAPI spec
 
@@ -92,11 +94,11 @@ as before, so a fresh clone and the offline path are unchanged.
 ## How the demo works
 
 1. Pick one of the eleven presets — reference scenarios (IT/BE), a German hotel group (XRechnung/ZUGFeRD-CII) and Roman restaurant scenarios (FatturaPA, including a TD04 credit note). Deliberately broken presets are labelled.
-2. **Create**: edit the invoice in the Human view or the generated XML view side by side.
+2. **Mapper**: edit the invoice in any of its three panes — Human view, the fiskaly JSON operation (what Send actually posts), and the predicted XML — and the other two follow.
 3. **Validate**: model rules, well-formedness, XSD, Schematron (EN 16931 + Peppol BIS 3.0), and FatturaPA SDI rules run client-side; findings highlight the offending field and XML range.
 4. **Send**: the backend proxies the invoice to the UAPI as an `INTENTION`, then a `TRANSACTION::INVOICE`, polls it to completion, and fetches the compliance artifact — the XML fiskaly actually transmitted.
 5. **Diff**: the locally generated XML is compared against fiskaly's compliance artifact, with normalisation toggles (pretty-print, ignore volatile fields — signature stripping is part of the volatile set). This is the core demo moment.
-6. **Correction**: after an invoice has been transmitted, the TD04 credit-note preset composes a `TRANSACTION::CORRECTION` referencing it and sends through `POST /api/invoices/{id}/correction`.
+6. **Correction**: after an invoice has been transmitted, the TD04 credit-note preset composes a `TRANSACTION::CORRECTION` referencing it and sends through `POST /api/invoices/{id}/correction`. (In MOCK mode, if that endpoint is not configured, the full correction operation is posted through the raw `/api/uapi` passthrough instead — noted in the send timeline.)
 
 A second section, the **Test runner**, replays the published fiskaly Postman collections (IT, BE, DE) step by step through the same proxy, with captures, waits and per-step cURL.
 
@@ -112,13 +114,17 @@ Invoice Generator/
 │   └── drop/                  drop a new OpenAPI YAML here, then run make spec
 ├── tools/fetch_spec.py        stdlib-only drop-in ingest + fetch/refresh of spec/
 ├── tools/spec_check.py        fails on a stale, tampered or un-ingested spec/
+├── vendor/                    vendored XSD/XSLT validation assets (make schemas)
 ├── docs/
 │   ├── ARCHITECTURE.md
 │   ├── DEMO-SCRIPT.md
+│   ├── handbook/              the handbook (10 chapters + generated mapping reference)
+│   ├── gaps/                  generated gap report (make gap-report)
+│   ├── reference/
 │   ├── adr/
 │   └── design/
 ├── .claude/                   agents, skills, rules, hooks, workflows, settings.json
-├── Makefile                   setup · doctor · spec · schemas · sef · dev · test · e2e · lint · docker
+├── Makefile                   setup · doctor · spec · schemas · sef · dev · test · e2e · lint · handbook · docker
 ├── docker-compose.yml
 ├── Dockerfile.backend
 ├── Dockerfile.frontend
@@ -149,4 +155,4 @@ This repo ships a project-level agent team in `.claude/`. Ask the agent that own
 | `qa-engineer`              | Vitest, Playwright, pytest suites, golden + Schematron fixture tests, CI                                                 |
 | `compliance-reviewer`      | Read-only review of generated XML/labels vs. FatturaPA, Peppol BIS 3.0, EN 16931; legal citations                        |
 | `devops-engineer`          | Makefile, `make doctor`, Dockerfiles/compose, `.env.example`, GitHub Actions, Node bootstrap                             |
-| `docs-writer`              | README, `docs/DEMO-SCRIPT.md`, glossary, ADR formatting                                                                  |
+| `docs-writer`              | README, `docs/DEMO-SCRIPT.md`, handbook, ADR formatting                                                                  |
