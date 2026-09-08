@@ -237,7 +237,7 @@
    "citation": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd:29: <xs:element name=\"RappresentanteFiscale\" type=\"RappresentanteFiscaleType\" minOccurs=\"0\" />; vendor/schematron/CEN-EN16931-UBL.sch:212: '[BR-18]-The Seller tax representative name (BT-62) shall be provided in the Invoice, if the Seller (BG-4) has a Seller tax representative party (BG-11)'; spec required arrays as cited.",
    "source": {
     "kind": "vendor",
-    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
+    "ref": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
    },
    "summary": "should-fix is right for the nine conditionally-required pointers; blocking would be wrong because nothing here is unconditionally mandatory in EN 16931 (by analogy) or in FatturaPA's own XSD.",
    "verifier": {
@@ -261,7 +261,7 @@
    "citation": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd AnagraficaType; docs/reference/fatturapa/README.md CessionarioCommittente section ('.name → Anagrafica/Denominazione — mapped')",
    "source": {
     "kind": "vendor",
-    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
+    "ref": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
    },
    "summary": "should-fix is right: FatturaPA renders Nome+Cognome (its own schema), the operation cannot carry them for the mandated BUSINESS recipient",
    "verifier": {
@@ -284,7 +284,7 @@
    "citation": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd DatiAnagraficiCessionarioType; SDI control 00417 as curated in frontend/src/fatturapa-rules.ts",
    "source": {
     "kind": "vendor",
-    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
+    "ref": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
    },
    "summary": "should-fix is right: authored CF lost, FatturaPA renders it, not blocking because IdFiscaleIVA alone satisfies SDI (control 00417 requires either)",
    "verifier": {
@@ -310,7 +310,7 @@
    "citation": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd (DatiBollo minOccurs=0; CodiceCUP/CodiceCIG minOccurs=0); frontend/src/fatturapa-map.ts labels (L. 3/2003 art. 11, L. 136/2010 art. 3)",
    "source": {
     "kind": "vendor",
-    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
+    "ref": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
    },
    "summary": "should-fix is right: authored bollo/CUP/CIG are silently dropped although FatturaPA renders them; CIG/CUP are legally significant for traceability",
    "verifier": {
@@ -333,7 +333,7 @@
    "citation": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd DettaglioLineeType (NumeroLinea 1..1); docs/reference/fatturapa/README.md line-discard statement",
    "source": {
     "kind": "vendor",
-    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
+    "ref": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
    },
    "summary": "should-fix is right: an authored line id that differs from position is lost, and corrections reference entry numbers",
    "verifier": {
@@ -359,7 +359,7 @@
    "citation": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd (AltriDatiGestionali minOccurs=0 maxOccurs=unbounded); docs/reference/fatturapa/README.md FAQ-45 note",
    "source": {
     "kind": "vendor",
-    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
+    "ref": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
    },
    "summary": "should-fix is right: authored management data is lost though FatturaPA renders it; optional in the XSD, so not blocking",
    "verifier": {
@@ -383,7 +383,7 @@
    "citation": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd NaturaType; SDI controls 00400/00429 (elenco controlli, curated in frontend/src/fatturapa-rules.ts)",
    "source": {
     "kind": "vendor",
-    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
+    "ref": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
    },
    "summary": "should-fix is right: the gateway must derive a sub-code the author cannot choose, and a wrong N-sub-code misstates the legal basis of the exemption",
    "verifier": {
@@ -408,7 +408,7 @@
    "citation": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd DettaglioPagamentoType; docs/reference/fatturapa/tested-response.xml <IstitutoFinanziario>/<IBAN>/<BIC>",
    "source": {
     "kind": "vendor",
-    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
+    "ref": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
    },
    "summary": "should-fix is right: when the payment means is not a credit transfer, authored bank details are lost though FatturaPA renders them",
    "verifier": {
@@ -432,7 +432,7 @@
    "citation": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd DatiPagamentoType/DettaglioPagamentoType; docs/reference/fatturapa/tested-response.xml TP02/MP05",
    "source": {
     "kind": "vendor",
-    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
+    "ref": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
    },
    "summary": "should-fix is right: mandatory elements are always rendered with derived values, so an authored TP01/MP12 silently becomes TP02/MP05",
    "verifier": {
@@ -456,7 +456,7 @@
    "citation": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd DatiDDTType/DatiGeneraliType; docs/reference/fatturapa/README.md 'Correction to the source on despatch_advice'",
    "source": {
     "kind": "vendor",
-    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
+    "ref": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
    },
    "summary": "should-fix is right: the missing date makes the whole DatiDDT block unfillable from the JSON, and an authored invoiced-object id is lost",
    "verifier": {
@@ -479,7 +479,7 @@
    "citation": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd (Arrotondamento minOccurs=0); docs/reference/fatturapa/README.md totals-discard statement",
    "source": {
     "kind": "vendor",
-    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
+    "ref": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
    },
    "summary": "should-fix is right: a nonzero authored rounding is not derivable from lines, so the recomputed document can never reproduce it",
    "verifier": {
@@ -502,7 +502,7 @@
    "citation": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd EsigibilitaIVAType (D 'esigibilità differita', I 'esigibilità immediata', S 'scissione dei pagamenti'; minOccurs=0)",
    "source": {
     "kind": "vendor",
-    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
+    "ref": "vendor/fatturapa/Schema_VFPR12_v1.2.3.xsd"
    },
    "summary": "should-fix is right: an authored D (cash accounting) or S (split payment) is real fiscal information the operation cannot deliver",
    "verifier": {
@@ -525,7 +525,7 @@
    "citation": "bt-catalog.json: BT-155 \"Item Seller's identifier\" cardinality 0..1; BT-157 \"Item standard identifier\" cardinality 0..1 (+BT-157-1 scheme from ICD mandatory when present) — catalog built from the local EN16931_BT_BG_Reference; gap-report.ts:151-153 R2 definition",
    "source": {
     "kind": "repo",
-    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/frontend/src/bt-catalog.json"
+    "ref": "frontend/src/bt-catalog.json"
    },
    "summary": "Confirmed: should-fix is the right level — real expressiveness loss (GTIN inexpressible), but nothing EN 16931 makes mandatory is endangered.",
    "verifier": {
@@ -552,7 +552,7 @@
    "citation": "CEN-EN16931-UBL.sch (no assert names BT-45/BT-56/BT-57/BT-58); docs/gaps/README.md R2: \"the syntax renders it but the operation cannot carry it, so authored data never reaches fiskaly\"",
    "source": {
     "kind": "vendor",
-    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/schematron/CEN-EN16931-UBL.sch"
+    "ref": "vendor/schematron/CEN-EN16931-UBL.sch"
    },
    "summary": "should-fix is right: optional EN terms, rendered by the UBL binding, lost from the operation",
    "verifier": {
@@ -575,7 +575,7 @@
    "citation": "CEN-EN16931-UBL.sch contains no assert requiring BT-72's presence; EN16931_BT_BG_Reference.md: BT-72 0..1",
    "source": {
     "kind": "vendor",
-    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/schematron/CEN-EN16931-UBL.sch"
+    "ref": "vendor/schematron/CEN-EN16931-UBL.sch"
    },
    "summary": "Optional term (0..1), rendered by UBL, conditionally lost — should-fix, not blocking",
    "verifier": {
@@ -598,7 +598,7 @@
    "citation": "CEN-EN16931-UBL.sch: \"[BR-21]-Each Invoice line (BG-25) shall have an Invoice line identifier (BT-126).\" (flag=fatal)",
    "source": {
     "kind": "vendor",
-    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/schematron/CEN-EN16931-UBL.sch"
+    "ref": "vendor/schematron/CEN-EN16931-UBL.sch"
    },
    "summary": "BT-126 is mandatory (BR-21) but always derivable from position — not blocking; authored ids can be lost, so should-fix",
    "verifier": {
@@ -622,7 +622,7 @@
    "citation": "CEN-EN16931-UBL.sch: \"[BR-48]-Each VAT breakdown (BG-23) shall have a VAT category rate (BT-119), except if the Invoice is not subject to VAT.\" (flag=fatal)",
    "source": {
     "kind": "vendor",
-    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/schematron/CEN-EN16931-UBL.sch"
+    "ref": "vendor/schematron/CEN-EN16931-UBL.sch"
    },
    "summary": "Not blocking: BR-48 requires BT-119 except category O, but EN pins the E/AE/Z/K/G rate to 0, so the missing value is always derivable",
    "verifier": {
@@ -647,7 +647,7 @@
    "citation": "CEN-EN16931-UBL.sch: \"[BR-61]-If the Payment means type code (BT-81) means SEPA credit transfer, Local credit transfer or Non-SEPA international credit transfer, the Payment account identifier (BT-84) shall be present.\"",
    "source": {
     "kind": "vendor",
-    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/schematron/CEN-EN16931-UBL.sch"
+    "ref": "vendor/schematron/CEN-EN16931-UBL.sch"
    },
    "summary": "Not blocking: BT-84 is only mandatory when the means code is a credit transfer (BR-61), and in exactly that shape the operation requires it",
    "verifier": {
@@ -671,7 +671,7 @@
    "citation": "CEN-EN16931-UBL.sch contains no assert requiring BT-14/BT-18; docs/gaps/README.md rule R2",
    "source": {
     "kind": "vendor",
-    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/schematron/CEN-EN16931-UBL.sch"
+    "ref": "vendor/schematron/CEN-EN16931-UBL.sch"
    },
    "summary": "Both terms optional (0..1), rendered by UBL, unconditionally lost from the operation — should-fix",
    "verifier": {
@@ -706,7 +706,7 @@
    "citation": "CEN-EN16931-UBL.sch: \"[BR-06]-An Invoice shall contain the Seller name (BT-27).\"; PEPPOL-EN16931-UBL.sch R020: \"Seller electronic address MUST be provided\" (both fatal)",
    "source": {
     "kind": "vendor",
-    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/schematron/CEN-EN16931-UBL.sch"
+    "ref": "vendor/schematron/CEN-EN16931-UBL.sch"
    },
    "summary": "Mandatory seller terms (BR-06 name, BR-09 country, R020 endpoint) are platform-rendered, so not blocking; model-authored values silently replaced — should-fix",
    "verifier": {
@@ -733,7 +733,7 @@
    "citation": "CEN-EN16931-UBL.sch: \"[BR-12]-An Invoice shall have the Sum of Invoice line net amount (BT-106).\" (fatal); docs/reference/fatturapa/README.md: \"breakdown[] and totals are discarded — DatiRiepilogo is always recomputed server-side\"",
    "source": {
     "kind": "vendor",
-    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/schematron/CEN-EN16931-UBL.sch"
+    "ref": "vendor/schematron/CEN-EN16931-UBL.sch"
    },
    "summary": "BR-12..BR-15 totals are mandatory but fiskaly recomputes them; BT-107/108/113/114 optional — should-fix, not blocking",
    "verifier": {
@@ -756,7 +756,7 @@
    "citation": "docs/gaps/README.md: \"A mandatory business term missing from the operation is deliberately not blocking: fiskaly derives BT-3 and takes the seller identity from the commissioned Taxpayer.\"",
    "source": {
     "kind": "repo",
-    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/docs/gaps/README.md"
+    "ref": "docs/gaps/README.md"
    },
    "summary": "BT-3 mandatory (BR-04) but derived and rendered by fiskaly — deliberately not blocking; should-fix right",
    "verifier": {
@@ -779,7 +779,7 @@
    "citation": "CEN-EN16931-UBL.sch: \"[BR-E-10]-A VAT breakdown (BG-23) with VAT Category code (BT-118) 'Exempt from VAT' shall have a VAT exemption reason code (BT-121) or a VAT exemption reason text (BT-120).\" (fatal)",
    "source": {
     "kind": "vendor",
-    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/schematron/CEN-EN16931-UBL.sch"
+    "ref": "vendor/schematron/CEN-EN16931-UBL.sch"
    },
    "summary": "Not blocking: BR-E-10/BR-AE-10 accept BT-120 text as the alternative, and BT-120 can travel via the line-level reason",
    "verifier": {
@@ -876,7 +876,7 @@
    "citation": "XRechnung 3.0.2 CIUS model: BT-119 required, BT-152 min-occurs=\"0\"; CEN-EN16931-UBL.sch BR-E-05/BR-AE-05/BR-Z-05 (rate shall be 0)",
    "source": {
     "kind": "vendor",
-    "ref": "/Users/martin.dutzler/Documents/GitHub/Invoice Generator/vendor/schematron/CEN-EN16931-UBL.sch"
+    "ref": "vendor/schematron/CEN-EN16931-UBL.sch"
    },
    "summary": "Derivable zero; should-fix stands.",
    "verifier": {
