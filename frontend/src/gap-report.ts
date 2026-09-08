@@ -15,6 +15,7 @@ import { coverage } from "./uapi-fields";
 import { lostFields, unmatchedFields } from "./transmittable";
 import {
   ACCOUNT_SUPPLIED_FIELDS,
+  RULE_DERIVED_FIELDS,
   UAPI_DERIVED_PATHS,
   UAPI_LOSSY_FIELDS,
   UAPI_PARTIAL_FIELDS,
@@ -243,17 +244,21 @@ export function modelGaps(snapshots: SpecSnapshot[] = []): GapRow[] {
       const { bg, term, cardinality } = catalogue(bt);
       const { text: applicability, applicable, required } = applicabilityOf(snapshot, pointer);
       const fate = pointer ? fateFor(format, pointer) : undefined;
-      // The datum is provided — mastered on an account resource (Taxpayer, System) and derived
-      // per invoice by fiskaly — so its absence from the operation is by design (R4), not loss.
+      // The datum is provided — mastered on an account resource (Taxpayer, System) or computed
+      // per invoice by a platform rule — so its absence from the operation is by design (R4),
+      // not loss.
       const accountSource =
         missingFrom === "json" ? ACCOUNT_SUPPLIED_FIELDS[genericField(field)] : undefined;
+      const ruleDerived =
+        missingFrom === "json" ? RULE_DERIVED_FIELDS[genericField(field)] : undefined;
       const { severity, rule } = severityFor({
         missingFrom,
         cardinality,
         required,
         applicable,
         carriedInXml: carried,
-        platform: fate?.fate === "platform" || accountSource !== undefined,
+        platform:
+          fate?.fate === "platform" || accountSource !== undefined || ruleDerived !== undefined,
         bindsEn16931: CIUS_OF_EN16931.includes(format),
       });
       const reason = missingFrom === "xml" ? NO_ELEMENT : (declared?.reason ?? NO_POINTER);
@@ -264,11 +269,13 @@ export function modelGaps(snapshots: SpecSnapshot[] = []): GapRow[] {
       const evidence = accountSource
         ? `Derived: fiskaly fills this from ${accountSource} — provided when the account is ` +
           "onboarded (POST /taxpayers, system commissioning), not per invoice."
-        : format === "fatturapa"
-          ? fate
-            ? `${fate.fate}: ${fate.note}`
-            : null
-          : unobserved(plugin.label);
+        : ruleDerived
+          ? `Derived: ${ruleDerived}.`
+          : format === "fatturapa"
+            ? fate
+              ? `${fate.fate}: ${fate.note}`
+              : null
+            : unobserved(plugin.label);
 
       rows.push({
         id: `${format}|${field}|${missingFrom}`,

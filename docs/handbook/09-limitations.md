@@ -41,7 +41,7 @@ requires but the model/JSON/XML cannot carry (321 rows currently; e.g. document-
 bank details outside `CREDIT_TRANSFER`, the BT-30 legal registration identifier outside Italy).
 Every row's `reason` is quoted verbatim from a declared table so `make gap-check` can prove
 nothing was paraphrased. It is scoped to each country's mandated syntax. The current report grades
-no row `blocking` (106 should-fix, the rest notes), so the methodological caveat about applying
+no row `blocking` (104 should-fix, the rest notes), so the methodological caveat about applying
 EN 16931 cardinality to FatturaPA (which is _not_ a CIUS of EN 16931) appears in the generated
 README only when blocking rows exist; the `/gap-audit` verdicts (`docs/gaps/verdicts.json`) are
 the place that question gets settled. The 2026-09 audit refuted three of the report's own claims —
@@ -52,7 +52,12 @@ gaps: the spec's own Taxpayer/System schemas show fiskaly masters the seller ide
 account (`POST /taxpayers` — name, address, VAT/tax ids, Italian REA registration; the Peppol
 endpoint from the commissioned System) and derives it per invoice; each row's evidence names the
 exact source property (`ACCOUNT_SUPPLIED_FIELDS` in `uapi-map.ts`). Only BT-30 stays a real gap —
-the German and Belgian taxpayer schemas have no registry-identifier slot.
+the German and Belgian taxpayer schemas have no registry-identifier slot. The Italian stamp duty
+(`DatiBollo`) is likewise graded `note`, not missing: fiskaly adds it automatically once the
+invoice's VAT-exempt amounts reach EUR 77.47 (imposta di bollo EUR 2.00, DPR 642/1972 tariffa
+art. 13; bollo virtuale per DM 17 giugno 2014 — `RULE_DERIVED_FIELDS` in `uapi-map.ts`), so an
+operation-level field would only contradict the computation; CUP and CIG in the same bundle remain
+real should-fix losses.
 
 ## Known engine defects
 

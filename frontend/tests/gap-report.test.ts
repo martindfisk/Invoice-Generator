@@ -145,6 +145,30 @@ describe("gap rows", () => {
     }
   });
 
+  it("grades the automated stamp duty as derived, and CUP/CIG as the real losses they are", () => {
+    // DatiBollo is fiskaly's own computation (VAT-exempt total >= EUR 77.47, DPR 642/1972);
+    // CUP and CIG are authored identifiers nothing supplies.
+    const extras = ROWS.filter(
+      (row) => row.reason.startsWith("The Italian document extras") && row.missingFrom === "json",
+    );
+    expect(extras.map((row) => row.field).sort()).toEqual([
+      "it.bollo.amount",
+      "it.bollo.virtuale",
+      "it.cig",
+      "it.cup",
+    ]);
+    for (const row of extras) {
+      if (row.field.startsWith("it.bollo")) {
+        expect(row.severity, row.id).toBe("note");
+        expect(row.source, row.id).toContain("R4");
+        expect(row.evidence, row.id).toMatch(/^Derived: fiskaly adds DatiBollo automatically/);
+        expect(row.evidence, row.id).toContain("77.47");
+      } else {
+        expect(row.severity, row.id).toBe("should-fix");
+      }
+    }
+  });
+
   it("only declares account sources for fields the seller loss-table actually lists", () => {
     const sellerReason = Object.keys(UAPI_LOSSY_FIELDS).find((reason) =>
       reason.startsWith("The seller (BG-4)"),

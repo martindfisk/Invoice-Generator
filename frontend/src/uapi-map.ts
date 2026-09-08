@@ -704,6 +704,11 @@ export const LOSS_KIND: Record<string, LossKind> = {
     "platform",
   "document.references carries neither BT-14 nor BT-18, and despatch_advice is a bare number without BT-16's date":
     "lost",
+  // Bundles fields with different fates: CUP and CIG really are lost (nothing supplies them),
+  // while DatiBollo is added by fiskaly once the VAT-exempt total reaches EUR 77.47 — see
+  // RULE_DERIVED_FIELDS, which regrades the bollo rows in the gap report. The kind stays "lost"
+  // so the predicted XML remains conservative: the predictor does not model the threshold, and
+  // CUP/CIG must not be rendered.
   "The Italian document extras (bollo virtuale, CUP, CIG) have no counterpart in the operation":
     "lost",
   "The seller (BG-4) comes from the taxpayer resource; the operation carries only the contact point (BG-6)":
@@ -761,6 +766,25 @@ export const ACCOUNT_SUPPLIED_FIELDS: Record<string, string> = {
   "seller.it.rea.capital": "Taxpayer /fiscalization/registration/capital (IT)",
   "seller.it.rea.soleShareholder": "Taxpayer /fiscalization/registration/shareholder_status (IT)",
   "seller.it.rea.liquidation": "Taxpayer /fiscalization/registration/liquidation_status (IT)",
+};
+
+/**
+ * Fields fiskaly computes per invoice from the document itself — no input carries them because
+ * the platform applies the rule. Keyed by model field; the value is the rule, cited, and becomes
+ * the row's evidence in the gap report.
+ *
+ * The Italian stamp duty is the one entry so far: DatiBollo (BolloVirtuale/ImportoBollo) is added
+ * automatically once the invoice's VAT-exempt amounts reach EUR 77.47 — imposta di bollo of
+ * EUR 2.00 per DPR 642/1972 (tariffa art. 13), assolvimento virtuale per DM 17 giugno 2014 —
+ * so an operation-level field would only invite values that contradict the computation.
+ */
+export const RULE_DERIVED_FIELDS: Record<string, string> = {
+  "it.bollo.virtuale":
+    "fiskaly adds DatiBollo automatically once the invoice's VAT-exempt amounts reach EUR 77.47 " +
+    "(imposta di bollo EUR 2.00, DPR 642/1972 tariffa art. 13; bollo virtuale per DM 17 giugno 2014)",
+  "it.bollo.amount":
+    "fiskaly adds DatiBollo automatically once the invoice's VAT-exempt amounts reach EUR 77.47 " +
+    "(imposta di bollo EUR 2.00, DPR 642/1972 tariffa art. 13; bollo virtuale per DM 17 giugno 2014)",
 };
 
 // Fields the operation carries for some shapes and drops for others. They survive the round trip

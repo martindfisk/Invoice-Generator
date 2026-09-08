@@ -1762,10 +1762,10 @@
     "belongsAt": "it.bollo.amount",
     "presentIn": "model Stamp duty amount; json —; xml mapped",
     "reason": "The Italian document extras (bollo virtuale, CUP, CIG) have no counterpart in the operation",
-    "evidence": null,
+    "evidence": "Derived: fiskaly adds DatiBollo automatically once the invoice's VAT-exempt amounts reach EUR 77.47 (imposta di bollo EUR 2.00, DPR 642/1972 tariffa art. 13; bollo virtuale per DM 17 giugno 2014).",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "fatturapa|it.bollo.virtuale|json",
@@ -1779,10 +1779,10 @@
     "belongsAt": "it.bollo.virtuale",
     "presentIn": "model Virtual stamp duty indicator; json —; xml mapped",
     "reason": "The Italian document extras (bollo virtuale, CUP, CIG) have no counterpart in the operation",
-    "evidence": null,
+    "evidence": "Derived: fiskaly adds DatiBollo automatically once the invoice's VAT-exempt amounts reach EUR 77.47 (imposta di bollo EUR 2.00, DPR 642/1972 tariffa art. 13; bollo virtuale per DM 17 giugno 2014).",
     "applicability": null,
-    "severity": "should-fix",
-    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R2"
+    "severity": "note",
+    "source": "structural · uapi-map.UAPI_LOSSY_FIELDS · R4"
   },
   {
     "id": "fatturapa|it.cig|json",
