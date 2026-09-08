@@ -726,6 +726,43 @@ export const LOSS_KIND: Record<string, LossKind> = {
 
 export const UAPI_LOSSY_FIELD_IDS: FieldId[] = Object.values(UAPI_LOSSY_FIELDS).flat();
 
+/**
+ * Where fiskaly actually takes each seller (BG-4) datum from: the account resources, per the
+ * spec's own schemas — `POST /taxpayers` masters the company identity (CompanyName, Address,
+ * CompanyFiscalization incl. the Italian REA registration), and the seller's Peppol endpoint
+ * (BT-34) comes from the commissioned System's registration. These fields are provided, just
+ * not per invoice — so their absence from the operation is by design, not data loss.
+ *
+ * Deliberately absent: `seller.legalRegId` / `seller.legalRegScheme` (BT-30) — only the Italian
+ * fiscalization carries a registry identifier (`registration/company_id`); the German and
+ * Belgian taxpayer schemas have no slot for it, so for those paths the datum really has no home.
+ */
+export const ACCOUNT_SUPPLIED_FIELDS: Record<string, string> = {
+  "seller.name": "Taxpayer /name/legal",
+  "seller.tradeName": "Taxpayer /name/trade",
+  "seller.person.forename": "Taxpayer::INDIVIDUAL /name/person/forename",
+  "seller.person.surname": "Taxpayer::INDIVIDUAL /name/person/surname",
+  "seller.person.gender": "Taxpayer::INDIVIDUAL /name/person/gender",
+  "seller.vatId": "Taxpayer /fiscalization/vat_id_number",
+  "seller.taxId": "Taxpayer /fiscalization/tax_id_number",
+  "seller.address.street": "Taxpayer /address/line",
+  "seller.address.number": "Taxpayer /address/line",
+  "seller.address.city": "Taxpayer /address/city",
+  "seller.address.postCode": "Taxpayer /address/code",
+  "seller.address.region": "Taxpayer /address/region",
+  "seller.address.country": "Taxpayer /address/country",
+  "seller.electronicAddress.id":
+    "System::E_INVOICE_SERVICE annotations.peppol_id (Peppol registration)",
+  "seller.electronicAddress.scheme":
+    "System::E_INVOICE_SERVICE annotations.peppol_id (Peppol registration)",
+  "seller.it.regimeFiscale": "Taxpayer /fiscalization/registration/tax_regime (IT)",
+  "seller.it.rea.office": "Taxpayer /fiscalization/registration/office (IT)",
+  "seller.it.rea.number": "Taxpayer /fiscalization/registration/entry (IT)",
+  "seller.it.rea.capital": "Taxpayer /fiscalization/registration/capital (IT)",
+  "seller.it.rea.soleShareholder": "Taxpayer /fiscalization/registration/shareholder_status (IT)",
+  "seller.it.rea.liquidation": "Taxpayer /fiscalization/registration/liquidation_status (IT)",
+};
+
 // Fields the operation carries for some shapes and drops for others. They survive the round trip
 // because the base supplies them, but an edit only reaches the model in the shape named here.
 export const UAPI_PARTIAL_FIELDS: Record<string, FieldId[]> = {

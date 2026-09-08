@@ -32,14 +32,14 @@ field list as its body — filing one ticket per row would be 321 tickets nobody
 
 | severity | rows |
 |---|---|
-| note | 164 |
-| should-fix | 157 |
+| note | 215 |
+| should-fix | 106 |
 
 | evidence | rows |
 |---|---|
-| unobserved | 207 |
-| none | 78 |
-| captured | 36 |
+| unobserved | 173 |
+| captured | 87 |
+| none | 61 |
 
 ## How severity is derived
 

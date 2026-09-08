@@ -15,7 +15,7 @@ import {
   type GapRow,
 } from "../src/gap-report";
 import { pointerForField } from "../src/uapi-json";
-import { UAPI_LOSSY_FIELDS, UAPI_PARTIAL_FIELDS } from "../src/uapi-map";
+import { ACCOUNT_SUPPLIED_FIELDS, UAPI_LOSSY_FIELDS, UAPI_PARTIAL_FIELDS } from "../src/uapi-map";
 
 const ROWS = gapRows();
 const REGISTRY = new Set(allFields().map((spec) => spec.field));
@@ -115,11 +115,43 @@ describe("gap rows", () => {
 
   it("says a syntax is unobserved rather than leaving the evidence blank", () => {
     for (const row of ROWS) {
+      if (row.evidence?.startsWith("Derived:")) continue;
       if (row.format === "fatturapa") {
         expect(row.evidence === null || !row.evidence.startsWith("Unobserved")).toBe(true);
       } else {
         expect(row.evidence, row.id).toMatch(/^Unobserved: no transmission capture exists/);
       }
+    }
+  });
+
+  it("grades account-supplied seller fields as derived, not as lost data", () => {
+    // The spec's own Taxpayer/System schemas prove the seller (BG-4) is mastered on the account
+    // and derived per invoice — every such field is a note naming its source, never should-fix.
+    const seller = ROWS.filter((row) => row.reason.startsWith("The seller (BG-4)"));
+    expect(seller.length).toBeGreaterThan(0);
+    for (const row of seller) {
+      const supplied = ACCOUNT_SUPPLIED_FIELDS[row.field] !== undefined;
+      if (supplied) {
+        expect(row.severity, row.id).toBe("note");
+        expect(row.source, row.id).toContain("R4");
+        expect(row.evidence, row.id).toMatch(/^Derived: fiskaly fills this from/);
+        expect(row.evidence, row.id).toContain(ACCOUNT_SUPPLIED_FIELDS[row.field]);
+      } else {
+        // BT-30: only the Italian fiscalization has a registry-identifier slot, so the datum
+        // genuinely has no home for the German and Belgian paths.
+        expect(["seller.legalRegId", "seller.legalRegScheme"], row.id).toContain(row.field);
+        expect(row.severity, row.id).toBe("should-fix");
+      }
+    }
+  });
+
+  it("only declares account sources for fields the seller loss-table actually lists", () => {
+    const sellerReason = Object.keys(UAPI_LOSSY_FIELDS).find((reason) =>
+      reason.startsWith("The seller (BG-4)"),
+    )!;
+    const declared = new Set<string>(UAPI_LOSSY_FIELDS[sellerReason]);
+    for (const field of Object.keys(ACCOUNT_SUPPLIED_FIELDS)) {
+      expect(declared.has(field), field).toBe(true);
     }
   });
 

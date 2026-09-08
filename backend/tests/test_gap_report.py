@@ -148,8 +148,11 @@ def test_a_field_fiskaly_supplies_itself_is_never_blocking():
 
 
 def test_evidence_says_unobserved_rather_than_leaving_a_syntax_blank():
-    # Absence of a capture is not evidence that a field is dropped; the two must read differently.
+    # Absence of a capture is not evidence that a field is dropped; the two must read
+    # differently. "Derived:" is the third shape: the spec's own account schemas (Taxpayer,
+    # System) are the evidence that fiskaly supplies the datum, no capture needed.
     for row in ROWS:
         if row["format"] == "fatturapa" or row["missingFrom"] == "model":
             continue
-        assert (row["evidence"] or "").startswith("Unobserved:"), row["id"]
+        evidence = row["evidence"] or ""
+        assert evidence.startswith(("Unobserved:", "Derived:")), row["id"]
