@@ -79,6 +79,16 @@ than the spec. Nothing is deleted except files the previous manifest listed.
 If you drop nothing, `make spec` fetches the per-country specs from `workspace.fiskaly.com` exactly
 as before, so a fresh clone and the offline path are unchanged.
 
+## Upstream watch
+
+`make check-updates` reports newer upstream versions without applying anything: UAPI spec CalVers
+vs `spec/spec.json`, GitHub releases vs the `tools/rulesets.json` pins (cen, peppol, xrechnung),
+and FatturaPA XSD sha drift. The `upstream-watch` GitHub Actions workflow runs the same check
+monthly (and on dispatch) and opens **one PR per changed source** with a diff report — version and
+sha transitions, added/removed rule ids, the `schematron:expected` finding diff, and in-job
+verification results. Nothing lands until the PR is merged; see
+[ADR-0008](docs/adr/0008-upstream-watch.md).
+
 ## `.env` setup
 
 1. Copy `.env.example` to `.env`.
