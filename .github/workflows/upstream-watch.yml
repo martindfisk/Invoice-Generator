@@ -1,0 +1,198 @@
+# Monthly upstream watch: detects new UAPI spec CalVers and rule-source releases,
+# applies each on its own branch and opens one review PR per source with a diff
+# report. Nothing merges automatically. FatturaPA sha drift files an issue instead
+# (a real FatturaPA bump changes URL paths and needs fatturapa-rules.ts review).
+# Trade-off (no PAT): ci.yml does not auto-trigger on these bot PRs — the report's
+# next-steps section tells the reviewer to push or close/reopen to run it.
+name: upstream-watch
+
+on:
+  schedule:
+    - cron: "17 6 3 * *" # 3rd of the month, 06:17 UTC (off cron congestion peaks)
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "check a single source id (spec, cen, peppol, xrechnung, fatturapa)"
+        required: false
+
+concurrency:
+  group: upstream-watch
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      prs: ${{ steps.plan.outputs.prs }}
+      has_prs: ${{ steps.plan.outputs.has_prs }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Check upstreams
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ONLY: ${{ inputs.only }}
+        run: |
+          python3 tools/check_updates.py --output "$RUNNER_TEMP/updates.json" ${ONLY:+--only "$ONLY"}
+          jq . "$RUNNER_TEMP/updates.json"
+
+      - name: File FatturaPA drift issue (unless one is open)
+        run: |
+          jq -c '.updates[] | select(.action=="issue")' "$RUNNER_TEMP/updates.json" | while read -r u; do
+            title=$(jq -r .title <<<"$u")
+            open=$(gh issue list --state open --search "\"$title\" in:title" --json number --jq length)
+            if [ "$open" != "0" ]; then
+              echo "issue already open: $title"
+              continue
+            fi
+            jq -r '"The pinned FatturaPA XSD no longer matches upstream:\n\n"
+              + (.details | map("- `" + . + "`") | join("\n"))
+              + "\n\nNo release feed exists for FatturaPA; a new version usually changes the URL path and needs `frontend/src/fatturapa-rules.ts` review, which is why the watch files an issue instead of a PR. After review, bump with `python3 tools/fetch_assets.py --update fatturapa=<version>`."' <<<"$u" > "$RUNNER_TEMP/issue-body.md"
+            gh issue create --title "$title" --body-file "$RUNNER_TEMP/issue-body.md"
+          done
+
+      - name: Plan PR matrix (skip branches that already exist)
+        id: plan
+        run: |
+          prs="[]"
+          while read -r u; do
+            branch=$(jq -r .branch <<<"$u")
+            if [ -n "$(git ls-remote --heads origin "$branch")" ]; then
+              echo "skip: branch $branch already exists (open PR, or a rejected update whose branch was kept)"
+              continue
+            fi
+            prs=$(jq -c --argjson u "$u" '. + [$u]' <<<"$prs")
+          done < <(jq -c '.updates[] | select(.action=="pr")' "$RUNNER_TEMP/updates.json")
+          echo "planned: $prs"
+          echo "prs=$prs" >> "$GITHUB_OUTPUT"
+          if [ "$prs" != "[]" ]; then echo "has_prs=true" >> "$GITHUB_OUTPUT"; else echo "has_prs=false" >> "$GITHUB_OUTPUT"; fi
+
+  apply:
+    needs: detect
+    if: needs.detect.outputs.has_prs == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.detect.outputs.prs) }}
+    env:
+      UAPI_MODE: mock
+      BRANCH: ${{ matrix.branch }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Backend deps
+        run: python3 -m venv backend/.venv && backend/.venv/bin/pip install -q -e 'backend[dev]'
+      - name: Frontend deps
+        run: npm ci --prefix frontend
+
+      - name: Create update branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          mkdir -p "$RUNNER_TEMP/report"
+
+      - name: Apply ruleset update
+        if: matrix.kind == 'ruleset'
+        run: |
+          python3 tools/fetch_spec.py --frozen
+          python3 tools/fetch_assets.py
+          mkdir -p "$RUNNER_TEMP/report/vendor-before" "$RUNNER_TEMP/report/vendor-after"
+          cp -R vendor/schematron/. "$RUNNER_TEMP/report/vendor-before/"
+          python3 tools/fetch_assets.py --update "${{ matrix.source }}=${{ matrix.latest }}" | tee "$RUNNER_TEMP/report/update.txt"
+          cp -R vendor/schematron/. "$RUNNER_TEMP/report/vendor-after/"
+          diff -ru "$RUNNER_TEMP/report/vendor-before" "$RUNNER_TEMP/report/vendor-after" > "$RUNNER_TEMP/report/vendor-changes.diff" || true
+          make sef
+          make gen-types
+
+      - name: Apply spec update
+        if: matrix.kind == 'spec'
+        run: |
+          python3 tools/fetch_spec.py --strict 2>&1 | tee "$RUNNER_TEMP/report/update.txt"
+          make schemas
+          make sef
+          make gen-types
+
+      - name: Verify (results go into the PR report)
+        id: verify
+        run: |
+          v="$RUNNER_TEMP/report/verify.md"
+          log="$RUNNER_TEMP/report/verify.log"
+          printf '| check | result |\n|---|---|\n' > "$v"
+          fail=0
+          check() {
+            name="$1"; shift
+            echo "=== $name ===" >> "$log"
+            if "$@" >> "$log" 2>&1; then echo "| $name | pass |" >> "$v"
+            else echo "| $name | **FAIL** (see verify.log in the run artifact) |" >> "$v"; fail=1; fi
+          }
+          check "make lint" make lint
+          check "make spec-check" make spec-check
+          check "make sef-check" make sef-check
+          check "backend pytest" bash -c 'cd backend && .venv/bin/pytest -q'
+          echo "=== frontend vitest (non-gating) ===" >> "$log"
+          if npm test --prefix frontend >> "$log" 2>&1; then
+            echo "| frontend vitest | pass |" >> "$v"
+          else
+            echo "| frontend vitest | fail — expected on a rule bump until EXPECTED is updated |" >> "$v"
+          fi
+          npm run schematron:expected --prefix frontend > "$RUNNER_TEMP/report/schematron-expected.diff" 2>&1 || true
+          echo "gates_failed=$fail" >> "$GITHUB_OUTPUT"
+
+      - name: Commit, push, open PR
+        run: |
+          if [ "${{ matrix.kind }}" = "ruleset" ]; then
+            git add tools/rulesets.json frontend/public/sef/manifest.json frontend/public/sef/SOURCES.md
+          else
+            # never the sef manifest: its timestamps churn on every make sef with unchanged inputs
+            git add spec/
+          fi
+          git diff --cached --stat > "$RUNNER_TEMP/report/diffstat.txt"
+          git commit -m "chore(upstream): ${{ matrix.source }} ${{ matrix.current }} -> ${{ matrix.latest }}"
+          git push origin "$BRANCH"
+          python3 tools/update_report.py \
+            --source "${{ matrix.source }}" \
+            --kind "${{ matrix.kind }}" \
+            --old "${{ matrix.current }}" \
+            --new "${{ matrix.latest }}" \
+            --dir "$RUNNER_TEMP/report" \
+            --release-url "${{ matrix.releaseUrl }}" \
+            --rule-sets "${{ join(matrix.ruleSets, ',') }}" \
+            ${{ matrix.dropBehind && '--drop-behind' || '' }} \
+            > "$RUNNER_TEMP/pr-body.md"
+          gh pr create --base main --head "$BRANCH" \
+            --title "${{ matrix.title }}" \
+            --body-file "$RUNNER_TEMP/pr-body.md"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: upstream-watch-${{ matrix.source }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/report
+          if-no-files-found: ignore
+
+      - name: Fail the run if a hard gate failed (PR stays open with the report)
+        if: steps.verify.outputs.gates_failed == '1'
+        run: |
+          echo "verification gates failed — review verify.md in the PR report" >&2
+          exit 1

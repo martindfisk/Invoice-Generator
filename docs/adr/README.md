@@ -24,3 +24,4 @@ Each ADR has four sections:
 | [0005](0005-session-credentials-from-the-ui.md)       | API credentials configurable from the UI, held in backend memory (supersedes the plan's `.env`-only rule) |
 | [0006](0006-drop-in-spec-and-field-metadata.md)       | Drop-in OpenAPI spec in `spec/drop/`, and field metadata served from it                                   |
 | [0007](0007-schematron-on-the-main-thread.md)         | Schematron runs on the main thread; four SEFs ship (amends 0004)                                          |
+| [0008](0008-upstream-watch.md)                        | Monthly upstream watch: detection PRs with diff reports, manual merge                                     |

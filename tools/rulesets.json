@@ -71,6 +71,7 @@
     {
       "id": "cen",
       "version": "1.3.15",
+      "repo": "ConnectingEurope/eInvoicing-EN16931",
       "tag": "validation-{version}",
       "licence": "EUPL-1.2 (CEN/TC 434 validation artefacts {version})",
       "distribution": "zip",
@@ -100,6 +101,7 @@
       "vars": {
         "cius": "3.0.2"
       },
+      "repo": "itplr-kosit/xrechnung-schematron",
       "tag": "v{version}",
       "licence": "Apache-2.0 (KoSIT / Koordinierungsstelle fuer IT-Standards, xrechnung-schematron {version})",
       "distribution": "zip",
@@ -131,6 +133,7 @@
       "id": "peppol",
       "version": "3.0.20",
       "title": "Peppol BIS Billing {version} (2025 November release)",
+      "repo": "OpenPEPPOL/peppol-bis-invoice-3",
       "tag": "v{version}",
       "licence": "OpenPeppol AISBL, attribution required (v{version})",
       "distribution": "raw",
@@ -185,9 +188,7 @@
       "source": "cen",
       "file": "EN16931-CII-validation.xslt",
       "compile": "none",
-      "formats": [
-        "cii"
-      ],
+      "formats": ["cii"],
       "order": 0,
       "title": "CEN/TC 434 EN 16931 CII",
       "licence": "EUPL-1.2 (CEN/TC 434 validation artefacts)"
@@ -197,9 +198,7 @@
       "source": "peppol",
       "file": "PEPPOL-EN16931-UBL.sch",
       "compile": "sch",
-      "formats": [
-        "ubl"
-      ],
+      "formats": ["ubl"],
       "order": 1,
       "title": "Peppol BIS Billing",
       "licence": "OpenPeppol AISBL (redistribution with attribution)"
@@ -209,10 +208,7 @@
       "source": "peppol",
       "file": "CEN-EN16931-UBL.sch",
       "compile": "sch",
-      "formats": [
-        "ubl",
-        "xrechnung"
-      ],
+      "formats": ["ubl", "xrechnung"],
       "order": 0,
       "title": "CEN/TC 434 EN 16931 UBL",
       "licence": "EUPL-1.2 (CEN/TC 434), redistributed by OpenPeppol"
@@ -222,9 +218,7 @@
       "source": "xrechnung",
       "file": "XRechnung-UBL-validation.xsl",
       "compile": "none",
-      "formats": [
-        "xrechnung"
-      ],
+      "formats": ["xrechnung"],
       "order": 1,
       "title": "KoSIT XRechnung {cius} UBL Schematron",
       "licence": "Apache-2.0 (KoSIT xrechnung-schematron)"
