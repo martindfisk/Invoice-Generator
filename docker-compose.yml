@@ -10,6 +10,11 @@ services:
         required: false
     environment:
       CORS_ORIGINS: http://localhost:8080
+      UAPI_SETTINGS_FILE: /data/uapi-settings.json
+    # Settings saved in the UI (credentials, environment, ids, mode) persist here so they
+    # survive container restarts and rebuilds, same as a native run.
+    volumes:
+      - uapi-settings:/data
     ports:
       - "8000:8000"
     healthcheck:
@@ -32,3 +37,6 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+
+volumes:
+  uapi-settings:

@@ -52,24 +52,10 @@ test.describe("shell", () => {
     await expect(page.getByRole("region", { name: "API log" })).toHaveCount(0);
   });
 
-  test("reaches the backend and reports MOCK mode", async ({ page }) => {
-    await expect(page.getByTitle("Backend mode from GET /api/config")).toHaveText("MOCK");
+  test("reaches the backend and reports MOCK mode in the status badge", async ({ page }) => {
+    await expect(page.getByTitle(/On-device mocked run/)).toHaveText("MOCK");
+    // Neither the offline chip nor the production banner has anything to report.
     await expect(page.getByRole("status")).toHaveCount(0);
-  });
-
-  test("offers the persona switch only in the runner — the flow always sends as the seller", async ({
-    page,
-  }) => {
-    await expect(page.getByRole("group", { name: "Persona" })).toHaveCount(0);
-    await page.getByRole("button", { name: "Test runner" }).click();
-    const group = page.getByRole("group", { name: "Persona" });
-    const buyer = group.getByRole("button", { name: "Buyer" });
-    await expect(group.getByRole("button", { name: "Seller" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    await buyer.click();
-    await expect(buyer).toHaveAttribute("aria-pressed", "true");
   });
 
   test("toggles the theme", async ({ page }) => {
@@ -870,7 +856,13 @@ test.describe("settings", () => {
     await expect(dialog).toHaveAttribute("aria-modal", "true");
     await expect(trigger).toHaveAttribute("aria-expanded", "true");
 
-    for (const name of ["Environment", "Mode", "Credentials", "Identifiers", "Local preferences"]) {
+    for (const name of [
+      "Mode",
+      "Environment credentials",
+      "Identifiers",
+      "Validation rules",
+      "Local preferences",
+    ]) {
       await expect(dialog.getByRole("region", { name })).toBeVisible();
     }
     await expect(dialog.getByRole("region", { name: "Mode" }).getByRole("radio")).toHaveCount(2);
@@ -879,18 +871,17 @@ test.describe("settings", () => {
     ).toBeChecked();
 
     // Secrets are write-only: the fields start empty and only a fingerprint is ever shown back.
-    const seller = dialog.getByRole("group", { name: "Seller credentials" });
-    await expect(seller.getByLabel("API key")).toHaveValue("");
-    await expect(seller.getByLabel("API secret")).toHaveAttribute("type", "password");
+    const credentials = dialog.getByRole("region", { name: "Environment credentials" });
+    await expect(credentials.getByLabel("API key")).toHaveValue("");
+    await expect(credentials.getByLabel("API secret")).toHaveAttribute("type", "password");
     await expect(
-      dialog.getByRole("group", { name: "Buyer identifiers" }).getByLabel("SDI destination code"),
+      dialog.getByRole("region", { name: "Identifiers" }).getByLabel("DE system id"),
     ).toBeVisible();
 
-    // LIVE is guarded: picking it is not applying it.
-    const environment = dialog.getByRole("region", { name: "Environment" });
-    await environment.getByRole("radio", { name: /^LIVE/ }).check();
-    await expect(environment.getByRole("button", { name: "Apply environment" })).toBeDisabled();
-    await expect(environment.getByRole("checkbox")).not.toBeChecked();
+    // The production host is guarded: picking LIVE api is not applying it.
+    await credentials.getByRole("radio", { name: /^LIVE api/ }).check();
+    await expect(credentials.getByRole("button", { name: "Save environment" })).toBeDisabled();
+    await expect(credentials.getByRole("checkbox")).not.toBeChecked();
 
     // Nothing behind the dialog is reachable by Tab: focus never leaves the panel.
     for (let press = 0; press < 30; press += 1) {
@@ -1021,24 +1012,22 @@ test.describe("entity tree", () => {
 
     const tree = page.getByRole("region", { name: "Entity tree" });
     await expect(tree).toBeVisible();
-    const seller = tree.locator("[data-persona-tree='seller']");
-    await expect(seller).toBeVisible();
-    // Both personas are in view — the round trip needs the buyer's account too.
-    await expect(tree.locator("[data-persona-tree='buyer']")).toBeVisible();
+    const account = tree.locator("[data-account-tree]");
+    await expect(account).toBeVisible();
 
-    // One country at a time: picking Germany renders only Germany, per persona…
+    // One country at a time: picking Germany renders only Germany…
     await tree
       .getByRole("group", { name: "Country" })
       .getByRole("button", { name: "Germany" })
       .click();
-    await expect(seller.locator("[data-country]")).toHaveCount(1);
-    await expect(seller.locator("[data-country='DE']")).toBeVisible();
+    await expect(account.locator("[data-country]")).toHaveCount(1);
+    await expect(account.locator("[data-country='DE']")).toBeVisible();
 
     // …and the same choice selects the German collection in the runner.
     const runner = page.getByRole("region", { name: "Test runner" });
     await expect(runner.locator("[data-collection='de']")).toHaveAttribute("aria-pressed", "true");
 
-    await seller.getByRole("button", { name: "Provision Germany for seller" }).click();
+    await account.getByRole("button", { name: "Provision Germany" }).click();
     const dialog = page.getByRole("dialog", { name: /Provision Germany/ });
     await expect(dialog).toContainText("one-way state transition");
     await expect(dialog).toContainText("TEST resources are not billed");
@@ -1050,7 +1039,7 @@ test.describe("entity tree", () => {
     await expect(dialog.locator("[data-provision-ready='true']")).toBeVisible();
     await dialog.getByRole("button", { name: "Close" }).click();
 
-    const germany = seller.locator("[data-country='DE']");
+    const germany = tree.locator("[data-country='DE']");
     await expect(germany).toHaveAttribute("data-ready", "true", { timeout: 20_000 });
     await expect(germany.locator("[data-entity='taxpayer-DE']").first()).toHaveAttribute(
       "data-entity-state",
@@ -1065,12 +1054,12 @@ test.describe("entity tree", () => {
     await tree.getByRole("button", { name: "fiskaly entities" }).click();
     const summary = tree.locator("[data-tree-summary]");
     await expect(summary).toContainText("Germany");
-    await expect(summary.locator("[data-summary-persona='seller']")).toHaveAttribute(
+    await expect(summary.locator("[data-summary-ready]")).toHaveAttribute(
       "data-summary-ready",
       "true",
     );
-    await expect(tree.locator("[data-persona-tree='seller']")).toHaveCount(0);
+    await expect(tree.locator("[data-account-tree]")).toHaveCount(0);
     await tree.getByRole("button", { name: "fiskaly entities" }).click();
-    await expect(tree.locator("[data-persona-tree='seller']")).toBeVisible();
+    await expect(tree.locator("[data-account-tree]")).toBeVisible();
   });
 });

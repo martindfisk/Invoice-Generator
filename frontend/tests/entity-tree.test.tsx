@@ -1,11 +1,11 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { EntityTree, PersonaTree, ProvisionDialog } from "../src/EntityTree";
+import { AccountTree, EntityTree, ProvisionDialog } from "../src/EntityTree";
 import {
   DEGRADED_NO_CAUSE,
+  NO_CREDENTIALS_HINT,
   availableCountries,
   countryRow,
-  noCredentialsHint,
 } from "../src/onboarding";
 import { COUNTRY_LOCKED_WHILE_RUNNING, selectCollection } from "../src/runner-actions";
 import { initialRunnerUi } from "../src/runner";
@@ -63,7 +63,6 @@ function system(overrides: Partial<OnboardingSystem> = {}): OnboardingSystem {
 
 function status(overrides: Partial<OnboardingStatus> = {}): OnboardingStatus {
   return {
-    persona: "seller",
     environment: "test",
     credentials: { configured: true, source: "env", fingerprint: "test***" },
     counts: { organizations: 1, subjects: 1, taxpayers: 1, systems: 1 },
@@ -99,10 +98,7 @@ function collection(id: string): Collection {
 
 function renderTree(state: OnboardingStatus, mode: "MOCK" | "LIVE" = "MOCK") {
   return render(
-    <PersonaTree
-      persona="seller"
-      label="Seller"
-      active
+    <AccountTree
       mode={mode}
       country={germany}
       fetch={{ status: state, error: null, loading: false }}
@@ -125,7 +121,7 @@ describe("availableCountries", () => {
   });
 });
 
-describe("PersonaTree", () => {
+describe("AccountTree", () => {
   it("renders only the selected country, one line per entity", () => {
     renderTree(status());
 
@@ -140,9 +136,7 @@ describe("PersonaTree", () => {
     expect(within(deTaxpayer).getByText("DE123456789")).toBeInTheDocument();
     const deSystem = de.querySelector("[data-entity='system-DE']") as HTMLElement;
     expect(deSystem).toHaveAttribute("data-entity-state", "COMMISSIONED / OPERATIVE");
-    expect(
-      screen.getByRole("button", { name: "Provision Germany for seller" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Provision Germany" })).toBeInTheDocument();
   });
 
   it("keeps a healthy country quiet: facts move to the tooltip, no extra lines", () => {
@@ -167,7 +161,7 @@ describe("PersonaTree", () => {
         errors: { organizations: "403 E_FORBIDDEN: no access" },
       }),
     );
-    const block = document.querySelector("[data-listing-errors='seller']") as HTMLElement;
+    const block = document.querySelector("[data-listing-errors]") as HTMLElement;
     expect(block).not.toBeNull();
     expect(within(block).getByText(/organizations could not be listed/)).toBeInTheDocument();
     expect(within(block).getByText(/403 E_FORBIDDEN: no access/)).toBeInTheDocument();
@@ -267,7 +261,7 @@ describe("PersonaTree", () => {
       }),
       "LIVE",
     );
-    expect(screen.getByText(noCredentialsHint("seller"))).toBeInTheDocument();
+    expect(screen.getByText(NO_CREDENTIALS_HINT)).toBeInTheDocument();
     expect(document.querySelectorAll("[data-entity]")).toHaveLength(0);
   });
 
@@ -284,7 +278,7 @@ describe("PersonaTree", () => {
       }),
       "MOCK",
     );
-    expect(screen.queryByText(noCredentialsHint("seller"))).not.toBeInTheDocument();
+    expect(screen.queryByText(NO_CREDENTIALS_HINT)).not.toBeInTheDocument();
     expect(document.querySelector("[data-entity='taxpayer-DE']")).toHaveAttribute(
       "data-entity-state",
       "not created",
@@ -307,19 +301,19 @@ describe("EntityTree", () => {
     seed("de");
     render(<EntityTree />);
     await screen.findByRole("group", { name: "Country" });
-    await waitFor(() => expect(document.querySelectorAll("[data-persona-tree]")).toHaveLength(2));
+    await waitFor(() => expect(document.querySelectorAll("[data-account-tree]")).toHaveLength(1));
 
     const groups = document.querySelectorAll("[data-country]");
-    expect(groups).toHaveLength(2);
-    for (const group of groups) expect(group).toHaveAttribute("data-country", "DE");
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toHaveAttribute("data-country", "DE");
 
     fireEvent.click(screen.getByRole("button", { name: "Italy" }));
     await waitFor(() => expect(store.getState().runner.collectionId).toBe("it"));
     await waitFor(() => expect(store.getState().runner.collection?.id).toBe("it"));
     await waitFor(() => {
       const after = document.querySelectorAll("[data-country]");
-      expect(after).toHaveLength(2);
-      for (const group of after) expect(group).toHaveAttribute("data-country", "IT");
+      expect(after).toHaveLength(1);
+      expect(after[0]).toHaveAttribute("data-country", "IT");
     });
   });
 
@@ -358,14 +352,14 @@ describe("EntityTree", () => {
     seed("de");
     const first = render(<EntityTree />);
     await screen.findByRole("group", { name: "Country" });
-    await waitFor(() => expect(document.querySelectorAll("[data-persona-tree]")).toHaveLength(2));
+    await waitFor(() => expect(document.querySelectorAll("[data-account-tree]")).toHaveLength(1));
 
     fireEvent.click(screen.getByRole("button", { name: "fiskaly entities" }));
-    expect(document.querySelectorAll("[data-persona-tree]")).toHaveLength(0);
+    expect(document.querySelectorAll("[data-account-tree]")).toHaveLength(0);
     const summary = document.querySelector("[data-tree-summary]") as HTMLElement;
     expect(summary).toHaveTextContent("Germany");
     await waitFor(() =>
-      expect(summary.querySelector("[data-summary-persona='seller']")).toHaveAttribute(
+      expect(summary.querySelector("[data-summary-ready]")).toHaveAttribute(
         "data-summary-ready",
         "true",
       ),
@@ -379,20 +373,14 @@ describe("EntityTree", () => {
       "false",
     );
     expect(document.querySelector("[data-tree-summary]")).not.toBeNull();
-    expect(document.querySelectorAll("[data-persona-tree]")).toHaveLength(0);
+    expect(document.querySelectorAll("[data-account-tree]")).toHaveLength(0);
   });
 });
 
 describe("ProvisionDialog", () => {
   it("requires the FISCONLINE secrets for Italy", () => {
     render(
-      <ProvisionDialog
-        persona="seller"
-        country={italy}
-        environment="test"
-        onClose={() => {}}
-        onDone={() => {}}
-      />,
+      <ProvisionDialog country={italy} environment="test" onClose={() => {}} onDone={() => {}} />,
     );
     const confirm = screen.getByRole("button", { name: "Provision Italy" });
     expect(confirm).toBeDisabled();
@@ -411,13 +399,7 @@ describe("ProvisionDialog", () => {
 
   it("asks for no secrets outside Italy and states the one-way transition and TEST billing", () => {
     render(
-      <ProvisionDialog
-        persona="seller"
-        country={germany}
-        environment="test"
-        onClose={() => {}}
-        onDone={() => {}}
-      />,
+      <ProvisionDialog country={germany} environment="test" onClose={() => {}} onDone={() => {}} />,
     );
     expect(screen.queryByLabelText("FISCONLINE PIN")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Provision Germany" })).toBeEnabled();
@@ -447,13 +429,7 @@ describe("ProvisionDialog", () => {
     mocks.provisionCountry.mockResolvedValue(outcome);
     const onDone = vi.fn();
     render(
-      <ProvisionDialog
-        persona="seller"
-        country={germany}
-        environment="test"
-        onClose={() => {}}
-        onDone={onDone}
-      />,
+      <ProvisionDialog country={germany} environment="test" onClose={() => {}} onDone={onDone} />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Provision Germany" }));
     await waitFor(() => expect(onDone).toHaveBeenCalled());
@@ -474,13 +450,7 @@ describe("ProvisionDialog", () => {
       new Error("refusing to provision in the test environment without confirm=true"),
     );
     render(
-      <ProvisionDialog
-        persona="seller"
-        country={germany}
-        environment="test"
-        onClose={() => {}}
-        onDone={() => {}}
-      />,
+      <ProvisionDialog country={germany} environment="test" onClose={() => {}} onDone={() => {}} />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Provision Germany" }));
     expect(
@@ -496,13 +466,7 @@ describe("ProvisionDialog", () => {
       ready: true,
     });
     render(
-      <ProvisionDialog
-        persona="seller"
-        country={italy}
-        environment="test"
-        onClose={() => {}}
-        onDone={() => {}}
-      />,
+      <ProvisionDialog country={italy} environment="test" onClose={() => {}} onDone={() => {}} />,
     );
     fireEvent.change(screen.getByLabelText("FISCONLINE PIN"), { target: { value: "1234" } });
     fireEvent.change(screen.getByLabelText("FISCONLINE password"), {
@@ -514,7 +478,6 @@ describe("ProvisionDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Provision Italy" }));
     await screen.findByText(/Italy is ready/);
     expect(mocks.provisionCountry).toHaveBeenCalledWith({
-      persona: "seller",
       country: "IT",
       confirm: true,
       reuse: true,
@@ -534,13 +497,7 @@ describe("ProvisionDialog", () => {
       ready: false,
     });
     render(
-      <ProvisionDialog
-        persona="seller"
-        country={italy}
-        environment="test"
-        onClose={() => {}}
-        onDone={() => {}}
-      />,
+      <ProvisionDialog country={italy} environment="test" onClose={() => {}} onDone={() => {}} />,
     );
     fireEvent.change(screen.getByLabelText("FISCONLINE PIN"), { target: { value: "1234" } });
     fireEvent.change(screen.getByLabelText("FISCONLINE password"), {
@@ -576,13 +533,7 @@ describe("ProvisionDialog", () => {
     );
     const onClose = vi.fn();
     render(
-      <ProvisionDialog
-        persona="seller"
-        country={germany}
-        environment="test"
-        onClose={onClose}
-        onDone={() => {}}
-      />,
+      <ProvisionDialog country={germany} environment="test" onClose={onClose} onDone={() => {}} />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Provision Germany" }));
     await screen.findByText("Provisioning…");

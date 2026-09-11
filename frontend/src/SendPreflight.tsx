@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { JsonView } from "./JsonView";
 import type { Channel } from "./model";
-import type { Persona } from "./api-log";
 import { IDENTIFIERS_SECTION_ID } from "./runner";
 import { CREDENTIALS_SECTION_ID } from "./SettingsDialog";
 import { CORRECTION_PENDING_NOTE } from "./uapi-json";
@@ -60,7 +59,6 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 export type SendPreflightProps = {
   open: boolean;
-  persona: Persona;
   country: string;
   channel: Channel;
   channelLabel?: string;
@@ -75,7 +73,6 @@ export type SendPreflightProps = {
 
 export function SendPreflight({
   open,
-  persona,
   country,
   channel,
   channelLabel,
@@ -94,9 +91,6 @@ export function SendPreflight({
         Preflight — the JSON this Send posts
       </summary>
       <div className="border-t border-line px-3 py-2">
-        <Row label="Persona">
-          <span className="font-mono">{persona}</span>
-        </Row>
         <Row label="Target system">
           {systemId ? (
             <span className="font-mono">{systemId}</span>
@@ -110,9 +104,8 @@ export function SendPreflight({
               >
                 Settings → Identifiers
               </button>
-              , or as{" "}
-              <span className="font-mono">{`${persona.toUpperCase()}_SYSTEM_ID_${country || "?"}`}</span>{" "}
-              in .env
+              , as <span className="font-mono">{`UAPI_SYSTEM_ID_${country || "?"}`}</span> in .env,
+              or provision the account from the Test runner
             </span>
           )}
         </Row>
@@ -133,7 +126,7 @@ export function SendPreflight({
             </span>
           ) : credentials ? (
             <span className="text-warning-ink">
-              No API key for the {persona} — set one under{" "}
+              No API key configured — set one under{" "}
               <button
                 type="button"
                 className="underline decoration-dotted underline-offset-2 hover:text-ink"
@@ -141,7 +134,7 @@ export function SendPreflight({
               >
                 Settings → Credentials
               </button>
-              , or as <span className="font-mono">{persona.toUpperCase()}_API_KEY</span> in .env
+              , or as <span className="font-mono">UAPI_API_KEY</span> in .env
               {mode === "LIVE" ? ". LIVE mode cannot call fiskaly without it." : ""}
             </span>
           ) : (

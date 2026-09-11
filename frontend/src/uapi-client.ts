@@ -1,4 +1,4 @@
-import { toApiCall, type ApiCall, type CallMode, type Persona } from "./api-log";
+import { toApiCall, type ApiCall, type CallMode } from "./api-log";
 
 export type BackendMode = "live" | "mock";
 
@@ -6,19 +6,18 @@ export type Environment = "test" | "live";
 
 export type SettingsCountry = "IT" | "BE" | "DE";
 
-export type CountryConfig = { system_id: string; taxpayer_id: string; peppol_id?: string };
-export type PersonaConfig = Partial<Record<SettingsCountry, CountryConfig>>;
+export type CountryConfig = { system_id: string; taxpayer_id: string };
 
 export type Config = {
   mode: BackendMode;
   environment: Environment;
   api_version: string;
-  personas: { seller: PersonaConfig; buyer: PersonaConfig };
+  systems: Partial<Record<SettingsCountry, CountryConfig>>;
 };
 
 export type ModeState = { mode: BackendMode; live_available: boolean };
 
-export type CredentialSource = "session" | "env" | "none";
+export type CredentialSource = "stored" | "env" | "none";
 
 // Never a key or a secret: `configured` plus a masked `fingerprint` is everything the browser
 // is allowed to know about a credential it posted.
@@ -30,37 +29,22 @@ export type CredentialState = {
 
 export type SettingsSystem = { system_id?: string | null; taxpayer_id?: string | null };
 
-export type SettingsRecipients = {
-  sdi_destination_code?: string | null;
-  peppol_id?: string | null;
-};
-
-export type PersonaSettings = {
-  credentials: CredentialState;
-  systems?: Partial<Record<SettingsCountry, SettingsSystem>>;
-  recipients?: SettingsRecipients | null;
-};
-
 export type Settings = {
   mode: BackendMode;
   environment: Environment;
   base_url: string;
   api_version: string;
-  personas: Record<Persona, PersonaSettings>;
-};
-
-export type PersonaPatch = {
-  api_key?: string;
-  api_secret?: string;
-  systems?: Partial<Record<SettingsCountry, SettingsSystem>>;
-  recipients?: SettingsRecipients;
+  credentials: CredentialState;
+  systems: Partial<Record<SettingsCountry, SettingsSystem>>;
 };
 
 export type SettingsPatch = {
   mode?: BackendMode;
   environment?: Environment;
   confirm_live?: boolean;
-  personas?: Partial<Record<Persona, PersonaPatch>>;
+  api_key?: string;
+  api_secret?: string;
+  systems?: Partial<Record<SettingsCountry, SettingsSystem>>;
 };
 
 export type OnboardingCountry = "IT" | "BE" | "DE";
@@ -97,7 +81,6 @@ export type OnboardingSystem = {
 // `organizations` and `subjects` land with the newer backend; the tree renders the counts
 // alone when an older backend omits them.
 export type OnboardingStatus = {
-  persona: string;
   environment: Environment;
   credentials: CredentialState;
   counts: { organizations: number; subjects: number; taxpayers: number; systems: number };
@@ -128,16 +111,14 @@ export type ProvisionResult = {
 };
 
 export type ProvisionRequest = {
-  persona: Persona;
   country: OnboardingCountry;
   confirm: true;
   reuse?: boolean;
   taxpayer?: Record<string, unknown>;
 };
 
-export function getOnboardingStatus(persona: Persona): Promise<OnboardingStatus> {
-  const query = new URLSearchParams({ persona });
-  return request("GET", `/api/onboarding/status?${query}`);
+export function getOnboardingStatus(): Promise<OnboardingStatus> {
+  return request("GET", "/api/onboarding/status");
 }
 
 // The IT body carries FISCONLINE credentials; they travel in this one request and are never
@@ -186,7 +167,6 @@ export type ArtifactPayload = {
 export type Transport = "backend" | "direct";
 
 export type SendRequest = {
-  persona: Persona;
   country: string;
   operation: unknown;
   systemId?: string;
@@ -199,14 +179,12 @@ export type SendStart = CreatedInvoice & { transport: Transport; note?: string }
 
 export type WaitRequest = {
   transport: Transport;
-  persona: Persona;
   transactionId: string;
   transmissionId?: string;
 };
 
 export type ArtifactRequest = {
   transport: Transport;
-  persona: Persona;
   recordId: string;
   kind: ArtifactKind;
 };
@@ -233,9 +211,9 @@ export const WAIT_SLICE_S = 5;
 export const POLL_DELAY_MS: Record<Transport, number> = { backend: 200, direct: 1500 };
 
 export const PASSTHROUGH_NOTE =
-  "The backend has no system id for this country in .env, so this ran the same choreography " +
+  "The backend has no system id for this country, so this ran the same choreography " +
   "through the /api/uapi passthrough with a placeholder system id. It only works against the " +
-  "mock — configure the system ids in .env before showing anything live.";
+  "mock — set the system id in Settings (or provision the account) before showing anything live.";
 
 const PLACEHOLDER_SYSTEM_ID = "demo-e-invoice-system";
 
@@ -270,8 +248,24 @@ function messageOf(body: unknown): string | undefined {
   for (const key of ["detail", "message", "error"]) {
     const value = record[key];
     if (typeof value === "string" && value.trim() !== "") return value;
+    // Structured details ({code, detail, ...}) carry their human text one level down.
+    if (key === "detail" && typeof value === "object" && value !== null) {
+      const inner = messageOf(value);
+      if (inner) return inner;
+    }
   }
   return undefined;
+}
+
+// Structured error codes the backend attaches under detail.code.
+export function errorCode(error: unknown): string | undefined {
+  if (!(error instanceof ApiError)) return undefined;
+  const body = error.body;
+  if (typeof body !== "object" || body === null) return undefined;
+  const detail = (body as Record<string, unknown>).detail;
+  if (typeof detail !== "object" || detail === null) return undefined;
+  const code = (detail as Record<string, unknown>).code;
+  return typeof code === "string" ? code : undefined;
 }
 
 function parseBody(text: string): unknown {
@@ -302,6 +296,13 @@ async function request<T>(
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (!response.ok) throw await failure(method, path, response);
+  // A passthrough step can legitimately return a binary body (GET /files/{id}.zip); a JSON
+  // parse there would fail the step. Summarize anything that is not JSON instead.
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("json")) {
+    const blob = await response.blob();
+    return { binary: true, content_type: contentType || "unknown", bytes: blob.size } as T;
+  }
   return (await response.json()) as T;
 }
 
@@ -327,9 +328,8 @@ export function updateSettings(patch: SettingsPatch): Promise<Settings> {
   return request("PUT", "/api/settings", patch);
 }
 
-export function clearCredentials(persona: Persona | "all"): Promise<Settings> {
-  const query = new URLSearchParams({ persona });
-  return request("DELETE", `/api/settings/credentials?${query}`);
+export function clearCredentials(): Promise<Settings> {
+  return request("DELETE", "/api/settings/credentials");
 }
 
 export type StepCapture = { variable: string; pointer: string };
@@ -390,12 +390,11 @@ function idempotencyKey(): string {
 export function passthrough<T>(
   method: string,
   path: string,
-  persona: Persona,
   body?: unknown,
   key?: string,
   extraHeaders?: Record<string, string>,
 ): Promise<T> {
-  const headers: Record<string, string> = { "X-Persona": persona, ...extraHeaders };
+  const headers: Record<string, string> = { ...extraHeaders };
   if (key) headers["X-Idempotency-Key"] = key;
   return request<T>(method, `/api/uapi${path}`, body, headers);
 }
@@ -403,7 +402,7 @@ export function passthrough<T>(
 function unconfigured(error: unknown): boolean {
   if (!(error instanceof ApiError)) return false;
   if (error.status === 404 || error.status === 405) return true;
-  return error.status === 409 && /is not set in \.env/.test(error.message);
+  return error.status === 409 && errorCode(error) === "SYSTEM_ID_MISSING";
 }
 
 async function createDirect(input: SendRequest): Promise<CreatedInvoice> {
@@ -411,7 +410,6 @@ async function createDirect(input: SendRequest): Promise<CreatedInvoice> {
   const intention = await passthrough<RecordEnvelope>(
     "POST",
     "/records",
-    input.persona,
     {
       content: { type: "INTENTION", system: { id: systemId }, operation: { type: "TRANSACTION" } },
     },
@@ -420,7 +418,6 @@ async function createDirect(input: SendRequest): Promise<CreatedInvoice> {
   const transaction = await passthrough<RecordEnvelope>(
     "POST",
     "/records",
-    input.persona,
     {
       content: {
         type: "TRANSACTION",
@@ -442,7 +439,6 @@ async function createDirect(input: SendRequest): Promise<CreatedInvoice> {
 export async function sendInvoice(input: SendRequest, mode: CallMode): Promise<SendStart> {
   try {
     const created = await request<CreatedInvoice>("POST", "/api/invoices", {
-      persona: input.persona,
       country: input.country,
       operation: input.operation,
       idempotency_key: input.idempotencyKey ?? idempotencyKey(),
@@ -455,7 +451,6 @@ export async function sendInvoice(input: SendRequest, mode: CallMode): Promise<S
 }
 
 export type CorrectionSendRequest = {
-  persona: Persona;
   country: string;
   correctedRecordId: string;
   // The nested invoice body — the backend wraps it into the TRANSACTION::CORRECTION envelope.
@@ -475,7 +470,6 @@ export async function sendCorrection(
   const path = `/api/invoices/${encodeURIComponent(input.correctedRecordId)}/correction`;
   try {
     const created = await request<CreatedInvoice>("POST", path, {
-      persona: input.persona,
       country: input.country,
       operation: input.operation,
       reason: input.reason,
@@ -486,7 +480,6 @@ export async function sendCorrection(
     if (mode !== "MOCK" || !unconfigured(error)) throw error;
   }
   const direct = await createDirect({
-    persona: input.persona,
     country: input.country,
     operation: input.correctionValue,
     systemId: input.systemId,
@@ -494,9 +487,9 @@ export async function sendCorrection(
   return { ...direct, transport: "direct", note: PASSTHROUGH_NOTE };
 }
 
-function readRecord(recordId: string, persona: Persona): Promise<UapiRecord> {
+function readRecord(recordId: string): Promise<UapiRecord> {
   const path = `/records/${encodeURIComponent(recordId)}`;
-  return passthrough<RecordEnvelope>("GET", path, persona).then((envelope) => envelope.content);
+  return passthrough<RecordEnvelope>("GET", path).then((envelope) => envelope.content);
 }
 
 function refOf(record: UapiRecord): TransmissionRef {
@@ -515,7 +508,7 @@ function untransmitted(record: UapiRecord): boolean {
 
 async function waitDirect(input: WaitRequest): Promise<TransmissionWait> {
   if (input.transmissionId) {
-    const transmission = await readRecord(input.transmissionId, input.persona);
+    const transmission = await readRecord(input.transmissionId);
     return {
       transaction_id: input.transactionId,
       transmission_id: input.transmissionId,
@@ -523,7 +516,7 @@ async function waitDirect(input: WaitRequest): Promise<TransmissionWait> {
       transmission: refOf(transmission),
     };
   }
-  const invoice = await readRecord(input.transactionId, input.persona);
+  const invoice = await readRecord(input.transactionId);
   const transmissionId = invoice.used_in?.id;
   const seen = {
     transaction_id: input.transactionId,
@@ -532,7 +525,7 @@ async function waitDirect(input: WaitRequest): Promise<TransmissionWait> {
     logs: invoice.logs ?? [],
   };
   if (!transmissionId) return { ...seen, finished: untransmitted(invoice) };
-  const transmission = await readRecord(transmissionId, input.persona);
+  const transmission = await readRecord(transmissionId);
   return {
     ...seen,
     transmission_id: transmissionId,
@@ -543,7 +536,7 @@ async function waitDirect(input: WaitRequest): Promise<TransmissionWait> {
 
 export function waitForTransmission(input: WaitRequest): Promise<TransmissionWait> {
   if (input.transport === "direct") return waitDirect(input);
-  const query = new URLSearchParams({ persona: input.persona, timeout: String(WAIT_SLICE_S) });
+  const query = new URLSearchParams({ timeout: String(WAIT_SLICE_S) });
   // Once the transmission id is known the backend skips the transaction read — half the poll
   // traffic on a send that keeps polling for minutes.
   if (input.transmissionId) query.set("transmission_id", input.transmissionId);
@@ -558,14 +551,14 @@ function decodeBase64(data: string): string {
 }
 
 export async function fetchArtifact(input: ArtifactRequest): Promise<ArtifactPayload> {
-  const { recordId, kind, persona } = input;
+  const { recordId, kind } = input;
   if (input.transport === "backend") {
-    const query = new URLSearchParams({ persona, kind });
+    const query = new URLSearchParams({ kind });
     const path = `/api/records/${encodeURIComponent(recordId)}/artifact?${query}`;
     return request<ArtifactPayload>("GET", path);
   }
   const path = `/records/${encodeURIComponent(recordId)}?${ARTIFACT_QUERY[kind]}`;
-  const envelope = await passthrough<RecordEnvelope>("GET", path, persona);
+  const envelope = await passthrough<RecordEnvelope>("GET", path);
   const artifact = envelope.content.compliance?.[ARTIFACT_KEY[kind]];
   if (!artifact?.data) {
     throw new ApiError(
@@ -582,14 +575,12 @@ export async function fetchArtifact(input: ArtifactRequest): Promise<ArtifactPay
   };
 }
 
-export async function fetchRecordFiles(recordId: string, persona: Persona): Promise<Blob> {
-  const query = new URLSearchParams({ persona });
-  const path = `/api/records/${encodeURIComponent(recordId)}/files.zip?${query}`;
+export async function fetchRecordFiles(recordId: string): Promise<Blob> {
+  const path = `/api/records/${encodeURIComponent(recordId)}/files.zip`;
   const response = await fetch(path);
   if (response.ok) return await response.blob();
   const error = await failure("GET", path, response);
-  const direct = `/api/uapi/files/${encodeURIComponent(recordId)}.zip`;
-  const replay = await fetch(direct, { headers: { "X-Persona": persona } });
+  const replay = await fetch(`/api/uapi/files/${encodeURIComponent(recordId)}.zip`);
   if (!replay.ok) throw error;
   return await replay.blob();
 }

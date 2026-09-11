@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { groupCalls, statusMarker, stepLabel, type Persona } from "./api-log";
+import { groupCalls, statusMarker, stepLabel } from "./api-log";
 import { ApiCallCard } from "./ApiCallCard";
 import { store, useStore } from "./store";
-
-const PERSONAS: Persona[] = ["seller", "buyer"];
 
 function FilterChip({
   label,
@@ -33,31 +31,14 @@ export function ApiLogPane() {
   const focus = useStore((state) => state.focus);
   const eventsDown = useStore((state) => state.eventsDown);
   const [steps, setSteps] = useState<string[]>([]);
-  const [personas, setPersonas] = useState<Persona[]>([]);
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const list = useRef<HTMLOListElement>(null);
   const handled = useRef(0);
 
   const knownSteps = useMemo(() => [...new Set(calls.map(stepLabel))].sort(), [calls]);
-  // The flow always sends as the seller; a buyer chip only means something when buyer calls
-  // exist (the runner ran as the buyer), so the chips are derived from the log, not hardcoded.
-  const knownPersonas = useMemo(
-    () => PERSONAS.filter((persona) => calls.some((call) => call.persona === persona)),
-    [calls],
-  );
-
-  // The persona filter only applies while its chips are rendered (>1 persona in the log): a
-  // selection left over from a runner session must not silently hide a later single-persona
-  // log with no visible control to undo it.
-  const activePersonas = knownPersonas.length > 1 ? personas : [];
   const filtered = useMemo(
-    () =>
-      calls.filter(
-        (call) =>
-          (steps.length === 0 || steps.includes(stepLabel(call))) &&
-          (activePersonas.length === 0 || activePersonas.includes(call.persona)),
-      ),
-    [calls, steps, activePersonas],
+    () => calls.filter((call) => steps.length === 0 || steps.includes(stepLabel(call))),
+    [calls, steps],
   );
 
   const groups = useMemo(() => groupCalls(filtered), [filtered]);
@@ -95,13 +76,6 @@ export function ApiLogPane() {
   const toggle = (step: string) =>
     setSteps((current) =>
       current.includes(step) ? current.filter((entry) => entry !== step) : [...current, step],
-    );
-
-  const togglePersona = (persona: Persona) =>
-    setPersonas((current) =>
-      current.includes(persona)
-        ? current.filter((entry) => entry !== persona)
-        : [...current, persona],
     );
 
   return (
@@ -143,19 +117,6 @@ export function ApiLogPane() {
                 onClick={() => toggle(step)}
               />
             ))}
-            {knownPersonas.length > 1 && (
-              <>
-                <span aria-hidden="true" className="mx-1 h-3 w-px bg-line" />
-                {knownPersonas.map((persona) => (
-                  <FilterChip
-                    key={persona}
-                    label={persona}
-                    active={personas.includes(persona)}
-                    onClick={() => togglePersona(persona)}
-                  />
-                ))}
-              </>
-            )}
           </div>
         )}
       </header>

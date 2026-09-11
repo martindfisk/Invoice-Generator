@@ -8,6 +8,10 @@ COLLECTION_GLOB = "fiskaly_e-invoice_*_postman_collection.json"
 PROXY_SKIP = "handled by the proxy"
 ACCOUNT_SKIP = "creates or mutates account resources"
 RECEPTION_SKIP = "the app has no receive step; a live account has no seeded inbox to list"
+PROOF_SKIP = (
+    "part of the Peppol proof-of-ownership flow, which this app cannot run; "
+    "complete it in the fiskaly dashboard"
+)
 READ_ONLY_RESOURCES = frozenset({"taxpayers", "systems"})
 RUNNABLE_FOLDER_WORDS = ("transmission",)
 SET_PATTERN = re.compile(r"pm\.environment\.set\(\s*[\"']([A-Za-z0-9_]+)[\"']")
@@ -354,6 +358,11 @@ def _scope(folder, method, path):
     lowered = folder.lower()
     if lowered.startswith("records") and "reception" in lowered:
         return False, RECEPTION_SKIP
+    # Before the read-only GET rule: the folder's GETs (upload status, the peppol_id assert)
+    # only succeed after the upload flow this app cannot run — skipping them with the flow
+    # keeps a fresh DEGRADED account from halting one step before the transmission folder.
+    if "proof of ownership" in lowered:
+        return False, PROOF_SKIP
     if lowered.startswith("records") and any(word in lowered for word in RUNNABLE_FOLDER_WORDS):
         return True, None
     if method == "GET" and resource in READ_ONLY_RESOURCES:

@@ -2,8 +2,7 @@ import { useEffect } from "react";
 import { ApiLogPane } from "./ApiLogPane";
 import { Split } from "./Split";
 import { subscribeApiLog } from "./api-log";
-import { EnvironmentBadge, ModeBadge } from "./ModeBadge";
-import { PersonaSwitch } from "./PersonaSwitch";
+import { StatusBadge } from "./ModeBadge";
 import { LIVE_BANNER, SettingsMenu } from "./SettingsDialog";
 import { RunnerPane } from "./RunnerPane";
 import { store, useStore, type Section } from "./store";
@@ -47,6 +46,7 @@ export function App() {
   const section = useStore((state) => state.section);
   const layoutNonce = useStore((state) => state.layoutNonce);
   const environment = useStore((state) => state.settings?.environment ?? state.config?.environment);
+  const mode = useStore((state) => state.mode);
   const offline = useStore((state) => state.offline);
 
   useEffect(() => {
@@ -101,11 +101,7 @@ export function App() {
                 backend offline
               </span>
             )}
-            {/* The flow always sends as the seller since the Receive step went away; the persona
-                switch only matters where both credentials are exercised — the test runner. */}
-            {section === "runner" && <PersonaSwitch />}
-            <EnvironmentBadge />
-            <ModeBadge />
+            <StatusBadge />
             <button
               type="button"
               onClick={() => store.setTheme(nextTheme)}
@@ -116,12 +112,12 @@ export function App() {
             <SettingsMenu />
           </div>
         </div>
-        {environment === "live" && (
+        {environment === "live" && mode === "LIVE" && (
           <p
             role="status"
             className="border-t border-error bg-error-soft px-4 py-1.5 text-xs font-medium text-error-ink"
           >
-            <span className="font-mono font-bold">LIVE environment</span> — {LIVE_BANNER}
+            <span className="font-mono font-bold">PRODUCTION environment</span> — {LIVE_BANNER}
           </p>
         )}
       </header>

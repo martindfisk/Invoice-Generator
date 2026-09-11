@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 Mode = Literal["live", "mock"]
 ArtifactKind = Literal["compliance", "receipt"]
 Environment = Literal["test", "live"]
-CredentialSource = Literal["session", "env", "none"]
+CredentialSource = Literal["stored", "env", "none"]
 
 
 class Health(BaseModel):
@@ -23,7 +23,7 @@ class Config(BaseModel):
     mode: Mode
     environment: Literal["test", "live"]
     api_version: str
-    personas: dict[str, dict[str, SystemRef]]
+    systems: dict[str, SystemRef]
     spec_source: str | None = None
     spec_sha256: str | None = None
     spec_origin: str | None = None
@@ -35,21 +35,10 @@ class SystemState(BaseModel):
     taxpayer_id: str | None = None
 
 
-class RecipientState(BaseModel):
-    sdi_destination_code: str | None = None
-    peppol_id: str | None = None
-
-
 class CredentialState(BaseModel):
     configured: bool
     source: CredentialSource
     fingerprint: str | None = None
-
-
-class PersonaState(BaseModel):
-    credentials: CredentialState
-    systems: dict[str, SystemState]
-    recipients: RecipientState
 
 
 class SettingsState(BaseModel):
@@ -57,21 +46,17 @@ class SettingsState(BaseModel):
     environment: Environment
     base_url: str
     api_version: str
-    personas: dict[str, PersonaState]
-
-
-class PersonaUpdate(BaseModel):
-    api_key: str | None = None
-    api_secret: str | None = None
-    systems: dict[str, SystemState] | None = None
-    recipients: RecipientState | None = None
+    credentials: CredentialState
+    systems: dict[str, SystemState]
 
 
 class SettingsUpdate(BaseModel):
     mode: Mode | None = None
     environment: Environment | None = None
     confirm_live: bool = False
-    personas: dict[str, PersonaUpdate] | None = None
+    api_key: str | None = None
+    api_secret: str | None = None
+    systems: dict[str, SystemState] | None = None
 
 
 class ModeState(BaseModel):
@@ -160,7 +145,6 @@ class SpecFields(BaseModel):
 
 
 class InvoiceRequest(BaseModel):
-    persona: str = "seller"
     country: str
     operation: dict[str, Any]
     idempotency_key: str | None = None
@@ -175,7 +159,6 @@ class InvoiceCreated(BaseModel):
 
 
 class CorrectionRequest(BaseModel):
-    persona: str = "seller"
     country: str
     operation: dict[str, Any]
     reason: str | None = None
@@ -254,7 +237,6 @@ class OnboardingSystem(BaseModel):
 
 
 class OnboardingStatus(BaseModel):
-    persona: str
     environment: Environment
     credentials: CredentialState
     counts: OnboardingCounts
@@ -270,7 +252,6 @@ class OnboardingStatus(BaseModel):
 
 
 class ProvisionRequest(BaseModel):
-    persona: str = "seller"
     country: str
     confirm: bool = False
     reuse: bool = True

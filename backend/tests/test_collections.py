@@ -1,6 +1,6 @@
 import pytest
 
-from app.collections import CAPTURES, load_collections
+from app.collections import CAPTURES, PROOF_SKIP, load_collections
 from app.settings import Settings
 from app.spec import manifest
 from tests.conftest import api_for, make_settings
@@ -22,7 +22,6 @@ DE_RUNNABLE = [
     "List Taxpayers",
     "Retrieve a System::E_INVOICE_SERVICE",
     "List Systems",
-    "Retrieve System with Peppol ID",
     "Create INTENTION::TRANSACTION",
     "Create TRANSACTION::INVOICE",
     "Retrieve TRANSACTION::INVOICE",
@@ -73,6 +72,8 @@ def test_excluded_steps_carry_skip_reason(collections):
                     "handled by the proxy",
                     "creates or mutates account resources",
                     "the app has no receive step; a live account has no seeded inbox to list",
+                    "part of the Peppol proof-of-ownership flow, which this app cannot run; "
+                    "complete it in the fiskaly dashboard",
                 )
             if step["path"] == "/tokens":
                 assert step["skipReason"] == "handled by the proxy"
@@ -148,6 +149,22 @@ def test_it_reception_folder_is_skipped_with_its_reason(collections):
     for step in reception:
         assert step["runnable"] is False
         assert "no receive step" in step["skipReason"]
+
+
+def test_proof_of_ownership_folder_is_skipped_with_its_reason(collections):
+    for country in ("be", "de"):
+        proof = [
+            step
+            for step in collections[country]["steps"]
+            if "proof of ownership" in step["folder"].lower()
+        ]
+        assert proof
+        for step in proof:
+            assert step["runnable"] is False
+            assert step["skipReason"] == PROOF_SKIP
+        # The folder's GET /systems assert-step used to be runnable; it only succeeds after the
+        # upload flow this app cannot run, so it is skipped with the rest of the folder.
+        assert any(step["name"] == "Retrieve System with Peppol ID" for step in proof)
 
 
 def test_de_notes_surface_the_published_defects(collections):
@@ -281,7 +298,7 @@ async def test_taxpayer_and_system_lists_start_empty_and_fill_after_provisioning
         assert response.json() == {"results": []}
 
     provisioned = await client.post(
-        "/api/onboarding/provision", json={"persona": "seller", "country": "BE", "confirm": True}
+        "/api/onboarding/provision", json={"country": "BE", "confirm": True}
     )
     assert provisioned.status_code == 200
     taxpayer_id = provisioned.json()["created"]["taxpayer_id"]
@@ -298,4 +315,4 @@ async def test_taxpayer_and_system_lists_start_empty_and_fill_after_provisioning
     body = (await client.get(f"/api/uapi/systems?taxpayer_id={taxpayer_id}")).json()
     assert "_fixture" not in body
     assert body["results"][0]["content"]["type"] == "E_INVOICE_SERVICE"
-    assert body["results"][0]["content"]["annotations"]["peppol_id"] == "0208:1234567890"
+    assert body["results"][0]["content"]["annotations"]["peppol_id"] == "0208:0699999906"

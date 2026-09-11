@@ -45,7 +45,6 @@ describe("workflow reducer", () => {
       step: "setup",
       presetId: null,
       invoice: null,
-      persona: "seller",
       selection: null,
     });
     expect(freshWorkflow().formatId in FORMATS).toBe(true);
@@ -133,17 +132,13 @@ describe("workflow reducer", () => {
     expect(switched.selection).toEqual({ field: "number", source: "human" });
   });
 
-  it("keeps the selection when the view or the persona changes", () => {
+  it("keeps the selection when the view changes", () => {
     const state = workflowReducer(chosen(), {
       type: "select",
       selection: { field: "number", source: "human" },
     });
     expect(workflowReducer(state, { type: "setPane", pane: "human", show: false })).toMatchObject({
       panes: { human: false, xml: true },
-      selection: { field: "number" },
-    });
-    expect(workflowReducer(state, { type: "setPersona", persona: "buyer" })).toMatchObject({
-      persona: "buyer",
       selection: { field: "number" },
     });
   });
@@ -180,7 +175,6 @@ describe("workflow reducer", () => {
     expect(
       workflowReducer(state, { type: "setPane", pane: "human", show: state.panes.human }),
     ).toBe(state);
-    expect(workflowReducer(state, { type: "setPersona", persona: state.persona })).toBe(state);
     expect(workflowReducer(state, { type: "goToStep", step: state.step })).toBe(state);
     expect(
       workflowReducer(state, { type: "showUncarried", show: state.groups.showUncarried }),
@@ -196,18 +190,14 @@ describe("workflow persistence", () => {
     localStorage.clear();
   });
 
-  it("rehydrates the step, the preset, the format, the persona and the view", () => {
-    const state = workflowReducer(
-      workflowReducer(chosen(), { type: "goToStep", step: "validate" }),
-      { type: "setPersona", persona: "buyer" },
-    );
+  it("rehydrates the step, the preset, the format and the view", () => {
+    const state = workflowReducer(chosen(), { type: "goToStep", step: "validate" });
     persistWorkflow(state);
     const restored = initialWorkflow();
     expect(restored).toMatchObject({
       step: "validate",
       presetId: state.presetId,
       formatId: state.formatId,
-      persona: "buyer",
       panes: state.panes,
     });
     expect(restored.invoice).toEqual(state.invoice);
@@ -223,7 +213,6 @@ describe("workflow persistence", () => {
       "formatId",
       "invoice",
       "panes",
-      "persona",
       "presetId",
       "send",
       "step",
@@ -436,14 +425,15 @@ describe("workflow persistence", () => {
   it("falls back to a fresh workflow when the stored preset no longer exists", () => {
     localStorage.setItem(
       WORKFLOW_KEY,
+      // A stale persona key from the removed buyer/seller split is simply ignored.
       JSON.stringify({ step: "send", presetId: "gone", formatId: "nope", persona: "buyer" }),
     );
     expect(initialWorkflow()).toMatchObject({
       step: "setup",
       presetId: null,
       invoice: null,
-      persona: "buyer",
     });
+    expect("persona" in initialWorkflow()).toBe(false);
   });
 
   it("ignores unreadable storage", () => {

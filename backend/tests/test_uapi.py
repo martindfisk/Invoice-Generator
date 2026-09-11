@@ -7,10 +7,10 @@ import pytest
 import respx
 
 from app.recorder import Recorder
-from app.session import SessionStore
+from app.store import SettingsStore
 from app.uapi import UapiClient
 from app.workflow import UpstreamError
-from tests.conftest import SELLER_KEY, SELLER_SECRET, make_settings
+from tests.conftest import API_KEY, API_SECRET, make_settings
 
 BASE_URL = "https://test.api.fiskaly.com"
 BEARER = "eyJ.synthetic.bearer-abcd1234"
@@ -44,12 +44,12 @@ def recorder():
 
 @pytest.fixture
 def store():
-    return SessionStore(make_settings())
+    return SettingsStore(make_settings())
 
 
 @pytest.fixture
 def uapi(store, recorder):
-    return UapiClient("seller", store, recorder)
+    return UapiClient(store, recorder)
 
 
 @pytest.fixture
@@ -76,7 +76,7 @@ async def test_injects_auth_version_and_idempotency_headers(uapi, upstream):
     assert "Authorization" not in token_request.headers
     uuid.UUID(token_request.headers["X-Idempotency-Key"])
     assert json.loads(token_request.content) == {
-        "content": {"type": "API_KEY", "key": SELLER_KEY, "secret": SELLER_SECRET}
+        "content": {"type": "API_KEY", "key": API_KEY, "secret": API_SECRET}
     }
 
 
@@ -113,6 +113,20 @@ async def test_gives_up_after_second_401(uapi, upstream):
     response = await uapi.request("GET", "/systems/abc")
     assert response.status_code == 401
     assert route.call_count == 2
+
+
+async def test_a_401_drops_the_persisted_token_and_mints_a_fresh_one(uapi, store, upstream):
+    upstream["tokens"].mock(
+        side_effect=[
+            httpx.Response(200, json=token_json(bearer="eyJ.first.aaaa1111")),
+            httpx.Response(200, json=token_json(bearer="eyJ.second.bbbb2222")),
+        ]
+    )
+    upstream.get("/systems/abc").mock(
+        side_effect=[httpx.Response(401, json={}), httpx.Response(200, json={})]
+    )
+    await uapi.request("GET", "/systems/abc")
+    assert store.token()[0] == "eyJ.second.bbbb2222"
 
 
 async def test_the_401_retry_replays_the_same_idempotency_key(uapi, upstream, recorder):
@@ -171,11 +185,10 @@ async def test_recorder_receives_masked_data_only(uapi, upstream, recorder):
     assert token_record.method == "POST"
     assert token_record.url == f"{BASE_URL}/tokens"
     assert token_record.request.body["content"]["secret"] == "***"
-    assert token_record.request.body["content"]["key"] == "sell***"
+    assert token_record.request.body["content"]["key"] == "test***"
     assert token_record.response.body["content"]["authentication"]["bearer"] == "***"
 
     assert call_record.step == "poll"
-    assert call_record.persona == "seller"
     assert call_record.mode == "live"
     assert call_record.record_id == "rec-9"
     assert call_record.request.headers["Authorization"] == "Bearer ****1234"
@@ -185,7 +198,7 @@ async def test_recorder_receives_masked_data_only(uapi, upstream, recorder):
     assert "Bearer $FISKALY_TOKEN" in call_record.curl
 
     dump = "".join(record.model_dump_json() for record in recorder.list())
-    assert SELLER_SECRET not in dump
+    assert API_SECRET not in dump
     assert BEARER not in dump
 
 
@@ -205,5 +218,7 @@ async def test_token_failure_raises(uapi, upstream):
     with pytest.raises(UpstreamError) as caught:
         await uapi.request("GET", "/systems/abc")
     assert caught.value.status_code == 401
-    assert "POST /tokens" in caught.value.body["detail"]
+    assert caught.value.body["detail"] == (
+        "fiskaly rejected the API credentials (POST /tokens returned 401)"
+    )
     assert caught.value.body["upstream"]["code"] == "E_UNAUTHORIZED_ACCESS"

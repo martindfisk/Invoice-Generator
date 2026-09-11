@@ -7,7 +7,6 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-PERSONAS = ("seller", "buyer")
 COUNTRIES = ("IT", "BE", "DE")
 
 
@@ -17,8 +16,7 @@ def default_api_version():
 
 
 @dataclass
-class Persona:
-    name: str
+class Account:
     api_key: str | None
     api_secret: str | None
     systems: dict
@@ -26,9 +24,8 @@ class Persona:
 
     @property
     def missing_credentials(self):
-        prefix = self.name.upper()
-        values = (("API_KEY", self.api_key), ("API_SECRET", self.api_secret))
-        return [f"{prefix}_{suffix}" for suffix, value in values if not value]
+        values = (("UAPI_API_KEY", self.api_key), ("UAPI_API_SECRET", self.api_secret))
+        return [name for name, value in values if not value]
 
 
 class Settings(BaseSettings):
@@ -37,26 +34,18 @@ class Settings(BaseSettings):
     uapi_base_url: str = "https://test.api.fiskaly.com"
     uapi_api_version: str = Field(default_factory=default_api_version)
     uapi_mode: Literal["live", "mock"] = "mock"
+    # Settings saved from the UI persist here (chmod 600, git-ignored) and take precedence
+    # over the .env values above; .env is only the bootstrap default.
+    uapi_settings_file: Path = REPO_ROOT / "backend" / ".uapi-settings.json"
 
-    seller_api_key: str | None = None
-    seller_api_secret: str | None = None
-    seller_system_id_it: str | None = None
-    seller_taxpayer_id_it: str | None = None
-    seller_system_id_be: str | None = None
-    seller_taxpayer_id_be: str | None = None
-    seller_system_id_de: str | None = None
-    seller_taxpayer_id_de: str | None = None
-
-    buyer_api_key: str | None = None
-    buyer_api_secret: str | None = None
-    buyer_system_id_it: str | None = None
-    buyer_taxpayer_id_it: str | None = None
-    buyer_system_id_be: str | None = None
-    buyer_taxpayer_id_be: str | None = None
-    buyer_system_id_de: str | None = None
-    buyer_taxpayer_id_de: str | None = None
-    buyer_sdi_destination_code: str | None = None
-    buyer_peppol_id: str | None = None
+    uapi_api_key: str | None = None
+    uapi_api_secret: str | None = None
+    uapi_system_id_it: str | None = None
+    uapi_taxpayer_id_it: str | None = None
+    uapi_system_id_be: str | None = None
+    uapi_taxpayer_id_be: str | None = None
+    uapi_system_id_de: str | None = None
+    uapi_taxpayer_id_de: str | None = None
 
     cors_origins: str = "http://localhost:5173"
     recorder_capacity: int = 500
@@ -75,25 +64,12 @@ class Settings(BaseSettings):
     def cors_origin_list(self):
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
-    def persona(self, name):
-        if name not in PERSONAS:
-            raise ValueError(f"unknown persona {name!r}; expected one of {PERSONAS}")
+    def account(self):
         systems = {}
         for country in COUNTRIES:
-            system_id = getattr(self, f"{name}_system_id_{country.lower()}")
-            taxpayer_id = getattr(self, f"{name}_taxpayer_id_{country.lower()}")
+            system_id = getattr(self, f"uapi_system_id_{country.lower()}")
+            taxpayer_id = getattr(self, f"uapi_taxpayer_id_{country.lower()}")
             systems[country] = (
                 {"system_id": system_id, "taxpayer_id": taxpayer_id} if system_id else None
             )
-        return Persona(
-            name, getattr(self, f"{name}_api_key"), getattr(self, f"{name}_api_secret"), systems
-        )
-
-    def validate_live(self):
-        # Only the seller sends; the buyer persona degrades to unconfigured and fails precisely
-        # at the point of use (MissingCredentials) if something still asks for it.
-        if self.uapi_mode != "live":
-            return
-        missing = self.persona("seller").missing_credentials
-        if missing:
-            raise ValueError(f"UAPI_MODE=live but {', '.join(missing)} missing in .env")
+        return Account(self.uapi_api_key, self.uapi_api_secret, systems)

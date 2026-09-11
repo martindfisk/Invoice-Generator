@@ -179,7 +179,7 @@ export const PRESET_META: Record<PresetId, PresetMeta> = {
     formatLabel: "FatturaPA 1.2.3 (FPA12)",
     channel: "SDI",
     summary:
-      "Catering a ministry event: FormatoTrasmissione FPA12 with a 6-character codice univoco ufficio, CIG and CUP on the purchase order and deferred VAT chargeability (EsigibilitaIVA D).",
+      "Catering a ministry event: FormatoTrasmissione FPA12 with a 6-character codice univoco ufficio, CIG and CUP on the purchase order and deferred VAT chargeability (EsigibilitaIVA D). Known limitation: the Unified API only accepts 7-character SDI destination codes, so a live Send of this legally correct 6-character B2G code is rejected by the API contract check.",
     legalBasis:
       "D.M. 55/2013 (B2G obbligo); L. 136/2010 art. 3 (CIG); L. 3/2003 art. 11 (CUP); FatturaPA specs 1.9.1",
   },

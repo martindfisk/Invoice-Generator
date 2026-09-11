@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { normaliseMode, type ApiCall, type Persona } from "./api-log";
+import { normaliseMode, type ApiCall } from "./api-log";
 import { getConfig, getSettings, type Config, type Settings } from "./uapi-client";
 import { initialRunnerUi, savedCollectionId, type RunnerUiState } from "./runner";
 import {
@@ -154,7 +154,6 @@ export function createStore(initial: Partial<State> = {}) {
       };
     },
     dispatch,
-    setPersona: (persona: Persona) => dispatch({ type: "setPersona", persona }),
     setSection(section: Section) {
       try {
         localStorage.setItem(SECTION_KEY, section);

@@ -1,4 +1,4 @@
-import type { ApiCall, CallMode, Persona } from "./api-log";
+import type { ApiCall, CallMode } from "./api-log";
 import { FORMATS, getFormat } from "./formats";
 import { getField, setField, type FieldId, type FormatId, type Invoice } from "./model";
 import { preset, type PresetId } from "./presets";
@@ -116,7 +116,6 @@ export type WorkflowState = {
   presetId: PresetId | null;
   invoice: Invoice | null;
   formatId: FormatId;
-  persona: Persona;
   selection: Selection;
   panes: Panes;
   groups: GroupViewState;
@@ -145,7 +144,6 @@ export type WorkflowAction =
   | { type: "setPane"; pane: PaneId; show: boolean }
   | { type: "setGroupOpen"; key: string; open: boolean }
   | { type: "showUncarried"; show: boolean }
-  | { type: "setPersona"; persona: Persona }
   | { type: "editField"; field: FieldId; value: string }
   | { type: "editXml"; text: string }
   | { type: "editJson"; text: string }
@@ -232,7 +230,6 @@ type Persisted = {
   step: Step;
   presetId: PresetId | null;
   formatId: FormatId;
-  persona: Persona;
   panes: Panes;
   viewVersion: number;
   invoice: Invoice | null;
@@ -561,7 +558,6 @@ export function freshWorkflow(): WorkflowState {
     presetId: null,
     invoice: null,
     formatId: firstFormatId(),
-    persona: "seller",
     selection: null,
     panes: defaultPanes(),
     groups: freshGroups(),
@@ -629,8 +625,6 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
       return state.groups.showUncarried === action.show
         ? state
         : { ...state, groups: { ...state.groups, showUncarried: action.show } };
-    case "setPersona":
-      return state.persona === action.persona ? state : { ...state, persona: action.persona };
     case "editField": {
       if (!state.invoice) return state;
       if (getField(state.invoice, action.field) === action.value) return state;
@@ -791,7 +785,6 @@ export function persistWorkflow(state: WorkflowState): void {
     step: state.step,
     presetId: state.presetId,
     formatId: state.formatId,
-    persona: state.persona,
     panes: state.panes,
     viewVersion: VIEW_VERSION,
     invoice: state.invoice,
@@ -920,7 +913,6 @@ export function initialWorkflow(): WorkflowState {
 
   const shell: WorkflowState = {
     ...fresh,
-    persona: saved.persona === "buyer" ? "buyer" : "seller",
     panes: migratePanes(saved),
     // A legacy bare-string target (pre-typed shape) lacks the country/mode context the
     // mismatch guards need, so it is dropped rather than trusted.

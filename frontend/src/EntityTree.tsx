@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import type { Persona } from "./api-log";
 import { Modal } from "./Modal";
 import {
   ACCOUNT_LIFECYCLE_HINT,
@@ -8,6 +7,7 @@ import {
   IDLE_FETCH,
   IT_SECRETS_NOTE,
   LIVE_BILLING_NOTE,
+  NO_CREDENTIALS_HINT,
   ONE_WAY_NOTE,
   TEST_BILLING_NOTE,
   accountTone,
@@ -17,7 +17,6 @@ import {
   countryEntities,
   countryRow,
   missingLines,
-  noCredentialsHint,
   systemHint,
   systemStateText,
   systemTone,
@@ -28,7 +27,7 @@ import {
   type TreeFetch,
 } from "./onboarding";
 import { COUNTRY_LOCKED_WHILE_RUNNING, selectCountry } from "./runner-actions";
-import { useStore, type Mode } from "./store";
+import { store, useStore, type Mode } from "./store";
 import {
   getOnboardingStatus,
   provisionCountry,
@@ -40,11 +39,6 @@ import {
   type ProvisionResult,
   type ProvisionStep,
 } from "./uapi-client";
-
-const PERSONAS: { id: Persona; label: string }[] = [
-  { id: "seller", label: "Seller" },
-  { id: "buyer", label: "Buyer" },
-];
 
 const TONE: Record<NodeTone, { glyph: string; chip: string; mark: string }> = {
   success: { glyph: "●", chip: "border-success text-success", mark: "text-success" },
@@ -194,15 +188,13 @@ function SystemIssues({ system }: { system: OnboardingSystem }) {
 }
 
 function CountryGroup({
-  persona,
   country,
   status,
   onProvision,
 }: {
-  persona: Persona;
   country: CountryRow;
   status: OnboardingStatus;
-  onProvision: (persona: Persona, country: CountryRow) => void;
+  onProvision: (country: CountryRow) => void;
 }) {
   const { taxpayers, systems } = countryEntities(status, country.code);
   const ready = status.ready?.[country.code] === true;
@@ -222,8 +214,8 @@ function CountryGroup({
         )}
         <button
           type="button"
-          aria-label={`Provision ${country.label} for ${persona}`}
-          onClick={() => onProvision(persona, country)}
+          aria-label={`Provision ${country.label}`}
+          onClick={() => onProvision(country)}
           className="ml-auto rounded-m border border-line px-1.5 py-0.5 text-[10px] text-muted transition-colors hover:border-brand hover:text-ink"
         >
           Provision
@@ -289,22 +281,16 @@ function CountryGroup({
   );
 }
 
-export function PersonaTree({
-  persona,
-  label,
-  active,
+export function AccountTree({
   mode,
   country,
   fetch,
   onProvision,
 }: {
-  persona: Persona;
-  label: string;
-  active: boolean;
   mode: Mode;
   country: CountryRow;
   fetch: TreeFetch;
-  onProvision: (persona: Persona, country: CountryRow) => void;
+  onProvision: (country: CountryRow) => void;
 }) {
   const status = fetch.status;
   const credentials = status?.credentials;
@@ -314,20 +300,12 @@ export function PersonaTree({
   const withheld = mode === "LIVE" && credentials !== undefined && !credentials.configured;
   return (
     <section
-      aria-label={`${label} entities`}
-      data-persona-tree={persona}
-      className={`rounded-l border bg-surface ${active ? "border-brand" : "border-line"}`}
+      aria-label="fiskaly account entities"
+      data-account-tree=""
+      className="rounded-l border border-line bg-surface"
     >
       <header className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-2">
-        <h4 className="text-xs font-semibold text-ink">{label}</h4>
-        {active && (
-          <span
-            title="The workflow currently acts as this persona — sends and runner calls use its credentials and identifiers. Switch with the persona control in the workflow header."
-            className="rounded-m bg-select-bg px-1.5 py-0.5 text-[10px] font-medium text-ink"
-          >
-            active persona
-          </span>
-        )}
+        <h4 className="text-xs font-semibold text-ink">Account</h4>
         <span
           className={`font-mono text-[10px] ${
             credentials?.configured ? "text-muted" : "text-warning-ink"
@@ -354,14 +332,14 @@ export function PersonaTree({
         )}
         {status && withheld && (
           <p
-            data-no-credentials={persona}
+            data-no-credentials=""
             className="mx-2 my-1 rounded-m bg-warning-soft px-2 py-1.5 text-[11px] text-warning-ink"
           >
-            {noCredentialsHint(persona)}
+            {NO_CREDENTIALS_HINT}
           </p>
         )}
         {status && !withheld && Object.entries(status.errors ?? {}).length > 0 && (
-          <div data-listing-errors={persona} className="mx-2 my-1 flex flex-col gap-1">
+          <div data-listing-errors="" className="mx-2 my-1 flex flex-col gap-1">
             {Object.entries(status.errors ?? {}).map(([resource, message]) => (
               <p
                 key={resource}
@@ -374,7 +352,7 @@ export function PersonaTree({
           </div>
         )}
         {status && !withheld && (
-          <ul aria-label={`${label} entity tree`}>
+          <ul aria-label="Account entity tree">
             <AccountRows
               kind="Organization"
               entities={status.organizations}
@@ -385,12 +363,7 @@ export function PersonaTree({
               entities={status.subjects}
               count={status.counts?.subjects ?? 0}
             />
-            <CountryGroup
-              persona={persona}
-              country={country}
-              status={status}
-              onProvision={onProvision}
-            />
+            <CountryGroup country={country} status={status} onProvision={onProvision} />
           </ul>
         )}
       </div>
@@ -441,13 +414,11 @@ function StepLine({ step }: { step: ProvisionStep }) {
 }
 
 export function ProvisionDialog({
-  persona,
   country,
   environment,
   onClose,
   onDone,
 }: {
-  persona: Persona;
   country: CountryRow;
   environment: Environment | undefined;
   onClose: () => void;
@@ -468,7 +439,6 @@ export function ProvisionDialog({
     setError(null);
     try {
       const body: ProvisionRequest = {
-        persona,
         country: country.code,
         confirm: true,
         reuse: true,
@@ -508,7 +478,7 @@ export function ProvisionDialog({
       className="max-w-lg p-4"
     >
       <h3 id="provision-title" className="text-sm font-semibold text-ink">
-        Provision {country.label} for the {persona}
+        Provision {country.label}
       </h3>
       <div id="provision-blurb" className="mt-2 flex flex-col gap-1.5 text-xs text-muted">
         <p>
@@ -666,13 +636,7 @@ function saveTreeOpen(open: boolean): void {
 }
 
 // Folded, the panel still answers its one question: which country is selected and is it ready.
-function FoldedSummary({
-  country,
-  trees,
-}: {
-  country: CountryRow | null;
-  trees: Record<Persona, TreeFetch>;
-}) {
+function FoldedSummary({ country, tree }: { country: CountryRow | null; tree: TreeFetch }) {
   if (!country) {
     return (
       <p data-tree-summary className="w-full text-[11px] text-muted">
@@ -680,28 +644,22 @@ function FoldedSummary({
       </p>
     );
   }
+  const ready = tree.status?.ready?.[country.code];
+  const chip =
+    ready === true
+      ? "border-success text-success"
+      : ready === false
+        ? "border-line text-muted"
+        : "border-dashed border-line text-muted";
   return (
     <p data-tree-summary className="flex w-full flex-wrap items-center gap-1.5 text-[11px]">
       <span className="font-medium text-ink">{country.label}</span>
-      {PERSONAS.map(({ id, label }) => {
-        const ready = trees[id].status?.ready?.[country.code];
-        const chip =
-          ready === true
-            ? "border-success text-success"
-            : ready === false
-              ? "border-line text-muted"
-              : "border-dashed border-line text-muted";
-        return (
-          <span
-            key={id}
-            data-summary-persona={id}
-            data-summary-ready={String(ready ?? "unknown")}
-            className={`rounded-m border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase ${chip}`}
-          >
-            {label} {ready === true ? "ready" : ready === false ? "not ready" : "unknown"}
-          </span>
-        );
-      })}
+      <span
+        data-summary-ready={String(ready ?? "unknown")}
+        className={`rounded-m border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase ${chip}`}
+      >
+        {ready === true ? "ready" : ready === false ? "not ready" : "unknown"}
+      </span>
     </p>
   );
 }
@@ -709,42 +667,22 @@ function FoldedSummary({
 export function EntityTree() {
   const settings = useStore((state) => state.settings);
   const mode = useStore((state) => state.mode);
-  const activePersona = useStore((state) => state.workflow.persona);
   const environment = useStore((state) => state.settings?.environment ?? state.config?.environment);
   const collections = useStore((state) => state.runner.collections);
   const collectionId = useStore((state) => state.runner.collectionId);
   const running = useStore((state) => state.runner.running);
-  const [trees, setTrees] = useState<Record<Persona, TreeFetch>>({
-    seller: IDLE_FETCH,
-    buyer: IDLE_FETCH,
-  });
+  const [tree, setTree] = useState<TreeFetch>(IDLE_FETCH);
   const [open, setOpen] = useState(readTreeOpen);
-  const [provisioning, setProvisioning] = useState<{
-    persona: Persona;
-    country: CountryRow;
-  } | null>(null);
+  const [provisioning, setProvisioning] = useState<CountryRow | null>(null);
 
   const refresh = useCallback(async () => {
-    setTrees((current) => ({
-      seller: { ...current.seller, loading: true },
-      buyer: { ...current.buyer, loading: true },
-    }));
-    await Promise.all(
-      PERSONAS.map(async ({ id }) => {
-        try {
-          const status = await getOnboardingStatus(id);
-          setTrees((current) => ({
-            ...current,
-            [id]: { status, error: null, loading: false },
-          }));
-        } catch (caught) {
-          setTrees((current) => ({
-            ...current,
-            [id]: { ...current[id], error: reason(caught), loading: false },
-          }));
-        }
-      }),
-    );
+    setTree((current) => ({ ...current, loading: true }));
+    try {
+      const status = await getOnboardingStatus();
+      setTree({ status, error: null, loading: false });
+    } catch (caught) {
+      setTree((current) => ({ ...current, error: reason(caught), loading: false }));
+    }
   }, []);
 
   // The account contents can only change when the backend-facing settings document or the
@@ -754,15 +692,13 @@ export function EntityTree() {
   }, [refresh, settings, mode]);
 
   const countries = useMemo(
-    () => availableCountries(collections, [trees.seller.status, trees.buyer.status]),
-    [collections, trees],
+    () => availableCountries(collections, [tree.status]),
+    [collections, tree],
   );
   const selectedCode = collectionId?.toUpperCase() ?? null;
   const selected =
     countries.find((entry) => entry.code === selectedCode) ??
     (selectedCode !== null ? countryRow(selectedCode) : (countries[0] ?? null));
-
-  const loading = trees.seller.loading || trees.buyer.loading;
 
   const toggle = () => {
     const next = !open;
@@ -782,7 +718,7 @@ export function EntityTree() {
             aria-expanded={open}
             aria-controls="entity-tree-body"
             onClick={toggle}
-            title="What exists on the fiskaly account each persona talks to — and what a send still needs."
+            title="What exists on the fiskaly account these credentials talk to — and what a send still needs."
             className="flex items-center gap-1.5 text-left hover:text-brand"
           >
             <span aria-hidden="true" className="w-2 shrink-0 text-muted">
@@ -793,14 +729,14 @@ export function EntityTree() {
         </h3>
         <button
           type="button"
-          disabled={loading}
+          disabled={tree.loading}
           onClick={() => void refresh()}
           className="ml-auto rounded-m border border-line px-2.5 py-1 text-xs text-muted transition-colors hover:border-brand hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
         >
           Refresh
         </button>
         <p role="status" aria-live="polite" className="text-[11px] text-muted">
-          {loading ? "Refreshing…" : ""}
+          {tree.loading ? "Refreshing…" : ""}
         </p>
         {open ? (
           countries.length > 0 && (
@@ -837,7 +773,7 @@ export function EntityTree() {
             </div>
           )
         ) : (
-          <FoldedSummary country={selected} trees={trees} />
+          <FoldedSummary country={selected} tree={tree} />
         )}
       </header>
       {open && (
@@ -848,28 +784,28 @@ export function EntityTree() {
               collections and onboarding status.
             </p>
           ) : (
-            PERSONAS.map(({ id, label }) => (
-              <PersonaTree
-                key={id}
-                persona={id}
-                label={label}
-                active={activePersona === id}
-                mode={mode}
-                country={selected}
-                fetch={trees[id]}
-                onProvision={(persona, country) => setProvisioning({ persona, country })}
-              />
-            ))
+            <AccountTree
+              mode={mode}
+              country={selected}
+              fetch={tree}
+              onProvision={(country) => setProvisioning(country)}
+            />
           )}
         </div>
       )}
       {provisioning && (
         <ProvisionDialog
-          persona={provisioning.persona}
-          country={provisioning.country}
+          country={provisioning}
           environment={environment}
           onClose={() => setProvisioning(null)}
-          onDone={() => void refresh()}
+          onDone={() => {
+            // The new system and taxpayer ids land in the settings document and the config, not
+            // only in this tree — refresh all three or the rest of the app keeps a stale
+            // "no system id" state.
+            void refresh();
+            void store.refreshConfig();
+            void store.refreshBackend().catch(() => undefined);
+          }}
         />
       )}
     </section>

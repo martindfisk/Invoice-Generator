@@ -1,5 +1,5 @@
 import { CopyButton } from "./ApiCallCard";
-import type { StepCurl, StepResult, StepStatus } from "./runner";
+import type { BinarySummary, StepCurl, StepResult, StepStatus } from "./runner";
 import { pendingResult } from "./runner";
 import type { CollectionStep } from "./uapi-client";
 
@@ -36,6 +36,12 @@ const METHOD_TONE: Record<string, string> = {
 
 function valueText(value: unknown): string {
   return typeof value === "string" ? value : JSON.stringify(value);
+}
+
+function binaryText(binary: BinarySummary): string {
+  const base = binary.contentType.split(";")[0].trim();
+  const label = base.split("/").pop() || "binary";
+  return `${label}, ${binary.bytes.toLocaleString()} bytes`;
 }
 
 const FINISHED: StepStatus[] = ["passed", "failed", "skipped"];
@@ -92,6 +98,11 @@ export function RunnerStepRow({
         )}
         {result.polls > 0 && (
           <span className="font-mono text-[10px] text-muted">{result.polls + 1} polls</span>
+        )}
+        {result.binary && (
+          <span data-binary="" className="font-mono text-[10px] text-muted">
+            {binaryText(result.binary)}
+          </span>
         )}
         {(step.runnable || showCurl) && (
           <span className="ml-auto flex items-center gap-1.5">

@@ -4,9 +4,9 @@ A scripted showcase for a solutions engineer presenting the e-invoice lifecycle 
 
 ## Setup checklist
 
-- [ ] `.env` populated with TEST keys for the Seller and Buyer organisations (see `README.md`).
+- [ ] One TEST API key configured — either in `.env` or via the app's Settings dialog, which persists it on the backend across restarts (see `README.md`).
 - [ ] `make dev` running; the workflow pane (left) and the API log pane (right) load with no console errors.
-- [ ] Mode badge reads **MOCK** for a rehearsal or no-network fallback; **LIVE** (against the TEST environment) for a live demo.
+- [ ] Status badge reads **MOCK** for a rehearsal or no-network fallback; **LIVE · TEST API** for a live demo (the red **LIVE · PRODUCTION** state should never appear in a demo).
 - [ ] Browser window wide enough for the split (≥ 1280 px) — workflow left, API log right; the Mapper itself shows three panes: Human view, fiskaly JSON operation, predicted XML.
 
 ## Act 1 — Create (Italian B2B, SDI)

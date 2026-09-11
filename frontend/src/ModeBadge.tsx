@@ -1,39 +1,41 @@
-import { useStore, type Mode } from "./store";
+import { useStore } from "./store";
 
-const STYLES: Record<Mode, string> = {
-  LIVE: "bg-warning text-bunker",
-  MOCK: "bg-brand-soft text-brand-ink",
-  unknown: "border border-line bg-canvas text-muted",
-};
-
-export function ModeBadge() {
+// One badge for the whole story: MOCK is on-device replay; LIVE names the host the stored
+// environment credentials point at, so "LIVE · TEST API" is the normal demo state and only
+// "LIVE · PRODUCTION" is the dangerous one.
+export function StatusBadge() {
   const mode = useStore((state) => state.mode);
-  return (
-    <span
-      title="Backend mode from GET /api/config"
-      className={`rounded-m px-2 py-0.5 font-mono text-xs font-medium ${STYLES[mode]}`}
-    >
-      {mode === "unknown" ? "MODE ?" : mode}
-    </span>
-  );
-}
-
-export function EnvironmentBadge() {
   const environment = useStore((state) => state.settings?.environment ?? state.config?.environment);
-  if (!environment) return null;
-  const live = environment === "live";
+  if (mode === "unknown") {
+    return (
+      <span className="rounded-m border border-line bg-canvas px-2 py-0.5 font-mono text-xs font-medium text-muted">
+        MODE ?
+      </span>
+    );
+  }
+  if (mode === "MOCK") {
+    return (
+      <span
+        title="On-device mocked run: fixture replay, nothing leaves the machine"
+        className="rounded-m bg-brand-soft px-2 py-0.5 font-mono text-xs font-medium text-brand-ink"
+      >
+        MOCK
+      </span>
+    );
+  }
+  const production = environment === "live";
   return (
     <span
       title={
-        live
-          ? "fiskaly environment: live.api.fiskaly.com — production"
-          : "fiskaly environment: test.api.fiskaly.com"
+        production
+          ? "Live calls against live.api.fiskaly.com — production"
+          : "Live calls against test.api.fiskaly.com — the fiskaly testing environment"
       }
       className={`rounded-m px-2 py-0.5 font-mono text-xs font-medium ${
-        live ? "bg-error text-white" : "border border-brand text-brand-ink"
+        production ? "bg-error text-white" : "bg-warning text-bunker"
       }`}
     >
-      {environment.toUpperCase()}
+      {production ? "LIVE · PRODUCTION" : "LIVE · TEST API"}
     </span>
   );
 }

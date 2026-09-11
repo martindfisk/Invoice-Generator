@@ -73,7 +73,7 @@ The proxy exists because the browser must never hold credentials (and because
 `test.api.fiskaly.com` serves no CORS headers). Its contract is the `/api/*` surface listed in
 [ARCHITECTURE.md](../ARCHITECTURE.md#frontend--backend-contract); the mechanics:
 
-- **`uapi.py` — `UapiClient`**, one per persona on one `httpx.AsyncClient`: caches the bearer token
+- **`uapi.py` — `UapiClient`**, one instance on one `httpx.AsyncClient`: caches the bearer token
   keyed on `expires_at` (refreshes 60 s early, under a lock), retries exactly once on 401, injects
   `X-Api-Version` and an `X-Idempotency-Key` on every POST/PATCH, and passes **every** call through
   the recorder. A token failure surfaces as the fiskaly status + body (never a bare 500), naming
@@ -87,13 +87,21 @@ The proxy exists because the browser must never hold credentials (and because
   (`/api/events`). Reconnects replay via `Last-Event-ID`; an id from before a backend restart is
   detected and the buffer replays from the start. Masking is centralised: secrets, bearer tokens,
   the taxpayer `tax_id_number`, and multi-kB base64 payloads all collapse before anything is stored.
-- **`session.py` + `settings.py`** — `.env` under runtime overrides. Credentials can be pasted in
-  the Settings dialog and live in backend memory only, returned as a fingerprint, never echoed
-  (ADR-0005). LIVE mode is gated on the **seller** credentials only.
-- **`routes.py`** — the contract, plus a catch-all `/api/uapi/{path}` passthrough (persona via
-  `X-Persona`) that the Test runner and the direct transport use. UAPI bodies are pass-through
-  dicts; the proxy never re-models fiskaly's schemas.
-- **`onboarding.py`** — the per-persona account tree (organizations → subjects → taxpayers →
+- **`store.py` — `SettingsStore`** — `.env` under runtime overrides, persisted like a Postman
+  environment to `backend/.uapi-settings.json` (git-ignored, chmod 600, atomic writes) instead of
+  living only in process memory (ADR-0009). A key present in the file is authoritative; an
+  explicit `null` means "cleared" (so a value can override or blank out `.env`); a key absent from
+  the file falls back to `.env`, which is bootstrap-only. Environment, credentials, per-country
+  system/taxpayer ids, mode and the minted bearer token all persist this way, and ids created by
+  guided provisioning are taken over automatically. Credentials are still write-only from the
+  browser's perspective: responses carry a fingerprint, never the secret (ADR-0005's contract
+  stands). LIVE mode is gated on these stored credentials only — there is one account, not a
+  seller/buyer pair (ADR-0009 removed the buyer persona end to end).
+- **`routes.py`** — the contract, plus a catch-all `/api/uapi/{path}` passthrough that the Test
+  runner and the direct transport use. There is no `X-Persona` header and no persona parameter
+  anywhere in the contract. UAPI bodies are pass-through dicts; the proxy never re-models
+  fiskaly's schemas.
+- **`onboarding.py`** — the single account's entity tree (organizations → subjects → taxpayers →
   systems, fetched in parallel, pagination followed) and guided provisioning behind an explicit
   confirmation, feeding the EntityTree in the Test runner section.
 - **`collections.py`** — parses the published fiskaly Postman collections into runnable steps for

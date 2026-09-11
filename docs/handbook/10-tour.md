@@ -7,11 +7,10 @@ everything is_.
 ## The header bar
 
 Always visible: the app title and subtitle · the **section switch** (_Invoice flow_ | _Test
-runner_) · on the right, the **environment badge** (`TEST`/`LIVE` — which fiskaly host the backend
-points at; LIVE additionally paints a warning banner under the header) · the **mode badge**
-(`MOCK`/`LIVE` — fixtures vs real calls; click-through to switching) · a theme toggle · **Settings**.
-In the Test runner section only, a **persona switch** (Seller/Buyer) appears — the invoice flow
-always sends as the seller. A red "backend offline" pill shows when `/api/config` is unreachable.
+runner_) · on the right, one **status badge** — `MOCK`, `LIVE · TEST API`, or `LIVE · PRODUCTION`
+(the only case with a red banner under the header) — · a theme toggle · **Settings**. There is no
+persona switch: one account, one set of credentials, and the invoice flow always sends as that
+account (ADR-0009). A red "backend offline" pill shows when `/api/config` is unreachable.
 
 ## Step 1 — Setup
 
@@ -65,7 +64,7 @@ Top half: the same three-pane workbench (editing continues to revalidate live). 
 ## Step 4 — Send
 
 - **Mode banner** — MOCK: "no request leaves this machine…"; LIVE: which host, and what that means.
-- **Preflight** (collapsible, open until the first send) — persona/system/credentials checks, the
+- **Preflight** (collapsible, open until the first send) — system/credentials checks, the
   channel summary, warnings (missing system id → the passthrough fallback note), and the exact
   **operation payload** that will be posted, labelled "posted unchanged".
 - **Transmission lifecycle timeline** — four nodes (_Intention_, _Transaction_, _Transmission_,
@@ -87,42 +86,54 @@ Top half: the same three-pane workbench (editing continues to revalidate live). 
 ## The API log pane
 
 Mounted beside Send and throughout the Test runner. Each call is a card: method, path, status pill
-(colour by class), latency, persona and MOCK/LIVE chips, the record id, expandable request/response
-with masked headers/bodies, prominent UAPI headers (`X-Api-Version`, `X-Idempotency-Key`,
+(colour by class), latency, a MOCK/LIVE chip, the record id, expandable request/response with
+masked headers/bodies, prominent UAPI headers (`X-Api-Version`, `X-Idempotency-Key`,
 `X-Trace-Identifier`, `X-Idempotency-Replayed`), and **Copy as cURL** (token placeholdered).
 Repeated GET polls of the same record collapse into one card with a "polled n×" chip. Header:
-call count, filter chips by step and persona, _Clear_ (view only — the backend keeps its history).
+call count, filter chips by step, _Clear_ (view only — the backend keeps its history).
 A warning strip appears if the live SSE stream disconnects; arriving at Send with a fresh session
 clears the view so what you watch is this send.
 
 ## The Test runner
 
 The second top-level section: replay the published fiskaly Postman collections (IT, BE, DE) through
-the proxy. Left: the **EntityTree** — each persona's fiskaly account (organizations → subjects →
-taxpayers → systems) with compliance-state glosses and guided provisioning where something is
-missing. Right: the collection picker with version + notes count, the **variables** table (seeded
-from config/entities, with source attribution and MOCK placeholders), and the step list — every
-step with its method/path, captures, waits and asserts; non-runnable steps carry their skip reason
-(tokens are the proxy's job, account mutations are skipped, the reception folder is skipped because
-the app has no receive step). Controls: _Run all_, per-step _Run_/_Run from here_, _Stop_ (finishes
-the current step), per-step and whole-run cURL export. In LIVE, _Run all_ first shows a
-confirmation modal counting the records that will be created. A collapsible **notes** panel lists
-the documented defects in the published collections, sent as published rather than silently fixed.
+the proxy. Left: the **EntityTree** — the account (organizations → subjects → taxpayers →
+systems) with compliance-state glosses and guided provisioning where something is missing. Right:
+the collection picker with version + notes count, the **variables** table (seeded from
+config/entities, with source attribution and MOCK placeholders), and the step list — every step
+with its method/path, captures, waits and asserts; non-runnable steps carry their skip reason
+(tokens are the proxy's job, account mutations are skipped, the Peppol proof-of-ownership folder is
+skipped with a note to complete it in the fiskaly dashboard instead, and the reception folder is
+skipped because the app has no receive step). A binary (`.zip`) step is handled without breaking
+the Italian collection.
+
+Controls: _Run all_ (disabled, with a reason, while a required variable is unset), per-step
+_Run_/_Run from here_, _Stop_ — which now **pauses** the run rather than ending it: steps not yet
+reached keep their pending status, and the next run resumes from there instead of reporting them
+skipped. A summary line reads "N of M steps run against the API; the rest are skipped with a
+reason inline." Per-step and whole-run cURL export. In LIVE, _Run all_ first shows a confirmation
+modal counting the records that will be created. A collapsible **notes** panel lists the
+documented defects in the published collections, sent as published rather than silently fixed.
 
 ## Settings
 
-A modal (focus-trapped, Esc closes) with sections:
+A modal (focus-trapped, Esc closes), one account's worth of settings — like a Postman environment,
+filled in once and saved on the backend (ADR-0009):
 
-- **Environment** — TEST/LIVE radio; LIVE requires ticking an explicit confirmation before _Apply
-  environment_ enables.
-- **Mode** — MOCK/LIVE radio (LIVE available only when seller credentials exist).
-- **Credentials** — per persona, write-only: fields start empty, the response is only
-  `configured` + a fingerprint (`sess***`); held in backend memory, never persisted (ADR-0005).
-  A delete control clears session credentials.
-- **Identifiers** — per-country system/taxpayer ids and the buyer's SDI destination code /
-  Peppol id used by presets.
-- **Validation rules** — the compiled rule sets and versions the Schematron stage runs.
-- **Local preferences** — theme, layout reset.
+- **Mode** — MOCK/LIVE radio. MOCK applies immediately; LIVE is refused by the backend with a 409
+  when no credentials are configured. Switching to LIVE while the environment is production also
+  requires ticking an explicit confirmation before _Apply LIVE mode_ enables.
+- **Environment credentials** — TEST/LIVE host radio (switching to the production host needs the
+  same explicit confirmation before _Save environment_ enables), the API key/secret fields
+  (write-only: they start empty, the response is only `configured` + a fingerprint), and a _Clear
+  credentials_ control. Saved values go to `backend/.uapi-settings.json` (git-ignored, chmod 600)
+  and survive backend restarts; clearing writes an explicit "cleared" marker that overrides `.env`
+  rather than just falling back to it.
+- **Identifiers** — per-country system id and taxpayer id, shown in full (routing data, not
+  secrets); guided provisioning in the Test runner fills these in automatically. Saved values
+  persist the same way.
+- **Validation rules** — the compiled rule sets and versions the Schematron stage runs, read-only.
+- **Local preferences** — theme, pane-layout reset; kept in this browser only.
 
 ## Accessibility, briefly
 

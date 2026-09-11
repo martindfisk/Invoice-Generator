@@ -58,8 +58,11 @@ TAXPAYER_TEMPLATES = {
         },
         "fiscalization": {
             "type": "BE",
-            "tax_id_number": "1234567890",
-            "vat_id_number": "1403019261",
+            # Belgian company numbers carry a mod-97 check (last two digits = 97 - first
+            # eight mod 97); an invalid one is either rejected at POST /taxpayers or breeds
+            # an invalid 0208 Peppol participant id (PEPPOL-COMMON-R043).
+            "tax_id_number": "0699999906",
+            "vat_id_number": "0699999906",
             "credentials": {"type": "MYMINFIN"},
         },
     },
@@ -75,7 +78,8 @@ TAXPAYER_TEMPLATES = {
         "fiscalization": {
             "type": "DE",
             "tax_id_number": "99999999999",
-            "vat_id_number": "123456789",
+            # USt-IdNr digits with a valid ISO 7064 MOD 11,10 check digit.
+            "vat_id_number": "123456788",
         },
     },
 }
@@ -110,11 +114,9 @@ def build_taxpayer(country, overrides):
 
 
 async def onboarding_status(client, store):
-    persona = client.name
     payload = {
-        "persona": persona,
         "environment": store.environment,
-        "credentials": store.credential_state(persona),
+        "credentials": store.credential_state(),
         "counts": {name: 0 for name in ("organizations", "subjects", "taxpayers", "systems")},
         "organizations": [],
         "subjects": [],
@@ -124,7 +126,7 @@ async def onboarding_status(client, store):
         "missing": ["no API credentials configured"],
         "errors": {},
     }
-    if client.mode == "live" and client.persona.missing_credentials:
+    if client.mode == "live" and client.account.missing_credentials:
         return payload
     # One failing listing (a 403 on /organizations, say) must not blank the whole tree — the
     # other resources still render, and the failed one is named per resource.
@@ -230,9 +232,7 @@ async def provision(client, store, country, taxpayer_content, reuse=True):
         and (verified.get("state"), verified.get("mode")) == OPERATIVE_SYSTEM
     )
     if taxpayer_id and system_id:
-        store.set_systems(
-            client.name, {country: {"system_id": system_id, "taxpayer_id": taxpayer_id}}
-        )
+        store.set_systems({country: {"system_id": system_id, "taxpayer_id": taxpayer_id}})
     return {
         "steps": chain.steps,
         "created": {"taxpayer_id": taxpayer_id, "location_id": None, "system_id": system_id},

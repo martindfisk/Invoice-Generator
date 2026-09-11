@@ -9,7 +9,6 @@ function call(id: string, ts: string, extra: Partial<ApiCall> = {}): ApiCall {
     id,
     ts,
     step: "setup",
-    persona: "seller",
     mode: "MOCK",
     method: "GET",
     url: "https://test.api.fiskaly.com/api/v5/systems/sys-1",
@@ -27,12 +26,12 @@ describe("store", () => {
     delete document.documentElement.dataset.theme;
   });
 
-  it("starts as seller, unknown mode, light theme, no calls and no preset", () => {
+  it("starts with unknown mode, light theme, no calls and no preset", () => {
     expect(createStore().getState()).toMatchObject({
       mode: "unknown",
       calls: [],
       theme: "light",
-      workflow: { persona: "seller", step: "setup", presetId: null, invoice: null },
+      workflow: { step: "setup", presetId: null, invoice: null },
     });
   });
 
@@ -41,14 +40,13 @@ describe("store", () => {
     expect(createStore().getState().theme).toBe("dark");
   });
 
-  it("setPersona and setMode replace the field and notify subscribers", () => {
+  it("setMode replaces the field and notifies subscribers", () => {
     const store = createStore();
     const listener = vi.fn();
     store.subscribe(listener);
-    store.setPersona("buyer");
     store.setMode("LIVE");
-    expect(store.getState()).toMatchObject({ mode: "LIVE", workflow: { persona: "buyer" } });
-    expect(listener).toHaveBeenCalledTimes(2);
+    expect(store.getState()).toMatchObject({ mode: "LIVE" });
+    expect(listener).toHaveBeenCalledTimes(1);
   });
 
   it("dispatch runs the workflow reducer, persists it after the debounce and notifies once", () => {
@@ -141,7 +139,7 @@ describe("store", () => {
     const listener = vi.fn();
     const unsubscribe = store.subscribe(listener);
     unsubscribe();
-    store.setPersona("buyer");
+    store.setMode("LIVE");
     expect(listener).not.toHaveBeenCalled();
   });
 });
@@ -155,7 +153,6 @@ describe("call ordering", () => {
         id,
         ts: at,
         step: "poll",
-        persona: "seller",
         mode: "MOCK",
         method: "GET",
         url: `https://test.api.fiskaly.com/records/${id}`,

@@ -1,4 +1,3 @@
-import type { Persona } from "./api-log";
 import type {
   CollectionSummary,
   OnboardingCountry,
@@ -67,13 +66,10 @@ export type TreeFetch = {
 
 export const IDLE_FETCH: TreeFetch = { status: null, error: null, loading: false };
 
-export function noCredentialsHint(persona: Persona): string {
-  return (
-    `No API credentials are configured for the ${persona}. This is not an empty fiskaly ` +
-    `account — without a key the backend cannot ask fiskaly what exists. Add the API key and ` +
-    `secret under Settings → Credentials.`
-  );
-}
+export const NO_CREDENTIALS_HINT =
+  "No API credentials are configured. This is not an empty fiskaly account — without a key " +
+  "the backend cannot ask fiskaly what exists. Add the API key and secret under Settings → " +
+  "Environment credentials.";
 
 export type NodeTone = "success" | "warning" | "neutral" | "missing";
 

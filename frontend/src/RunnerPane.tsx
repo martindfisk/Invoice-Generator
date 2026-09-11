@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { CopyButton } from "./ApiCallCard";
-import type { Persona } from "./api-log";
 import { EntityTree } from "./EntityTree";
 import { Modal } from "./Modal";
 import { Split } from "./Split";
@@ -14,10 +13,13 @@ import {
   pendingResult,
   recordsCreated,
   runCurlScript,
+  runnableSummary,
   runSteps,
+  saveNotesDismissed,
   seedValues,
   seedVariables,
   stepCurl,
+  stoppedLine,
   type MissingVariable,
   type RunTransport,
   type SeededVariable,
@@ -43,13 +45,8 @@ async function startRun(from: number, until?: number, continueOnFailure = false)
   const { collection } = state.runner;
   if (!collection || state.runner.running) return;
   const to = until ?? collection.steps.length - 1;
-  const persona = state.workflow.persona;
-  const seeds = seedVariables(state.settings, persona, collection.id);
-  // Captured ids belong to the persona whose run captured them; against the other persona's
-  // credentials they only produce 403/404s, so a persona switch starts from the seeds alone.
-  const staleCaptures = state.runner.capturedBy !== null && state.runner.capturedBy !== persona;
-  const carried = staleCaptures ? {} : state.runner.captured;
-  const variables: Vars = { ...seedValues(seeds), ...carried };
+  const seeds = seedVariables(state.settings, collection.id);
+  const variables: Vars = { ...seedValues(seeds), ...state.runner.captured };
   const runId = crypto.randomUUID();
   const startedAt = Date.now();
   controller = new AbortController();
@@ -63,7 +60,7 @@ async function startRun(from: number, until?: number, continueOnFailure = false)
     status: `Running ${collection.name}…`,
   });
   const transport: RunTransport = ({ method, path, body, stepName, idempotencyKey }) =>
-    passthrough(method, path, persona, body ?? undefined, idempotencyKey, {
+    passthrough(method, path, body ?? undefined, idempotencyKey, {
       "X-Step": stepName,
       "X-Run-Id": runId,
     });
@@ -83,14 +80,17 @@ async function startRun(from: number, until?: number, continueOnFailure = false)
       });
     },
   });
-  const captured: Vars = staleCaptures ? {} : { ...store.getState().runner.captured };
+  const captured: Vars = { ...store.getState().runner.captured };
   for (const result of Object.values(outcome.results)) Object.assign(captured, result.captured);
+  const finalResults = store.getState().runner.results;
   store.patchRunner({
     running: false,
     haltedAt: outcome.haltedAt,
     captured,
-    capturedBy: persona,
-    status: finishLine(collection.steps, store.getState().runner.results, Date.now() - startedAt),
+    status:
+      outcome.stoppedAt !== null
+        ? stoppedLine(collection.steps, finalResults, outcome.stoppedAt)
+        : finishLine(collection.steps, finalResults, Date.now() - startedAt),
   });
   controller = null;
 }
@@ -99,7 +99,6 @@ function clearRun(): void {
   store.patchRunner({
     results: {},
     captured: {},
-    capturedBy: null,
     haltedAt: null,
     runId: null,
     status: null,
@@ -114,24 +113,13 @@ function stopRun(): void {
 export function VariablePanel({
   seeds,
   captured,
-  capturedBy = null,
-  persona,
   missing,
-  onClearCaptured,
 }: {
   seeds: SeededVariable[];
   captured: Vars;
-  capturedBy?: Persona | null;
-  persona?: Persona;
   missing: MissingVariable[];
-  onClearCaptured?: () => void;
 }) {
   const capturedEntries = Object.entries(captured);
-  const staleCaptures =
-    capturedEntries.length > 0 &&
-    capturedBy !== null &&
-    persona !== undefined &&
-    capturedBy !== persona;
   const settingsLink = (section: string, label: string) => (
     <button
       type="button"
@@ -174,28 +162,11 @@ export function VariablePanel({
               {typeof value === "string" ? value : JSON.stringify(value)}
             </span>
             <span className="rounded-m bg-select-bg px-1.5 py-0.5 text-[10px] text-ink">
-              captured at runtime{capturedBy ? ` as ${capturedBy}` : ""}
+              captured at runtime
             </span>
           </li>
         ))}
       </ul>
-      {staleCaptures && (
-        <div className="mt-2 flex flex-wrap items-center gap-2 rounded-m bg-warning-soft px-2 py-1.5 text-[11px] text-warning-ink">
-          <p>
-            These values were captured as the {capturedBy} — the next run as the {persona} starts
-            from the seeds alone and ignores them.
-          </p>
-          {onClearCaptured && (
-            <button
-              type="button"
-              className="rounded-m border border-line bg-surface px-2 py-0.5 text-[10px] font-medium text-muted hover:border-brand hover:text-ink"
-              onClick={onClearCaptured}
-            >
-              Clear captured
-            </button>
-          )}
-        </div>
-      )}
       {missing.length > 0 && (
         <div className="mt-2 rounded-m bg-warning-soft px-2 py-1.5 text-[11px] text-warning-ink">
           {missing.map((entry) => (
@@ -265,7 +236,6 @@ export function CollectionNotesPanel({
 export function RunnerPane() {
   const runner = useStore((state) => state.runner);
   const settings = useStore((state) => state.settings);
-  const persona = useStore((state) => state.workflow.persona);
   const mode = useStore((state) => state.mode);
   const calls = useStore((state) => state.calls);
   const wide = useIsWide();
@@ -278,20 +248,17 @@ export function RunnerPane() {
   }, []);
 
   const seeds = useMemo(
-    () =>
-      runner.collection ? seedVariables(settings, persona as Persona, runner.collection.id) : [],
-    [settings, persona, runner.collection],
+    () => (runner.collection ? seedVariables(settings, runner.collection.id) : []),
+    [settings, runner.collection],
   );
 
   const missing = useMemo(() => {
     if (!runner.collection) return [];
-    // Stale captures are ignored by the next run, so they must not satisfy references here.
-    const stale = runner.capturedBy !== null && runner.capturedBy !== persona;
     return missingVariables(runner.collection.steps, {
       ...seedValues(seeds),
-      ...(stale ? {} : runner.captured),
+      ...runner.captured,
     });
-  }, [runner.collection, seeds, runner.captured, runner.capturedBy, persona]);
+  }, [runner.collection, seeds, runner.captured]);
 
   const matches = useMemo(
     () => (runner.collection ? matchStepCalls(runner.collection.steps, runner.results, calls) : {}),
@@ -315,6 +282,22 @@ export function RunnerPane() {
     );
     return index === -1 ? null : index;
   }, [runner.collection, runner.results]);
+
+  // Where "Run all" starts: the first step without a verdict, so a stopped run resumes where
+  // it paused; when every step has a result the whole collection runs again from the top.
+  const resumeIndex = useMemo(() => {
+    if (!runner.collection) return 0;
+    const index = runner.collection.steps.findIndex(
+      (_, i) => (runner.results[i]?.status ?? "pending") === "pending",
+    );
+    return index === -1 ? 0 : index;
+  }, [runner.collection, runner.results]);
+
+  const blocked = missing.length > 0;
+  const blockedTitle = blocked
+    ? `unresolved ${missing.map((entry) => `{{${entry.name}}}`).join(", ")} — ` +
+      "set them in Settings → Identifiers (see the Variables panel above)"
+    : undefined;
 
   const hasRunState =
     Object.keys(runner.results).length > 0 || Object.keys(runner.captured).length > 0;
@@ -411,33 +394,29 @@ export function RunnerPane() {
             {runner.collection.notes.length > 0 && !runner.notesDismissed && (
               <CollectionNotesPanel
                 notes={runner.collection.notes}
-                onDismiss={() => store.patchRunner({ notesDismissed: true })}
+                onDismiss={() => {
+                  saveNotesDismissed(runner.collection!.id);
+                  store.patchRunner({ notesDismissed: true });
+                }}
               />
             )}
-            <VariablePanel
-              seeds={seeds}
-              captured={runner.captured}
-              capturedBy={runner.capturedBy}
-              persona={persona as Persona}
-              missing={missing}
-              onClearCaptured={() =>
-                store.patchRunner({ captured: {}, capturedBy: null, status: null })
-              }
-            />
+            <VariablePanel seeds={seeds} captured={runner.captured} missing={missing} />
 
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 className={PRIMARY}
-                disabled={runner.running}
-                onClick={() => requestRun(0)}
+                disabled={runner.running || blocked}
+                title={blockedTitle}
+                onClick={() => requestRun(resumeIndex)}
               >
                 Run all
               </button>
               <button
                 type="button"
                 className={SECONDARY}
-                disabled={runner.running || nextIndex === null}
+                disabled={runner.running || nextIndex === null || blocked}
+                title={blockedTitle}
                 onClick={() => {
                   if (nextIndex !== null) requestRun(nextIndex, nextIndex);
                 }}
@@ -494,6 +473,8 @@ export function RunnerPane() {
               </p>
             </div>
 
+            <p className="text-[11px] text-muted">{runnableSummary(runner.collection.steps)}</p>
+
             <ol
               aria-label="Collection steps"
               className="rounded-l border border-line bg-surface py-1"
@@ -543,7 +524,10 @@ export function RunnerPane() {
         <p id="runner-live-guard-blurb" className="mt-2 text-xs text-muted">
           This run will create{" "}
           <span className="font-mono font-semibold text-error-ink">{liveRecords}</span> record
-          {liveRecords === 1 ? "" : "s"} at fiskaly. LIVE records are real and cannot be recalled.
+          {liveRecords === 1 ? "" : "s"} at fiskaly.{" "}
+          {settings?.environment === "test"
+            ? "These are real records in the fiskaly TEST environment (not billed, no tax-authority transmission)."
+            : "LIVE records are real and cannot be recalled."}
         </p>
         <div className="mt-4 flex justify-end gap-2">
           <button type="button" className={SECONDARY} onClick={() => setLiveGuard(null)}>

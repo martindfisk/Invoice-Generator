@@ -29,7 +29,6 @@ class CallRecord(BaseModel):
     id: str = ""
     ts: str = Field(default_factory=_now)
     step: str
-    persona: str
     mode: str
     method: str
     url: str

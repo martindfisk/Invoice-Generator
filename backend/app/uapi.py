@@ -23,8 +23,7 @@ class MissingCredentials(RuntimeError):
 
 
 class UapiClient:
-    def __init__(self, name, store, recorder, transport=None):
-        self.name = name
+    def __init__(self, store, recorder, transport=None):
         self.store = store
         self.recorder = recorder
         self._lock = asyncio.Lock()
@@ -36,8 +35,8 @@ class UapiClient:
         return self.store.settings
 
     @property
-    def persona(self):
-        return self.store.persona(self.name)
+    def account(self):
+        return self.store.account()
 
     @property
     def mode(self):
@@ -63,19 +62,19 @@ class UapiClient:
     async def token(self):
         async with self._lock:
             await self._sync()
-            persona = self.persona
-            if self.mode == "live" and persona.missing_credentials:
+            account = self.account
+            if self.mode == "live" and account.missing_credentials:
                 raise MissingCredentials(
-                    f"no API credentials for persona {self.name!r}: set them in the settings "
-                    f"dialog or {', '.join(persona.missing_credentials)} in .env"
+                    f"no API credentials configured: set them in the settings dialog or "
+                    f"{', '.join(account.missing_credentials)} in .env"
                 )
             if self._bearer and time.time() < self._expires_at - REFRESH_MARGIN_S:
                 return self._bearer
             body = {
                 "content": {
                     "type": "API_KEY",
-                    "key": persona.api_key,
-                    "secret": persona.api_secret,
+                    "key": account.api_key,
+                    "secret": account.api_secret,
                 }
             }
             headers = {
@@ -86,7 +85,7 @@ class UapiClient:
             if response.status_code >= 400:
                 error = UpstreamError(response)
                 error.body = {
-                    "detail": f"fiskaly rejected the credentials for persona {self.name!r} "
+                    "detail": f"fiskaly rejected the API credentials "
                     f"(POST /tokens returned {response.status_code})",
                     "upstream": error.body,
                 }
@@ -94,6 +93,10 @@ class UapiClient:
             authentication = response.json()["content"]["authentication"]
             self._bearer = authentication["bearer"]
             self._expires_at = datetime.fromisoformat(authentication["expires_at"]).timestamp()
+            # Taken over into the persisted settings: a restart reuses the token until it
+            # expires or the credentials/environment change.
+            if self.mode == "live":
+                self.store.set_token(self._bearer, self._expires_at)
             return self._bearer
 
     async def request(
@@ -117,6 +120,7 @@ class UapiClient:
         response = await self._authorized(*args)
         if response.status_code == 401:
             self._bearer = None
+            self.store.clear_token()
             response = await self._authorized(*args)
         return response
 
@@ -125,12 +129,11 @@ class UapiClient:
         self._http = httpx.AsyncClient(
             base_url=self.store.base_url, transport=transport, timeout=REQUEST_TIMEOUT_S
         )
-        self._bearer = None
-        self._expires_at = 0.0
-        self._revision = self.store.revision(self.name)
+        self._bearer, self._expires_at = self.store.token()
+        self._revision = self.store.revision()
 
     async def _sync(self):
-        if self._revision != self.store.revision(self.name):
+        if self._revision != self.store.revision():
             await self.use(self._transport)
 
     async def _authorized(
@@ -198,7 +201,6 @@ class UapiClient:
         self.recorder.add(
             CallRecord(
                 step=step,
-                persona=self.name,
                 mode=self.mode,
                 method=request.method,
                 url=str(request.url),

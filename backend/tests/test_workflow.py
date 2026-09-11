@@ -9,7 +9,7 @@ import pytest
 import respx
 
 from app.recorder import Recorder
-from app.session import SessionStore
+from app.store import SettingsStore
 from app.uapi import UapiClient
 from app.workflow import (
     ArtifactMissing,
@@ -22,8 +22,8 @@ from app.workflow import (
     wait_for_transmission,
 )
 from tests.conftest import (
+    API_SECRET,
     PEPPOL_INVOICING,
-    SELLER_SECRET,
     api_for,
     invoice_operation,
     make_settings,
@@ -50,7 +50,7 @@ def record(record_id, record_type, state, mode, **extra):
             "type": record_type,
             "state": state,
             "mode": mode,
-            "system": {"id": "seller-system-it"},
+            "system": {"id": "test-system-it"},
             "journal": {"signature": "0" * 64, "signed_at": "2026-08-26T09:00:00Z"},
             "file": {"location": f"records/{record_id}.json"},
             **extra,
@@ -65,8 +65,8 @@ def recorder():
 
 @pytest.fixture
 def client(recorder):
-    store = SessionStore(make_settings(poll_interval_s=0.0, poll_timeout_s=5.0))
-    return UapiClient("seller", store, recorder)
+    store = SettingsStore(make_settings(poll_interval_s=0.0, poll_timeout_s=5.0))
+    return UapiClient(store, recorder)
 
 
 @pytest.fixture
@@ -94,7 +94,7 @@ def creation(upstream):
 async def test_create_invoice_posts_intention_then_transaction(client, upstream, recorder):
     route = creation(upstream)
     operation = invoice_operation()
-    result = await create_invoice(client, "seller-system-it", operation)
+    result = await create_invoice(client, "test-system-it", operation)
 
     assert result == {
         "intention_id": INTENTION_ID,
@@ -107,7 +107,7 @@ async def test_create_invoice_posts_intention_then_transaction(client, upstream,
     assert intention == {
         "content": {
             "type": "INTENTION",
-            "system": {"id": "seller-system-it"},
+            "system": {"id": "test-system-it"},
             "operation": {"type": "TRANSACTION"},
         }
     }
@@ -123,7 +123,7 @@ async def test_create_invoice_posts_intention_then_transaction(client, upstream,
 
 async def test_create_invoice_derives_two_stable_idempotency_keys(client, upstream):
     route = creation(upstream)
-    await create_invoice(client, "seller-system-it", invoice_operation(), "demo-key-1")
+    await create_invoice(client, "test-system-it", invoice_operation(), "demo-key-1")
     first = [call.request.headers["X-Idempotency-Key"] for call in route.calls]
     assert len({uuid.UUID(key).version for key in first}) == 1
     assert {uuid.UUID(key).version for key in first} == {4}
@@ -139,7 +139,7 @@ async def test_create_invoice_derives_two_stable_idempotency_keys(client, upstre
             ),
         ]
     )
-    await create_invoice(client, "seller-system-it", invoice_operation(), "demo-key-1")
+    await create_invoice(client, "test-system-it", invoice_operation(), "demo-key-1")
     assert [call.request.headers["X-Idempotency-Key"] for call in route.calls][2:] == first
 
 
@@ -435,7 +435,7 @@ async def test_correction_opens_its_own_intention_and_references_the_original(
     route = correction_creation(upstream)
     operation = invoice_operation(number="2026-001-NC")
     result = await create_correction(
-        client, "seller-system-it", TRANSACTION_ID, operation, "wrong quantity invoiced"
+        client, "test-system-it", TRANSACTION_ID, operation, "wrong quantity invoiced"
     )
 
     assert result == {
@@ -450,7 +450,7 @@ async def test_correction_opens_its_own_intention_and_references_the_original(
     assert intention == {
         "content": {
             "type": "INTENTION",
-            "system": {"id": "seller-system-it"},
+            "system": {"id": "test-system-it"},
             "operation": {"type": "TRANSACTION"},
         }
     }
@@ -471,7 +471,7 @@ async def test_correction_opens_its_own_intention_and_references_the_original(
 
 async def test_correction_omits_the_reason_when_none_is_given(client, upstream):
     route = correction_creation(upstream)
-    await create_correction(client, "seller-system-it", TRANSACTION_ID, invoice_operation())
+    await create_correction(client, "test-system-it", TRANSACTION_ID, invoice_operation())
     operation = json.loads(route.calls[1].request.content)["content"]["operation"]
     assert "reason" not in operation
     assert operation["record"] == {"id": TRANSACTION_ID}
@@ -479,12 +479,12 @@ async def test_correction_omits_the_reason_when_none_is_given(client, upstream):
 
 async def test_correction_derives_a_key_that_differs_from_the_invoice_transaction(client, upstream):
     route = creation(upstream)
-    await create_invoice(client, "seller-system-it", invoice_operation(), "demo-key-1")
+    await create_invoice(client, "test-system-it", invoice_operation(), "demo-key-1")
     invoice_keys = [call.request.headers["X-Idempotency-Key"] for call in route.calls]
 
     correction_route = correction_creation(upstream)
     await create_correction(
-        client, "seller-system-it", TRANSACTION_ID, invoice_operation(), None, "demo-key-1"
+        client, "test-system-it", TRANSACTION_ID, invoice_operation(), None, "demo-key-1"
     )
     correction_keys = [
         call.request.headers["X-Idempotency-Key"] for call in correction_route.calls[-2:]
@@ -517,7 +517,7 @@ async def test_correction_passes_a_missing_original_record_through(client, upstr
     )
     with pytest.raises(UpstreamError) as raised:
         await create_correction(
-            client, "seller-system-it", "does-not-exist", invoice_operation(), "typo"
+            client, "test-system-it", "does-not-exist", invoice_operation(), "typo"
         )
     assert raised.value.status_code == 404
     assert raised.value.body["code"] == "E_NOT_FOUND"
@@ -536,12 +536,12 @@ async def test_list_records_unwraps_content_and_keeps_pagination(client, upstrea
             },
         )
     )
-    result = await list_records(client, "TRANSACTION::INVOICE", "seller-system-it", 2, "MA==")
+    result = await list_records(client, "TRANSACTION::INVOICE", "test-system-it", 2, "MA==")
 
     assert [item["id"] for item in result["results"]] == [TRANSACTION_ID, CORRECTION_ID]
     assert result["pagination"] == {"next": "/records?token=Mg==", "token": "Mg==", "limit": 2}
     query = route.calls.last.request.url.query.decode()
-    assert query == "type=TRANSACTION::INVOICE&system_id=seller-system-it&limit=2&token=MA%3D%3D"
+    assert query == "type=TRANSACTION::INVOICE&system_id=test-system-it&limit=2&token=MA%3D%3D"
     assert recorder.list()[-1].step == "list"
 
 
@@ -552,7 +552,7 @@ async def test_list_records_passes_upstream_errors_through(client, upstream):
         )
     )
     with pytest.raises(UpstreamError) as raised:
-        await list_records(client, "TRANSACTION::INVOICE", "seller-system-it")
+        await list_records(client, "TRANSACTION::INVOICE", "test-system-it")
     assert raised.value.status_code == 401
 
 
@@ -582,21 +582,17 @@ async def test_fetch_files_passes_upstream_errors_through(client, upstream):
 async def test_belgian_invoice_uses_peppol_invoicing(client, upstream):
     route = creation(upstream)
     operation = invoice_operation(invoicing=PEPPOL_INVOICING, inclusive="121.00")
-    await create_invoice(client, "seller-system-be", operation)
+    await create_invoice(client, "test-system-be", operation)
     body = json.loads(route.calls[1].request.content)
     recipient = body["content"]["operation"]["recipients"][0]
     assert recipient["invoicing"] == {"type": "PEPPOL", "identifier": "0208:0987654321"}
     assert json.loads(route.calls[0].request.content)["content"]["system"]["id"] == (
-        "seller-system-be"
+        "test-system-be"
     )
 
 
 async def api_send(api, country="IT", number="2026-001", **kwargs):
-    body = {
-        "persona": "seller",
-        "country": country,
-        "operation": invoice_operation(number=number, **kwargs),
-    }
+    body = {"country": country, "operation": invoice_operation(number=number, **kwargs)}
     return await api.post("/api/invoices", json=body)
 
 
@@ -631,7 +627,6 @@ async def test_route_walks_send_wait_artifact_and_records_every_step():
             "poll",
             "artifact",
         ]
-        assert {call["persona"] for call in calls} == {"seller"}
         assert {call["mode"] for call in calls} == {"mock"}
         assert all(
             call["request"]["headers"]["Authorization"].startswith("Bearer ****")
@@ -640,7 +635,7 @@ async def test_route_walks_send_wait_artifact_and_records_every_step():
         assert "Authorization" not in calls[0]["request"]["headers"]
         assert all("Bearer $FISKALY_TOKEN" in call["curl"] for call in calls[1:])
         assert calls[0]["request"]["body"]["content"]["secret"] == "***"
-        assert SELLER_SECRET not in (await api.get("/api/calls")).text
+        assert API_SECRET not in (await api.get("/api/calls")).text
 
 
 async def test_route_reports_the_recipient_without_invoicing_as_terminal():
@@ -683,7 +678,6 @@ async def test_route_walks_the_correction_choreography_to_its_own_transmission()
         corrected = await api.post(
             f"/api/invoices/{invoice_id}/correction",
             json={
-                "persona": "seller",
                 "country": "IT",
                 "operation": invoice_operation(number="2026-700-NC"),
                 "reason": "two covers were never served",
@@ -714,7 +708,7 @@ async def test_route_reports_a_correction_of_a_record_that_does_not_exist():
     async with api_for(make_settings(poll_interval_s=0.0)) as (_, api):
         response = await api.post(
             "/api/invoices/does-not-exist/correction",
-            json={"persona": "seller", "country": "IT", "operation": invoice_operation()},
+            json={"country": "IT", "operation": invoice_operation()},
         )
         assert response.status_code == 404
         assert response.json()["code"] == "E_NOT_FOUND"
@@ -793,11 +787,7 @@ async def test_listing_defaults_to_invoices_and_can_ask_for_corrections():
         invoice_id = sent.json()["transaction_id"]
         await api.post(
             f"/api/invoices/{invoice_id}/correction",
-            json={
-                "persona": "seller",
-                "country": "IT",
-                "operation": invoice_operation(number="2026-804-NC"),
-            },
+            json={"country": "IT", "operation": invoice_operation(number="2026-804-NC")},
         )
         invoices = await api.get("/api/invoices", params={"country": "IT"})
         assert [item["type"] for item in invoices.json()["results"]] == ["TRANSACTION::INVOICE"]
@@ -812,27 +802,20 @@ async def test_listing_defaults_to_invoices_and_can_ask_for_corrections():
         ]
 
 
-async def test_listing_names_the_missing_env_variable():
-    async with api_for(make_settings(seller_system_id_it=None, uapi_mode="live")) as (app, api):
-        for uapi in app.state.clients.values():
-            await uapi.use(None)
+async def test_listing_names_the_missing_system_id():
+    async with api_for(make_settings(uapi_system_id_it=None, uapi_mode="live")) as (_, api):
         response = await api.get("/api/invoices", params={"country": "IT"})
         assert response.status_code == 409
-        assert "SELLER_SYSTEM_ID_IT" in response.json()["detail"]
+        detail = response.json()["detail"]
+        assert detail["code"] == "SYSTEM_ID_MISSING"
+        assert detail["country"] == "IT"
+        assert "UAPI_SYSTEM_ID_IT" in detail["detail"]
 
 
-async def test_route_rejects_unknown_persona_country_and_kind():
+async def test_route_rejects_unknown_country_and_kind():
     async with api_for(make_settings()) as (_, api):
-        unknown_persona = await api.post(
-            "/api/invoices",
-            json={"persona": "auditor", "country": "IT", "operation": invoice_operation()},
-        )
-        assert unknown_persona.status_code == 400
-        assert "auditor" in unknown_persona.json()["detail"]
-
         unknown_country = await api.post(
-            "/api/invoices",
-            json={"persona": "seller", "country": "FR", "operation": invoice_operation()},
+            "/api/invoices", json={"country": "FR", "operation": invoice_operation()}
         )
         assert unknown_country.status_code == 400
         assert "FR" in unknown_country.json()["detail"]
@@ -842,13 +825,22 @@ async def test_route_rejects_unknown_persona_country_and_kind():
         assert "pdf" in unknown_kind.json()["detail"]
 
 
-async def test_route_names_the_missing_env_variable():
-    async with api_for(make_settings(seller_system_id_it=None, uapi_mode="live")) as (app, api):
-        for uapi in app.state.clients.values():
-            await uapi.use(None)
+async def test_mock_mode_falls_back_to_a_placeholder_system_id():
+    async with api_for(make_settings(uapi_system_id_it=None)) as (_, api):
+        created = await api_send(api, number="2026-805")
+        assert created.status_code == 200
+        calls = (await api.get("/api/calls")).json()
+        intention = next(call for call in calls if call["step"] == "intention")
+        assert intention["request"]["body"]["content"]["system"]["id"] == "mock-system-it"
+
+
+async def test_send_names_the_missing_system_id_in_live_mode():
+    async with api_for(make_settings(uapi_system_id_it=None, uapi_mode="live")) as (_, api):
         response = await api_send(api)
         assert response.status_code == 409
-        assert "SELLER_SYSTEM_ID_IT" in response.json()["detail"]
+        detail = response.json()["detail"]
+        assert detail["code"] == "SYSTEM_ID_MISSING"
+        assert "UAPI_SYSTEM_ID_IT" in detail["detail"]
 
 
 async def test_route_passes_upstream_errors_through_unchanged():

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-03T15:34:25Z",
+  "generatedAt": "2026-09-11T08:20:51Z",
   "saxonJs": "2.7.0",
   "ruleSets": [
     {
@@ -13,10 +13,10 @@
       "order": 0,
       "sourceSha": "e55f1b01ffcbcc037dd1b9d01c52423a3f91f45a2e966e6bc8a56ea6c69188b6",
       "sef": {
-        "sha256": "707d5539a442c4a856544f17c561718763a8d7e853fcb6cb2fa43f6c12e7ec46",
-        "bytes": 4886124,
+        "sha256": "5ffa27a468f90c8915bfa0bcee0ba78cc4c8be4253938ec24ae2787bf8950a62",
+        "bytes": 4886126,
         "saxonVersion": "SaxonJS 2.7",
-        "buildDateTime": "2026-09-03T17:34:09.56+02:00"
+        "buildDateTime": "2026-09-11T10:20:35.593+02:00"
       }
     },
     {
@@ -30,10 +30,10 @@
       "order": 1,
       "sourceSha": "5ddf3a2f6633147b20b7805df9902d825af1a984f10014fcee186d4170364b1d",
       "sef": {
-        "sha256": "49d275d28db2efadf21f27bb7ec0fbb433bb7f32b9d71cd655137f9e6455105b",
-        "bytes": 1857643,
+        "sha256": "c03e7e0c91d3698219ee4a52df8d1bb016a384a9262a75026d6a032192153f56",
+        "bytes": 1857642,
         "saxonVersion": "SaxonJS 2.7",
-        "buildDateTime": "2026-09-03T17:34:14.298+02:00"
+        "buildDateTime": "2026-09-11T10:20:40.438+02:00"
       }
     },
     {
@@ -48,10 +48,10 @@
       "order": 0,
       "sourceSha": "bdcbb7b702cce55c7f8c789bef0cb9bebf6d376140c1776e683bd6d9bc0ad331",
       "sef": {
-        "sha256": "9b5dcf4e09c3e6063b6b26b6f0dbc2f34b59c8e2564cd70ec126b9079a7aca4c",
-        "bytes": 8227437,
+        "sha256": "cfe98b916c553669f22d1fe313d993407b3541da301eebdb85ed8321749677a5",
+        "bytes": 8227436,
         "saxonVersion": "SaxonJS 2.7",
-        "buildDateTime": "2026-09-03T17:34:20.452+02:00"
+        "buildDateTime": "2026-09-11T10:20:46.86+02:00"
       }
     },
     {
@@ -65,10 +65,10 @@
       "order": 1,
       "sourceSha": "0cadcbde2eb320c2e7e83a8057b93bc48076e223dda36308e31704684ee9ecf3",
       "sef": {
-        "sha256": "9366f9a52434a72037f05b4b16fb1bf417be60fd24e20cc40e26627b9897f158",
+        "sha256": "8d1de1e0482dcb8955e8c16286b84f491b097d7e603d0c2f8f507e7de863e11b",
         "bytes": 1832215,
         "saxonVersion": "SaxonJS 2.7",
-        "buildDateTime": "2026-09-03T17:34:24.284+02:00"
+        "buildDateTime": "2026-09-11T10:20:50.929+02:00"
       }
     }
   ]

@@ -34,8 +34,8 @@ describe("storage resilience", () => {
     expect(store.getState().theme).toBe("light");
     expect(store.getState().workflow.step).toBe("setup");
 
-    expect(() => store.dispatch({ type: "setPersona", persona: "buyer" })).not.toThrow();
-    expect(store.getState().workflow.persona).toBe("buyer");
+    expect(() => store.dispatch({ type: "showUncarried", show: false })).not.toThrow();
+    expect(store.getState().workflow.groups.showUncarried).toBe(false);
 
     expect(() => store.setTheme("dark")).not.toThrow();
     expect(store.getState().theme).toBe("dark");

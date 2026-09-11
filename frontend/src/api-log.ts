@@ -1,11 +1,9 @@
-export type Persona = "seller" | "buyer";
 export type CallMode = "LIVE" | "MOCK";
 
 export type ApiCall = {
   id: string;
   ts: string;
   step: string;
-  persona: Persona;
   mode: CallMode;
   method: string;
   url: string;
@@ -52,9 +50,6 @@ export function toApiCall(raw: unknown): ApiCall {
   const label = `Call record ${String(record.id ?? "<no id>")}`;
   for (const field of STRING_FIELDS) {
     if (typeof record[field] !== "string") throw new Error(`${label}: "${field}" must be a string`);
-  }
-  if (record.persona !== "seller" && record.persona !== "buyer") {
-    throw new Error(`${label}: persona must be seller or buyer`);
   }
   if (typeof record.duration_ms !== "number") {
     throw new Error(`${label}: "duration_ms" must be a number`);
@@ -117,7 +112,6 @@ export function groupCalls(calls: ApiCall[]): CallGroup[] {
       previous &&
       previous.latest.method.toUpperCase() === "GET" &&
       previous.latest.url === call.url &&
-      previous.latest.persona === call.persona &&
       stepLabel(previous.latest) === stepLabel(call)
     ) {
       previous.calls.push(call);

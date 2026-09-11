@@ -19,7 +19,6 @@ describe("sendCorrection", () => {
 
     const started = await sendCorrection(
       {
-        persona: "seller",
         country: "IT",
         correctedRecordId: "txn-1",
         operation: { document: { number: "NC-1" } },
@@ -34,7 +33,6 @@ describe("sendCorrection", () => {
     const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(path).toBe("/api/invoices/txn-1/correction");
     expect(JSON.parse(String(init.body))).toMatchObject({
-      persona: "seller",
       country: "IT",
       operation: { document: { number: "NC-1" } },
       reason: "two covers were never served",
@@ -45,9 +43,11 @@ describe("sendCorrection", () => {
   it("falls back to the passthrough with the FULL correction value in MOCK when unconfigured", async () => {
     const fetchMock = vi
       .fn()
-      // typed endpoint refuses: no system id configured
+      // typed endpoint refuses: no system id configured — the structured 409 detail
       .mockResolvedValueOnce(
-        jsonResponse(409, { detail: "SELLER_SYSTEM_ID_IT is not set in .env" }),
+        jsonResponse(409, {
+          detail: { code: "SYSTEM_ID_MISSING", country: "IT", detail: "no system id for IT" },
+        }),
       )
       // passthrough intention, then transaction
       .mockResolvedValueOnce(jsonResponse(200, { content: { id: "int-9" } }))
@@ -61,7 +61,6 @@ describe("sendCorrection", () => {
     };
     const started = await sendCorrection(
       {
-        persona: "seller",
         country: "IT",
         correctedRecordId: "txn-1",
         operation: correctionValue.data,
@@ -82,14 +81,15 @@ describe("sendCorrection", () => {
   it("does not swallow the unconfigured 409 in LIVE", async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue(jsonResponse(409, { detail: "SELLER_SYSTEM_ID_IT is not set in .env" })),
+      vi.fn().mockResolvedValue(
+        jsonResponse(409, {
+          detail: { code: "SYSTEM_ID_MISSING", country: "IT", detail: "no system id for IT" },
+        }),
+      ),
     );
     await expect(
       sendCorrection(
         {
-          persona: "seller",
           country: "IT",
           correctedRecordId: "txn-1",
           operation: {},
@@ -97,6 +97,6 @@ describe("sendCorrection", () => {
         },
         "LIVE",
       ),
-    ).rejects.toThrow(/is not set in \.env/);
+    ).rejects.toThrow(/no system id for IT/);
   });
 });

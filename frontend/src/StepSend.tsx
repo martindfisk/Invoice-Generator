@@ -155,9 +155,6 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
   const offline = useStore((state) => state.offline);
   const workflow = useStore((state) => state.workflow);
   const { formatId, send } = workflow;
-  // The flow sends as the seller, always: with no Receive step the buyer persona exists only for
-  // the test-runner section, and sending with buyer credentials is never what the flow means.
-  const persona = "seller" as const;
   const editXml = workflow.edit.xml;
   const stages = workflow.validation.stages;
   const focus = useStore((state) => state.focus);
@@ -187,7 +184,7 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
   const country = invoice.seller.address.country || (meta?.country ?? "");
   const countryDiverges = meta !== undefined && country !== meta.country;
   const format = getFormat(formatId);
-  const systemId = config?.personas?.[persona]?.[country as SettingsCountry]?.system_id;
+  const systemId = config?.systems?.[country as SettingsCountry]?.system_id;
 
   const operation = composeOperation(workflow);
   const target = workflow.correctionTarget;
@@ -231,7 +228,7 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
     alive: () => boolean,
   ) => {
     try {
-      const artifact = await fetchArtifact({ transport, persona, recordId, kind });
+      const artifact = await fetchArtifact({ transport, recordId, kind });
       if (!alive()) return;
       store.dispatch({
         type: "sendArtifact",
@@ -252,7 +249,7 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
   useEffect(() => {
     if (mode !== "LIVE" || !systemId) return;
     let cancelled = false;
-    getOnboardingStatus(persona).then(
+    getOnboardingStatus().then(
       (status) => {
         if (cancelled) return;
         const system = status.systems.find((entry) => entry.id === systemId);
@@ -269,7 +266,7 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
     return () => {
       cancelled = true;
     };
-  }, [mode, systemId, persona]);
+  }, [mode, systemId]);
 
   // A restored terminal send lost its artifacts (they are stripped from persistence); the record
   // ids survive, so refetch instead of showing a transmitted invoice without its diff.
@@ -326,7 +323,6 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
           correction?.record?.id !== undefined
             ? await sendCorrection(
                 {
-                  persona,
                   country,
                   correctedRecordId: correction.record.id,
                   operation: correction.data,
@@ -338,7 +334,7 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
                 callMode,
               )
             : await sendInvoice(
-                { persona, country, operation: operation.value, systemId, idempotencyKey },
+                { country, operation: operation.value, systemId, idempotencyKey },
                 callMode,
               );
         if (!alive()) return;
@@ -357,7 +353,7 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
       const deadline = Date.now() + POLL_BUDGET_MS;
       let wait: TransmissionWait | null = null;
       while (alive()) {
-        wait = await waitForTransmission({ transport, persona, transactionId, transmissionId });
+        wait = await waitForTransmission({ transport, transactionId, transmissionId });
         if (!alive()) return;
         store.dispatch({ type: "sendPolled", at: Date.now(), wait });
         transmissionId = wait.transmission_id ?? transmissionId;
@@ -394,7 +390,7 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
     if (!send.transmissionId) return;
     setFilesError(null);
     try {
-      const blob = await fetchRecordFiles(send.transmissionId, persona);
+      const blob = await fetchRecordFiles(send.transmissionId);
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
@@ -415,13 +411,12 @@ function Sending({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
         <SendPreflight
           open={send.phase === "idle"}
-          persona={persona}
           country={country}
           channel={invoice.buyer.channel}
           channelLabel={meta?.channel}
           systemId={systemId}
           config={config}
-          credentials={settings?.personas?.[persona]?.credentials}
+          credentials={settings?.credentials}
           mode={mode}
           stages={stages}
           operation={operation}

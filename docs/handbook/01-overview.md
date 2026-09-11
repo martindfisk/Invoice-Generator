@@ -78,7 +78,9 @@ Boundaries that matter:
   handbook generators do exactly that).
 - **The browser never holds credentials.** Every fiskaly call goes through the proxy; the proxy
   injects `Authorization`, `X-Api-Version` and `X-Idempotency-Key`, records the call (masked), and
-  streams it to the API-log pane over SSE. Secrets live in `.env` or in backend memory (ADR-0005).
+  streams it to the API-log pane over SSE. Secrets live in `.env` (bootstrap) or in
+  `backend/.uapi-settings.json`, a persisted store the Settings dialog writes to (ADR-0005,
+  ADR-0009).
 - **Live and mock share one code path.** MOCK mode swaps an `httpx.MockTransport` into the same
   `UapiClient`; nothing above the transport branches on the mode ([07](07-send-and-backend.md#the-mock)).
 - **The spec is fetched at build time** and is the API authority: types are generated from it, the
@@ -90,7 +92,7 @@ Four steps, one invoice: **Setup** (pick a preset scenario) → **Mapper** (edit
 three synchronized panes: form fields, fiskaly JSON, predicted XML) → **Validate** (run the local
 pipeline) → **Send** (post through fiskaly, follow the lifecycle, diff the artifact). A second
 top-level section, the **Test runner**, replays the published fiskaly Postman collections through
-the same proxy. The buyer persona exists only there; the flow always sends as the seller.
+the same proxy. There is one account, not a seller/buyer pair (ADR-0009).
 
 Work persists across reloads (invoice edits, send record ids, the correction target) in
 `localStorage` — never tokens or credentials.

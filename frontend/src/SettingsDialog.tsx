@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import type { Persona } from "./api-log";
 import { FIELD_FATE_PROVENANCE } from "./field-fate";
 import { Modal } from "./Modal";
 import { IDENTIFIERS_SECTION_ID } from "./runner";
@@ -18,8 +17,6 @@ import {
   type Config,
   type CredentialState,
   type Environment,
-  type PersonaPatch,
-  type PersonaSettings,
   type Settings,
   type SettingsCountry,
   type SettingsPatch,
@@ -30,20 +27,16 @@ const DESCRIPTION_ID = "settings-dialog-blurb";
 
 const COUNTRIES: SettingsCountry[] = ["DE", "IT", "BE"];
 
-const PERSONAS: { id: Persona; label: string }[] = [
-  { id: "seller", label: "Seller" },
-  { id: "buyer", label: "Buyer" },
-];
-
 export const LIVE_CONFIRMATION =
-  "I understand: LIVE posts to production. Invoices are really transmitted and records cannot " +
-  "be recalled.";
+  "I understand: this targets production (live.api.fiskaly.com). Invoices are really " +
+  "transmitted and records cannot be recalled.";
 
 export const LIVE_BANNER =
   "Requests hit production. Invoices are transmitted for real and records cannot be recalled.";
 
 export const MOCK_BLURB =
-  "MOCK replays recorded fixtures from the backend — no request leaves this machine.";
+  "MOCK is an on-device mocked run — fixture replay, no credentials needed. LIVE makes real " +
+  "calls against the fiskaly environment your credentials below point at.";
 
 export const NO_SETTINGS_API =
   "The backend is not serving /api/settings, so environment, credentials and identifiers cannot " +
@@ -62,8 +55,18 @@ export const RULES_BLURB =
   "in tools/rulesets.json and rebuilt by make schemas && make sef.";
 
 export const SECRET_BLURB =
-  "Keys are posted to the backend and never stored in this browser. After a save the field is " +
-  "emptied and only the masked fingerprint the backend returns is shown.";
+  "One credential set, like a Postman environment: filled in once, saved on the backend " +
+  "(backend/.uapi-settings.json, git-ignored, survives restarts). Keys are posted to the " +
+  "backend and never stored in this browser — after a save the field is emptied and only the " +
+  "masked fingerprint the backend returns is shown.";
+
+export const CLEAR_NOTE =
+  "Removes the stored key; .env values are overridden until you save a new one.";
+
+export const IDENTIFIERS_BLURB =
+  "Routing identifiers, not secrets — shown in full so they can be checked against the invoice. " +
+  "Guided provisioning in the Test runner fills these automatically; saved values persist on " +
+  "the backend.";
 
 const PRIMARY =
   "rounded-m bg-brand px-3 py-1.5 text-xs font-semibold text-bunker transition-opacity " +
@@ -79,11 +82,9 @@ const INPUT =
 
 type Secret = { key: string; secret: string };
 
-type Identifiers = {
-  systems: Record<SettingsCountry, { system_id: string; taxpayer_id: string }>;
-  sdi_destination_code: string;
-  peppol_id: string;
-};
+type Identifiers = Record<SettingsCountry, { system_id: string; taxpayer_id: string }>;
+
+type ReseedScope = "all" | "environment" | "identifiers";
 
 function reason(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -93,40 +94,29 @@ function text(value: string | null | undefined): string {
   return value ?? "";
 }
 
-function personaOf(settings: Settings | null, persona: Persona): PersonaSettings | undefined {
-  return settings?.personas?.[persona];
-}
-
-function identifiersOf(
-  settings: Settings | null,
-  config: Config | null,
-  persona: Persona,
-): Identifiers {
-  const known = personaOf(settings, persona);
-  const systems = known?.systems ?? config?.personas?.[persona];
-  return {
-    // Built from COUNTRIES so a new country cannot be added to the list and silently miss a field.
-    systems: Object.fromEntries(
-      COUNTRIES.map((country) => [
-        country,
-        {
-          system_id: text(systems?.[country]?.system_id),
-          taxpayer_id: text(systems?.[country]?.taxpayer_id),
-        },
-      ]),
-    ) as Identifiers["systems"],
-    sdi_destination_code: text(known?.recipients?.sdi_destination_code),
-    peppol_id: text(known?.recipients?.peppol_id),
-  };
+function identifiersOf(settings: Settings | null, config: Config | null): Identifiers {
+  const systems = settings?.systems ?? config?.systems;
+  // Built from COUNTRIES so a new country cannot be added to the list and silently miss a field.
+  return Object.fromEntries(
+    COUNTRIES.map((country) => [
+      country,
+      {
+        system_id: text(systems?.[country]?.system_id),
+        taxpayer_id: text(systems?.[country]?.taxpayer_id),
+      },
+    ]),
+  ) as Identifiers;
 }
 
 function credentialLabel(credentials: CredentialState | undefined): string {
   if (!credentials?.configured) return "not configured";
-  return `${credentials.source} · ${credentials.fingerprint ?? "no fingerprint"}`;
-}
-
-function patchFor(persona: Persona, patch: PersonaPatch): SettingsPatch["personas"] {
-  return persona === "seller" ? { seller: patch } : { buyer: patch };
+  const source =
+    credentials.source === "stored"
+      ? "saved on this backend (survives restarts)"
+      : credentials.source === "env"
+        ? "from .env"
+        : credentials.source;
+  return `${source} · ${credentials.fingerprint ?? "no fingerprint"}`;
 }
 
 function GearIcon() {
@@ -168,15 +158,6 @@ function Section({
       {blurb && <p className="mt-1 text-[11px] text-muted">{blurb}</p>}
       <div className="mt-2 flex flex-col gap-3">{children}</div>
     </section>
-  );
-}
-
-function Group({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <fieldset className="rounded-m border border-line px-3 pt-1 pb-3">
-      <legend className="px-1 text-[11px] font-semibold text-ink">{label}</legend>
-      {children}
-    </fieldset>
   );
 }
 
@@ -379,37 +360,33 @@ function SettingsBody({ onClose, focusSection }: { onClose: () => void; focusSec
   const [confirmLive, setConfirmLive] = useState(false);
   const [pendingLiveMode, setPendingLiveMode] = useState(false);
   const [confirmLiveMode, setConfirmLiveMode] = useState(false);
-  const [secrets, setSecrets] = useState<Record<Persona, Secret>>({
-    seller: { key: "", secret: "" },
-    buyer: { key: "", secret: "" },
-  });
-  const [identifiers, setIdentifiers] = useState<Record<Persona, Identifiers>>(() => ({
-    seller: identifiersOf(settings, config, "seller"),
-    buyer: identifiersOf(settings, config, "buyer"),
-  }));
+  const [secret, setSecret] = useState<Secret>({ key: "", secret: "" });
+  const [identifiers, setIdentifiers] = useState<Identifiers>(() =>
+    identifiersOf(settings, config),
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const editable = settings !== null;
+  const credentials = settings?.credentials;
   const currentEnvironment = settings?.environment ?? config?.environment ?? "test";
-  const liveNeedsConfirmation = environment === "live" && !confirmLive;
+  // The confirm checkbox guards the production host, not LIVE mode as such: switching mode to
+  // LIVE while the environment is TEST asks for nothing.
+  const productionEnvironment = currentEnvironment === "live";
+  const environmentChanged = editable && environment !== currentEnvironment;
+  const hasSecretPair = secret.key !== "" && secret.secret !== "";
+  const halfSecret = (secret.key !== "" || secret.secret !== "") && !hasSecretPair;
+  const liveNeedsConfirmation = environmentChanged && environment === "live" && !confirmLive;
 
-  // scope: reseed everything on open, but after a save only the persona that was saved —
-  // "Save seller identifiers" must not snap the buyer's unsaved drafts back to server values.
-  const reseed = (next: Settings, scope: "all" | Persona = "all") => {
-    if (scope === "all") {
+  // scope: reseed everything on open, but after a save only the block that was saved —
+  // "Save identifiers" must not snap an unsaved environment draft back to server values.
+  const reseed = (next: Settings, scope: ReseedScope = "all") => {
+    if (scope !== "identifiers") {
       setEnvironment(next.environment);
       setConfirmLive(false);
     }
-    setIdentifiers((current) => ({
-      seller:
-        scope === "all" || scope === "seller"
-          ? identifiersOf(next, null, "seller")
-          : current.seller,
-      buyer:
-        scope === "all" || scope === "buyer" ? identifiersOf(next, null, "buyer") : current.buyer,
-    }));
+    if (scope !== "environment") setIdentifiers(identifiersOf(next, null));
   };
 
   // The dialog mounts when it opens, so this is the "opened" hook: ask the backend what is true
@@ -432,7 +409,7 @@ function SettingsBody({ onClose, focusSection }: { onClose: () => void; focusSec
   const run = async (
     action: () => Promise<Settings>,
     success: string,
-    scope: "all" | Persona = "all",
+    scope: ReseedScope = "all",
   ): Promise<boolean> => {
     setBusy(true);
     setError(null);
@@ -452,25 +429,17 @@ function SettingsBody({ onClose, focusSection }: { onClose: () => void; focusSec
     }
   };
 
-  const applyEnvironment = async () => {
-    if (!editable || environment === currentEnvironment) return;
-    if (liveNeedsConfirmation) return;
-    await run(
-      () =>
-        updateSettings(
-          environment === "live"
-            ? { environment: "live", confirm_live: true }
-            : { environment: "test" },
-        ),
-      `Environment is now ${environment.toUpperCase()}.`,
-    );
-  };
-
   const applyMode = async (next: BackendMode) => {
-    const current: Mode = next === "live" ? "LIVE" : "MOCK";
-    if (mode === current) return;
+    const target: Mode = next === "live" ? "LIVE" : "MOCK";
+    if (mode === target) return;
     if (settings) {
-      await run(() => updateSettings({ mode: next }), `Mode is now ${current}.`);
+      // Mode LIVE without credentials is refused by the backend with a 409; its message is
+      // surfaced verbatim below instead of being second-guessed here.
+      const done = await run(() => updateSettings({ mode: next }), `Mode is now ${target}.`);
+      if (done) {
+        setPendingLiveMode(false);
+        setConfirmLiveMode(false);
+      }
       return;
     }
     setBusy(true);
@@ -480,6 +449,8 @@ function SettingsBody({ onClose, focusSection }: { onClose: () => void; focusSec
       const result = await putMode(next);
       store.setMode(result.mode === "live" ? "LIVE" : "MOCK");
       await store.refreshConfig();
+      setPendingLiveMode(false);
+      setConfirmLiveMode(false);
       setNotice(`Mode is now ${result.mode.toUpperCase()}.`);
     } catch (caught) {
       setError(reason(caught));
@@ -488,79 +459,65 @@ function SettingsBody({ onClose, focusSection }: { onClose: () => void; focusSec
     }
   };
 
-  const saveCredentials = async (persona: Persona) => {
-    const draft = secrets[persona];
-    // A key without its secret is not half a credential, it is a broken one: the backend replaces
-    // the pair, so both halves have to travel together.
-    if (!draft.key || !draft.secret) return;
-    const patch: PersonaPatch = { api_key: draft.key, api_secret: draft.secret };
+  const selectLiveMode = () => {
+    if (mode === "LIVE") return;
+    if (productionEnvironment) {
+      setPendingLiveMode(true);
+      return;
+    }
+    void applyMode("live");
+  };
+
+  const saveEnvironment = async () => {
+    if (!editable || busy || halfSecret || liveNeedsConfirmation) return;
+    if (!environmentChanged && !hasSecretPair) return;
+    const patch: SettingsPatch = {};
+    if (environmentChanged) {
+      patch.environment = environment;
+      if (environment === "live") patch.confirm_live = true;
+    }
+    if (hasSecretPair) {
+      patch.api_key = secret.key;
+      patch.api_secret = secret.secret;
+    }
+    const parts = [
+      ...(environmentChanged ? [`environment ${environment.toUpperCase()}`] : []),
+      ...(hasSecretPair ? ["credentials"] : []),
+    ];
     const saved = await run(
-      () => updateSettings({ personas: patchFor(persona, patch) }),
-      `${persona} credentials saved on the backend. This browser kept nothing.`,
-      persona,
+      () => updateSettings(patch),
+      `Saved ${parts.join(" and ")} on the backend — persists across restarts. This browser ` +
+        `kept nothing.`,
+      "environment",
     );
-    if (saved) {
-      setSecrets((current) => ({ ...current, [persona]: { key: "", secret: "" } }));
-    }
+    if (saved) setSecret({ key: "", secret: "" });
   };
 
-  const forgetCredentials = async (persona: Persona) => {
+  const forgetCredentials = async () => {
     const cleared = await run(
-      () => clearCredentials(persona),
-      `${persona} credentials cleared on the backend.`,
-      persona,
+      () => clearCredentials(),
+      "Credentials cleared on the backend. " + CLEAR_NOTE,
+      "environment",
     );
-    if (cleared) {
-      setSecrets((current) => ({ ...current, [persona]: { key: "", secret: "" } }));
-    }
+    if (cleared) setSecret({ key: "", secret: "" });
   };
 
-  const saveIdentifiers = async (persona: Persona) => {
-    const draft = identifiers[persona];
-    const patch: PersonaPatch = { systems: draft.systems };
-    if (persona === "buyer") {
-      patch.recipients = {
-        sdi_destination_code: draft.sdi_destination_code,
-        peppol_id: draft.peppol_id,
-      };
-    }
+  const saveIdentifiers = async () => {
     await run(
-      () => updateSettings({ personas: patchFor(persona, patch) }),
-      `${persona} identifiers saved.`,
-      persona,
+      () => updateSettings({ systems: identifiers }),
+      "Identifiers saved on the backend — persists across restarts.",
+      "identifiers",
     );
-  };
-
-  const editSecret = (persona: Persona, part: keyof Secret, value: string) => {
-    setSecrets((current) => ({ ...current, [persona]: { ...current[persona], [part]: value } }));
   };
 
   const editSystem = (
-    persona: Persona,
     country: SettingsCountry,
     part: "system_id" | "taxpayer_id",
     value: string,
   ) => {
     setIdentifiers((current) => ({
       ...current,
-      [persona]: {
-        ...current[persona],
-        systems: {
-          ...current[persona].systems,
-          [country]: { ...current[persona].systems[country], [part]: value },
-        },
-      },
-    }));
-  };
-
-  const editRecipient = (
-    persona: Persona,
-    part: "sdi_destination_code" | "peppol_id",
-    value: string,
-  ) => {
-    setIdentifiers((current) => ({
-      ...current,
-      [persona]: { ...current[persona], [part]: value },
+      [country]: { ...current[country], [part]: value },
     }));
   };
 
@@ -572,8 +529,9 @@ function SettingsBody({ onClose, focusSection }: { onClose: () => void; focusSec
             Settings
           </h2>
           <p id={DESCRIPTION_ID} className="mt-0.5 text-[11px] text-muted">
-            Everything this tool talks to fiskaly with. No key or secret is ever stored in this
-            browser.
+            Everything this tool talks to fiskaly with — one environment, filled in once. Saved
+            values persist on the backend (backend/.uapi-settings.json, git-ignored) and survive
+            restarts. No key or secret is ever stored in this browser.
           </p>
         </div>
         <button type="button" onClick={onClose} className={SECONDARY}>
@@ -592,95 +550,10 @@ function SettingsBody({ onClose, focusSection }: { onClose: () => void; focusSec
       )}
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <Section
-          id="settings-environment"
-          title="Environment"
-          blurb={
-            <>
-              Which fiskaly host every call goes to
-              {settings?.base_url ? (
-                <>
-                  {" — currently "}
-                  <span className="font-mono">{settings.base_url}</span>
-                </>
-              ) : null}
-              .
-            </>
-          }
-        >
-          <fieldset>
-            <legend className="sr-only">fiskaly environment</legend>
-            <div className="flex flex-col gap-1.5">
-              <Choice
-                name="settings-environment"
-                checked={environment === "test"}
-                disabled={!editable || busy}
-                onSelect={() => setEnvironment("test")}
-              >
-                <span className="font-mono font-semibold">TEST</span> — test.api.fiskaly.com.
-                Validation is simulated and nothing reaches a tax authority.
-              </Choice>
-              <Choice
-                name="settings-environment"
-                checked={environment === "live"}
-                disabled={!editable || busy}
-                onSelect={() => setEnvironment("live")}
-              >
-                <span className="font-mono font-semibold">LIVE</span> — live.api.fiskaly.com.
-                Production: invoices are really transmitted.
-              </Choice>
-            </div>
-          </fieldset>
-          {environment === "live" && (
-            <label className="flex items-start gap-2 rounded-m bg-error-soft px-3 py-2 text-[11px] text-error-ink">
-              <input
-                type="checkbox"
-                checked={confirmLive}
-                disabled={!editable || busy}
-                onChange={(event) => setConfirmLive(event.target.checked)}
-                className="mt-0.5 accent-brand"
-              />
-              <span>{LIVE_CONFIRMATION}</span>
-            </label>
-          )}
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={
-                !editable || busy || environment === currentEnvironment || liveNeedsConfirmation
-              }
-              onClick={() => void applyEnvironment()}
-              className={PRIMARY}
-            >
-              Apply environment
-            </button>
-            {liveNeedsConfirmation ? (
-              <span className="text-[11px] text-muted">Tick the confirmation to switch.</span>
-            ) : environment === currentEnvironment ? (
-              <span className="text-[11px] text-muted">
-                Already on {currentEnvironment?.toUpperCase() ?? "this environment"} — pick the
-                other one to switch.
-              </span>
-            ) : null}
-          </div>
-        </Section>
-
         <Section id="settings-mode" title="Mode" blurb={MOCK_BLURB}>
           <fieldset>
             <legend className="sr-only">Backend mode</legend>
             <div className="flex flex-col gap-1.5">
-              {/* Switching to LIVE is staged behind the same confirm gesture as the LIVE
-                  environment — a one-click radio next to a checkbox-gated one taught users the
-                  wrong lesson. MOCK applies immediately (the safe direction). */}
-              <Choice
-                name="settings-mode"
-                checked={mode === "LIVE" || pendingLiveMode}
-                disabled={busy}
-                onSelect={() => setPendingLiveMode(true)}
-              >
-                <span className="font-mono font-semibold">LIVE</span> — real HTTP calls to the
-                environment above. Needs confirmation below.
-              </Choice>
               <Choice
                 name="settings-mode"
                 checked={mode === "MOCK" && !pendingLiveMode}
@@ -691,8 +564,22 @@ function SettingsBody({ onClose, focusSection }: { onClose: () => void; focusSec
                   void applyMode("mock");
                 }}
               >
-                <span className="font-mono font-semibold">MOCK</span> — recorded fixtures, replayed
-                through the same client code. Applies immediately.
+                <span className="font-mono font-semibold">MOCK</span> — on-device mocked run:
+                fixture replay, no credentials needed. Applies immediately.
+              </Choice>
+              {/* Only the production host stages LIVE behind a confirmation; against the TEST
+                  environment the switch applies directly, gated solely by the backend's
+                  credentials check. */}
+              <Choice
+                name="settings-mode"
+                checked={mode === "LIVE" || pendingLiveMode}
+                disabled={busy}
+                onSelect={selectLiveMode}
+              >
+                <span className="font-mono font-semibold">LIVE</span> — real calls against the
+                fiskaly environment your credentials below point at
+                {productionEnvironment ? ". Production: needs confirmation below" : ""}. Requires
+                configured credentials — the backend refuses the switch without them.
               </Choice>
             </div>
           </fieldset>
@@ -706,20 +593,13 @@ function SettingsBody({ onClose, focusSection }: { onClose: () => void; focusSec
                   onChange={(event) => setConfirmLiveMode(event.target.checked)}
                   className="mt-0.5 accent-brand"
                 />
-                <span>
-                  I understand LIVE mode makes real HTTP calls to fiskaly with the configured
-                  credentials.
-                </span>
+                <span>{LIVE_CONFIRMATION}</span>
               </label>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   disabled={busy || !confirmLiveMode}
-                  onClick={() => {
-                    setPendingLiveMode(false);
-                    setConfirmLiveMode(false);
-                    void applyMode("live");
-                  }}
+                  onClick={() => void applyMode("live")}
                   className={PRIMARY}
                 >
                   Apply LIVE mode
@@ -732,134 +612,146 @@ function SettingsBody({ onClose, focusSection }: { onClose: () => void; focusSec
           )}
         </Section>
 
-        <Section id={CREDENTIALS_SECTION_ID} title="Credentials" blurb={SECRET_BLURB}>
-          {PERSONAS.map(({ id, label }) => {
-            const credentials = personaOf(settings, id)?.credentials;
-            const draft = secrets[id];
-            return (
-              <Group key={id} label={`${label} credentials`}>
-                <p className="mb-2 text-[11px] text-muted">
-                  API key:{" "}
-                  <span
-                    data-credentials={id}
-                    className={
-                      credentials?.configured ? "font-mono text-ink" : "font-mono text-warning-ink"
-                    }
-                  >
-                    {credentialLabel(credentials)}
-                  </span>
-                  {credentials && !credentials.configured && mode === "LIVE" && (
-                    <span className="ml-2 text-warning-ink">
-                      Mode is LIVE and this persona has no key — every call it makes will be
-                      refused.
-                    </span>
-                  )}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <TextField
-                    id={`settings-${id}-api-key`}
-                    label="API key"
-                    type="password"
-                    value={draft.key}
-                    disabled={!editable || busy}
-                    onChange={(value) => editSecret(id, "key", value)}
-                  />
-                  <TextField
-                    id={`settings-${id}-api-secret`}
-                    label="API secret"
-                    type="password"
-                    value={draft.secret}
-                    disabled={!editable || busy}
-                    onChange={(value) => editSecret(id, "secret", value)}
-                  />
-                </div>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={!editable || busy || !draft.key || !draft.secret}
-                    onClick={() => void saveCredentials(id)}
-                    className={PRIMARY}
-                  >
-                    Save {label.toLowerCase()} credentials
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!editable || busy}
-                    onClick={() => void forgetCredentials(id)}
-                    className={SECONDARY}
-                  >
-                    Clear {label.toLowerCase()} credentials
-                  </button>
-                  {(draft.key || draft.secret) && !(draft.key && draft.secret) && (
-                    <span className="text-[11px] text-muted">
-                      The backend replaces the pair, so both halves are needed.
-                    </span>
-                  )}
-                </div>
-              </Group>
-            );
-          })}
+        <Section id={CREDENTIALS_SECTION_ID} title="Environment credentials" blurb={SECRET_BLURB}>
+          <fieldset>
+            <legend className="sr-only">fiskaly environment</legend>
+            <div className="flex flex-col gap-1.5">
+              <Choice
+                name="settings-environment"
+                checked={environment === "test"}
+                disabled={!editable || busy}
+                onSelect={() => setEnvironment("test")}
+              >
+                <span className="font-mono font-semibold">TEST api</span> — test.api.fiskaly.com.
+                Validation is simulated and nothing reaches a tax authority.
+              </Choice>
+              <Choice
+                name="settings-environment"
+                checked={environment === "live"}
+                disabled={!editable || busy}
+                onSelect={() => setEnvironment("live")}
+              >
+                <span className="font-mono font-semibold">LIVE api</span> — live.api.fiskaly.com.
+                Production: invoices are really transmitted.
+              </Choice>
+            </div>
+          </fieldset>
+          {settings?.base_url && (
+            <p className="text-[11px] text-muted">
+              Currently <span className="font-mono">{settings.base_url}</span>.
+            </p>
+          )}
+          {environmentChanged && environment === "live" && (
+            <label className="flex items-start gap-2 rounded-m bg-error-soft px-3 py-2 text-[11px] text-error-ink">
+              <input
+                type="checkbox"
+                checked={confirmLive}
+                disabled={!editable || busy}
+                onChange={(event) => setConfirmLive(event.target.checked)}
+                className="mt-0.5 accent-brand"
+              />
+              <span>{LIVE_CONFIRMATION}</span>
+            </label>
+          )}
+          <p className="text-[11px] text-muted">
+            API key:{" "}
+            <span
+              data-credentials=""
+              className={
+                credentials?.configured ? "font-mono text-ink" : "font-mono text-warning-ink"
+              }
+            >
+              {credentialLabel(credentials)}
+            </span>
+            {credentials && !credentials.configured && mode === "LIVE" && (
+              <span className="ml-2 text-warning-ink">
+                Mode is LIVE and no key is configured — every call will be refused.
+              </span>
+            )}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <TextField
+              id="settings-api-key"
+              label="API key"
+              type="password"
+              value={secret.key}
+              disabled={!editable || busy}
+              onChange={(value) => setSecret((current) => ({ ...current, key: value }))}
+            />
+            <TextField
+              id="settings-api-secret"
+              label="API secret"
+              type="password"
+              value={secret.secret}
+              disabled={!editable || busy}
+              onChange={(value) => setSecret((current) => ({ ...current, secret: value }))}
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={
+                !editable ||
+                busy ||
+                halfSecret ||
+                liveNeedsConfirmation ||
+                (!environmentChanged && !hasSecretPair)
+              }
+              onClick={() => void saveEnvironment()}
+              className={PRIMARY}
+            >
+              Save environment
+            </button>
+            <button
+              type="button"
+              disabled={!editable || busy}
+              onClick={() => void forgetCredentials()}
+              className={SECONDARY}
+            >
+              Clear credentials
+            </button>
+            {halfSecret ? (
+              <span className="text-[11px] text-muted">
+                The backend replaces the pair, so both halves are needed.
+              </span>
+            ) : liveNeedsConfirmation ? (
+              <span className="text-[11px] text-muted">Tick the confirmation to save.</span>
+            ) : null}
+          </div>
+          <p className="text-[11px] text-muted">Clear: {CLEAR_NOTE}</p>
         </Section>
 
-        <Section
-          id={IDENTIFIERS_SECTION_ID}
-          title="Identifiers"
-          blurb="Routing identifiers, not secrets — shown in full so they can be checked against the invoice."
-        >
-          {PERSONAS.map(({ id, label }) => (
-            <Group key={id} label={`${label} identifiers`}>
-              <div className="flex flex-col gap-2">
-                {COUNTRIES.map((country) => (
-                  <div key={country} className="flex flex-wrap gap-2">
-                    <TextField
-                      id={`settings-${id}-${country}-system`}
-                      label={`${country} system id`}
-                      value={identifiers[id].systems[country].system_id}
-                      disabled={!editable || busy}
-                      onChange={(value) => editSystem(id, country, "system_id", value)}
-                    />
-                    <TextField
-                      id={`settings-${id}-${country}-taxpayer`}
-                      label={`${country} taxpayer id`}
-                      value={identifiers[id].systems[country].taxpayer_id}
-                      disabled={!editable || busy}
-                      onChange={(value) => editSystem(id, country, "taxpayer_id", value)}
-                    />
-                  </div>
-                ))}
-                {id === "buyer" && (
-                  <div className="flex flex-wrap gap-2">
-                    <TextField
-                      id="settings-buyer-sdi"
-                      label="SDI destination code"
-                      value={identifiers.buyer.sdi_destination_code}
-                      disabled={!editable || busy}
-                      placeholder="0000000"
-                      onChange={(value) => editRecipient("buyer", "sdi_destination_code", value)}
-                    />
-                    <TextField
-                      id="settings-buyer-peppol"
-                      label="Peppol id"
-                      value={identifiers.buyer.peppol_id}
-                      disabled={!editable || busy}
-                      placeholder="0208:0123456789"
-                      onChange={(value) => editRecipient("buyer", "peppol_id", value)}
-                    />
-                  </div>
-                )}
-              </div>
-              <div className="mt-2">
-                <button
-                  type="button"
+        <Section id={IDENTIFIERS_SECTION_ID} title="Identifiers" blurb={IDENTIFIERS_BLURB}>
+          <div className="flex flex-col gap-2">
+            {COUNTRIES.map((country) => (
+              <div key={country} className="flex flex-wrap gap-2">
+                <TextField
+                  id={`settings-${country}-system`}
+                  label={`${country} system id`}
+                  value={identifiers[country].system_id}
                   disabled={!editable || busy}
-                  onClick={() => void saveIdentifiers(id)}
-                  className={PRIMARY}
-                >
-                  Save {label.toLowerCase()} identifiers
-                </button>
+                  onChange={(value) => editSystem(country, "system_id", value)}
+                />
+                <TextField
+                  id={`settings-${country}-taxpayer`}
+                  label={`${country} taxpayer id`}
+                  value={identifiers[country].taxpayer_id}
+                  disabled={!editable || busy}
+                  onChange={(value) => editSystem(country, "taxpayer_id", value)}
+                />
               </div>
-            </Group>
-          ))}
+            ))}
+          </div>
+          <div>
+            <button
+              type="button"
+              disabled={!editable || busy}
+              onClick={() => void saveIdentifiers()}
+              className={PRIMARY}
+            >
+              Save identifiers
+            </button>
+          </div>
         </Section>
 
         <ValidationRulesSection />

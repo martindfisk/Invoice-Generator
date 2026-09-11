@@ -33,7 +33,7 @@ vi.mock("../src/uapi-client", async (importOriginal) => {
         mode: "mock",
         environment: "test",
         api_version: "2026-06-01",
-        personas: { seller: { IT: { system_id: "sys-it", taxpayer_id: "tax-it" } }, buyer: {} },
+        systems: { IT: { system_id: "sys-it", taxpayer_id: "tax-it" } },
       }),
     sendInvoice: mocks.sendInvoice,
     waitForTransmission: mocks.waitForTransmission,
@@ -53,7 +53,6 @@ function call(id: string, overrides: Partial<ApiCall> = {}): ApiCall {
     id,
     ts: `2026-08-26T09:31:0${id}.000Z`,
     step: "poll",
-    persona: "seller",
     mode: "MOCK",
     method: "GET",
     url: "https://test.api.fiskaly.com/records/trn-1",
@@ -422,7 +421,6 @@ describe("correction target guards", () => {
 describe("DEGRADED system warning", () => {
   it("warns before a LIVE send when the selected system is DEGRADED", async () => {
     mocks.getOnboardingStatus.mockResolvedValue({
-      persona: "seller",
       environment: "test",
       credentials: { configured: true, source: "env", fingerprint: "x" },
       counts: { organizations: 1, subjects: 1, taxpayers: 1, systems: 1 },

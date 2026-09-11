@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ApiCall } from "../src/api-log";
 import {
   finishLine,
@@ -8,10 +8,14 @@ import {
   resolvePointer,
   resolveStep,
   runCurlScript,
+  runnableSummary,
   runSteps,
+  savedNotesDismissed,
+  saveNotesDismissed,
   seedValues,
   seedVariables,
   stepCurl,
+  stoppedLine,
   summarise,
   type RunTransport,
   type StepResult,
@@ -338,7 +342,7 @@ describe("run control", () => {
     expect(transport).toHaveBeenCalledTimes(1);
   });
 
-  it("marks steps skipped once the signal aborts", async () => {
+  it("treats a stop as a pause: unreached steps stay pending and stoppedAt marks the resume point", async () => {
     const abort = new AbortController();
     const transport: RunTransport = () => {
       abort.abort();
@@ -352,8 +356,44 @@ describe("run control", () => {
       sleep: immediate,
     });
     expect(outcome.results[0].status).toBe("passed");
-    expect(outcome.results[1].status).toBe("skipped");
-    expect(outcome.results[1].skipReason).toBe("run stopped");
+    // No verdict for the step the run never reached — a later run resumes there.
+    expect(outcome.results[1]).toBeUndefined();
+    expect(outcome.stoppedAt).toBe(1);
+  });
+
+  it("skips the step whose wait the stop interrupted, without a verdict for the rest", async () => {
+    const abort = new AbortController();
+    const transport: RunTransport = () => Promise.resolve({ content: { mode: "PROCESSING" } });
+    const outcome = await runSteps({
+      steps: [
+        step({
+          id: "a",
+          method: "GET",
+          waitFor: { pointer: "/content/mode", equals: "FINISHED", timeoutS: 60 },
+        }),
+        step({ id: "b" }),
+      ],
+      variables: {},
+      transport,
+      signal: abort.signal,
+      sleep: () => {
+        abort.abort();
+        return Promise.resolve();
+      },
+    });
+    expect(outcome.results[0].status).toBe("skipped");
+    expect(outcome.results[0].skipReason).toBe("run stopped while waiting");
+    expect(outcome.results[1]).toBeUndefined();
+    expect(outcome.stoppedAt).toBe(1);
+  });
+
+  it("reports where a stopped run paused and how many steps stay pending", () => {
+    const steps = [step({ id: "a" }), step({ id: "b" }), step({ id: "c" })];
+    expect(stoppedLine(steps, { 0: done({}) }, 1)).toBe("Stopped after step 1 — 2 steps pending");
+    expect(stoppedLine(steps, {}, 0)).toBe("Stopped before the first step — 3 steps pending");
+    expect(stoppedLine(steps, { 0: done({}), 1: done({}) }, 2)).toBe(
+      "Stopped after step 2 — 1 step pending",
+    );
   });
 
   it("sends an idempotency key on POST but not on GET", async () => {
@@ -374,26 +414,23 @@ describe("run control", () => {
 });
 
 describe("seeding and analysis", () => {
-  const settings = {
+  const settings: Settings = {
     mode: "mock",
     environment: "test",
     base_url: "https://test.api.fiskaly.com",
     api_version: "2026-06-01",
-    personas: {
-      seller: {
-        credentials: { configured: true, source: "env" },
-        systems: {
-          IT: { system_id: "sys-it", taxpayer_id: "tax-it" },
-          BE: { system_id: "sys-be", taxpayer_id: "tax-be" },
-          DE: { system_id: "sys-de", taxpayer_id: "tax-de" },
-        },
-      },
-      buyer: { credentials: { configured: false, source: "none" } },
+    credentials: { configured: true, source: "env", fingerprint: "test***" },
+    systems: {
+      IT: { system_id: "sys-it", taxpayer_id: "tax-it" },
+      BE: { system_id: "sys-be", taxpayer_id: "tax-be" },
+      DE: { system_id: "sys-de", taxpayer_id: "tax-de" },
     },
-  } as unknown as Settings;
+  };
 
-  it("seeds identifiers from the persona's settings for the collection country", () => {
-    const seeds = seedVariables(settings, "seller", "de");
+  const unconfigured: Settings = { ...settings, systems: {} };
+
+  it("seeds identifiers from the settings for the collection country", () => {
+    const seeds = seedVariables(settings, "de");
     expect(seedValues(seeds)).toEqual({
       apiBaseUrl: "https://test.api.fiskaly.com",
       apiVersion: "2026-06-01",
@@ -405,7 +442,7 @@ describe("seeding and analysis", () => {
   });
 
   it("falls back to MOCK placeholders for unconfigured identifiers in mock mode", () => {
-    const seeds = seedVariables(settings, "buyer", "it");
+    const seeds = seedVariables(unconfigured, "it");
     const bySeed = Object.fromEntries(seeds.map((seed) => [seed.name, seed.value]));
     expect(bySeed.eInvoiceSystemId).toBe("demo-e-invoice-system");
     expect(bySeed.taxpayerId).toBe("demo-taxpayer");
@@ -413,19 +450,19 @@ describe("seeding and analysis", () => {
   });
 
   it("leaves unconfigured identifiers empty in live mode instead of inventing them", () => {
-    const live = { ...settings, mode: "live" } as Settings;
-    const seeds = seedVariables(live, "buyer", "it");
+    const live: Settings = { ...unconfigured, mode: "live" };
+    const seeds = seedVariables(live, "it");
     const bySeed = Object.fromEntries(seeds.map((seed) => [seed.name, seed.value]));
     expect(bySeed.eInvoiceSystemId).toBe("");
     expect(bySeed.taxpayerId).toBe("");
     expect(seedValues(seeds)).not.toHaveProperty("eInvoiceSystemId");
     expect(seeds.find((seed) => seed.name === "eInvoiceSystemId")?.source).toBe(
-      "Settings → Identifiers (buyer, IT)",
+      "Settings → Identifiers (IT)",
     );
   });
 
   it("marks identifier seeds with the Settings section that configures them", () => {
-    const seeds = seedVariables(settings, "seller", "it");
+    const seeds = seedVariables(settings, "it");
     expect(seeds.find((seed) => seed.name === "eInvoiceSystemId")?.section).toBe(
       "settings-identifiers",
     );
@@ -476,6 +513,32 @@ describe("seeding and analysis", () => {
     expect(recordsCreated(steps, 3, 3)).toBe(1);
   });
 
+  it("summarises a binary response instead of failing to parse it", async () => {
+    const transport: RunTransport = () =>
+      Promise.resolve({ binary: true, content_type: "application/zip", bytes: 512 });
+    const outcome = await runSteps({
+      steps: [step({ id: "a", method: "GET", path: "/files/rec-1.zip" })],
+      variables: {},
+      transport,
+      sleep: immediate,
+    });
+    expect(outcome.results[0].status).toBe("passed");
+    expect(outcome.results[0].binary).toEqual({ contentType: "application/zip", bytes: 512 });
+  });
+
+  it("says how many steps actually run against the API", () => {
+    const runnable = [step({ id: "a" }), step({ id: "b" })];
+    expect(runnableSummary(runnable)).toBe("All 2 steps run against the API.");
+    const mixed = [
+      step({ id: "a" }),
+      step({ id: "b", runnable: false, skipReason: "account mutation" }),
+      step({ id: "c" }),
+    ];
+    expect(runnableSummary(mixed)).toBe(
+      "2 of 3 steps run against the API; the rest are skipped with a reason inline.",
+    );
+  });
+
   it("summarises results", () => {
     expect(
       summarise({
@@ -492,7 +555,6 @@ function call(overrides: Partial<ApiCall>): ApiCall {
     id: "1",
     ts: "2026-08-28T10:00:00Z",
     step: "passthrough",
-    persona: "seller",
     mode: "MOCK",
     method: "POST",
     url: "http://localhost:8000/records",
@@ -690,5 +752,29 @@ describe("runCurlScript", () => {
 
   it("returns null when no step has a recorded call", () => {
     expect(runCurlScript("x", [step({})], { 0: done({ sent: false }) }, {})).toBeNull();
+  });
+});
+
+describe("notes dismissal", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("persists per collection id and survives switches", () => {
+    expect(savedNotesDismissed("de")).toBe(false);
+    saveNotesDismissed("de");
+    expect(savedNotesDismissed("de")).toBe(true);
+    expect(savedNotesDismissed("be")).toBe(false);
+    saveNotesDismissed("be");
+    expect(savedNotesDismissed("de")).toBe(true);
+    expect(savedNotesDismissed("be")).toBe(true);
+    expect(savedNotesDismissed(null)).toBe(false);
+  });
+
+  it("recovers from an unreadable stored value", () => {
+    localStorage.setItem("runner:notes-dismissed", "{not json");
+    expect(savedNotesDismissed("de")).toBe(false);
+    saveNotesDismissed("de");
+    expect(savedNotesDismissed("de")).toBe(true);
   });
 });

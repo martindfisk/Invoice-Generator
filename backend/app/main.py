@@ -10,8 +10,8 @@ from fastapi.responses import JSONResponse
 from app.mock import MockTransport
 from app.recorder import Recorder
 from app.routes import UPSTREAM_HEADERS, cached_fields, router
-from app.session import SessionStore
-from app.settings import COUNTRIES, PERSONAS, Settings
+from app.settings import COUNTRIES, Settings
+from app.store import SettingsStore
 from app.uapi import MissingCredentials, UapiClient
 from app.validate import (
     OPERATION_SCHEMAS,
@@ -28,16 +28,13 @@ async def lifespan(app):
     app.state.validator = XsdValidator(settings.vendor_dir)
     app.state.uapi_schema = UapiSchemaValidator(settings.spec_dir)
     app.state.spec_fields = {}
-    app.state.store = SessionStore(settings)
-    transport = None if settings.uapi_mode == "live" else MockTransport()
-    app.state.clients = {
-        name: UapiClient(name, app.state.store, app.state.recorder, transport) for name in PERSONAS
-    }
+    app.state.store = SettingsStore(settings)
+    transport = None if app.state.store.mode == "live" else MockTransport()
+    app.state.client = UapiClient(app.state.store, app.state.recorder, transport)
     app.state.warmup = asyncio.create_task(warm_spec(app, settings.spec_dir))
     yield
     app.state.warmup.cancel()
-    for client in app.state.clients.values():
-        await client.aclose()
+    await app.state.client.aclose()
 
 
 async def warm_spec(app, spec_dir):
@@ -93,8 +90,9 @@ async def body_size_guard(request, call_next):
 
 
 def create_app(settings=None):
+    # Live mode with missing credentials is not a boot error: the credentials may arrive from
+    # the settings dialog, and every call fails loudly at the point of use (MissingCredentials).
     settings = settings or Settings()
-    settings.validate_live()
     logging.basicConfig(level=settings.log_level)
     app = FastAPI(title="Invoice Generator backend", lifespan=lifespan)
     app.state.settings = settings

@@ -15,7 +15,6 @@ const payload = {
   id: "call-1",
   ts: "2026-08-26T09:31:02.412Z",
   step: "setup",
-  persona: "seller",
   mode: "live",
   method: "GET",
   url: "https://test.api.fiskaly.com/api/v5/systems/sys-1",
@@ -45,7 +44,6 @@ describe("parseCall", () => {
   it("rejects unknown modes and malformed records", () => {
     expect(() => normaliseMode("staging")).toThrow(/Unknown mode "staging"/);
     expect(() => parseCall(JSON.stringify({ ...payload, id: 7 }))).toThrow(/"id" must be a string/);
-    expect(() => parseCall(JSON.stringify({ ...payload, persona: "auditor" }))).toThrow(/persona/);
     expect(() => parseCall("null")).toThrow(/JSON object/);
   });
 });
@@ -119,7 +117,6 @@ function call(id: string, overrides: Partial<ApiCall> = {}): ApiCall {
     id,
     ts: `2026-08-26T09:31:${id.padStart(2, "0")}.000Z`,
     step: "poll",
-    persona: "seller",
     mode: "MOCK",
     method: "GET",
     url: "https://test.api.fiskaly.com/records/trn-1",
@@ -156,9 +153,7 @@ describe("groupCalls", () => {
     expect(groups.map((group) => group.repeats)).toEqual([1, 1, 1, 1, 1]);
   });
 
-  it("splits a run when the persona or the step changes", () => {
-    const groups = groupCalls([call("4"), call("3", { persona: "buyer" }), call("2")]);
-    expect(groups.map((group) => group.repeats)).toEqual([1, 1, 1]);
+  it("splits a run when the step changes", () => {
     const steps = groupCalls([call("3"), call("2", { step: "artifact" })]);
     expect(steps.map((group) => group.repeats)).toEqual([1, 1]);
   });

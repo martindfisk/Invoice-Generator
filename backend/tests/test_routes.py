@@ -1,14 +1,7 @@
 import uuid
 
 from app.mock import MockTransport
-from tests.conftest import (
-    BUYER_KEY,
-    BUYER_SECRET,
-    SELLER_KEY,
-    SELLER_SECRET,
-    api_for,
-    make_settings,
-)
+from tests.conftest import API_KEY, API_SECRET, api_for, make_settings
 
 
 async def test_health(api):
@@ -26,39 +19,31 @@ async def test_config_exposes_systems_but_no_secrets(api):
     assert body["mode"] == "mock"
     assert body["environment"] == "test"
     assert body["api_version"] == "2026-06-01"
-    assert body["personas"]["seller"]["BE"] == {
-        "system_id": "seller-system-be",
-        "taxpayer_id": "seller-taxpayer-be",
+    assert body["systems"]["BE"] == {
+        "system_id": "test-system-be",
+        "taxpayer_id": "test-taxpayer-be",
     }
-    assert set(body["personas"]["seller"]) == {"IT", "BE"}
-    assert set(body["personas"]["buyer"]) == {"BE"}
-    for secret in (SELLER_KEY, SELLER_SECRET, BUYER_KEY, BUYER_SECRET):
+    assert set(body["systems"]) == {"IT", "BE"}
+    for secret in (API_KEY, API_SECRET):
         assert secret not in response.text
 
 
-async def test_mode_switch_to_live_refused_without_seller_credentials():
-    settings = make_settings(seller_api_key=None, seller_api_secret=None)
+async def test_mode_switch_to_live_refused_without_credentials():
+    settings = make_settings(uapi_api_key=None, uapi_api_secret=None)
     async with api_for(settings) as (_, client):
         response = await client.put("/api/mode", json={"mode": "live"})
         assert response.status_code == 409
-        assert "SELLER_API_KEY" in response.json()["detail"]
+        detail = response.json()["detail"]
+        assert "UAPI_API_KEY" in detail
+        assert "settings dialog" in detail
         assert (await client.get("/api/mode")).json() == {"mode": "mock", "live_available": False}
-
-
-async def test_mode_switch_to_live_needs_no_buyer_credentials():
-    settings = make_settings(buyer_api_key=None, buyer_api_secret=None)
-    async with api_for(settings) as (_, client):
-        assert (await client.get("/api/mode")).json() == {"mode": "mock", "live_available": True}
-        response = await client.put("/api/mode", json={"mode": "live"})
-        assert response.status_code == 200
-        assert response.json() == {"mode": "live", "live_available": True}
 
 
 async def test_mode_switch_round_trip(api):
     app, client = api
     assert (await client.put("/api/mode", json={"mode": "live"})).json()["mode"] == "live"
     assert (await client.get("/api/health")).json()["mode"] == "live"
-    assert {c.mode for c in app.state.clients.values()} == {"live"}
+    assert app.state.client.mode == "live"
     assert (await client.put("/api/mode", json={"mode": "mock"})).json()["mode"] == "mock"
     assert (await client.get("/api/config")).json()["mode"] == "mock"
     assert (await client.put("/api/mode", json={"mode": "bogus"})).status_code == 422
@@ -66,7 +51,7 @@ async def test_mode_switch_round_trip(api):
 
 async def test_passthrough_in_mock_mode_records_calls(api):
     _, client = api
-    response = await client.get("/api/uapi/systems/buyer-system-be", headers={"X-Persona": "buyer"})
+    response = await client.get("/api/uapi/systems/test-system-be")
     assert response.status_code == 200
     body = response.json()
     assert body["content"]["type"] == "E_INVOICE_SERVICE"
@@ -78,14 +63,13 @@ async def test_passthrough_in_mock_mode_records_calls(api):
     listing = await client.get("/api/calls")
     calls = listing.json()
     assert [call["step"] for call in calls] == ["token", "passthrough"]
-    assert {call["persona"] for call in calls} == {"buyer"}
     assert {call["mode"] for call in calls} == {"mock"}
     assert calls[1]["method"] == "GET"
-    assert calls[1]["url"] == "https://test.api.fiskaly.com/systems/buyer-system-be"
+    assert calls[1]["url"] == "https://test.api.fiskaly.com/systems/test-system-be"
     assert calls[1]["response"]["status"] == 200
     assert calls[1]["request"]["headers"]["X-Api-Version"] == "2026-06-01"
     assert calls[0]["request"]["body"]["content"]["secret"] == "***"
-    assert BUYER_SECRET not in listing.text
+    assert API_SECRET not in listing.text
 
     since = await client.get("/api/calls", params={"since": calls[0]["id"]})
     assert [call["id"] for call in since.json()] == [calls[1]["id"]]
@@ -100,16 +84,22 @@ async def test_passthrough_forwards_idempotency_key_and_query(api):
     assert response.status_code == 404
     assert response.json()["content"]["code"] == "E_NOT_FOUND"
     call = (await client.get("/api/calls")).json()[-1]
-    assert call["persona"] == "seller"
     assert call["url"] == "https://test.api.fiskaly.com/records?limit=1"
     assert call["request"]["headers"]["X-Idempotency-Key"] == key
     assert call["request"]["body"] == {"content": {}}
 
 
-async def test_passthrough_rejects_unknown_persona_and_bad_json(api):
+async def test_passthrough_ignores_an_x_persona_header(api):
     _, client = api
-    response = await client.get("/api/uapi/systems/x", headers={"X-Persona": "auditor"})
-    assert response.status_code == 400
+    response = await client.get("/api/uapi/systems/x", headers={"X-Persona": "buyer"})
+    assert response.status_code == 200
+    call = (await client.get("/api/calls")).json()[-1]
+    assert "persona" not in call
+    assert "X-Persona" not in call["request"]["headers"]
+
+
+async def test_passthrough_rejects_bad_json(api):
+    _, client = api
     response = await client.post(
         "/api/uapi/records", content=b"{not json", headers={"Content-Type": "application/json"}
     )
@@ -119,8 +109,7 @@ async def test_passthrough_rejects_unknown_persona_and_bad_json(api):
 
 async def test_passthrough_surfaces_token_failure(api, tmp_path):
     app, client = api
-    for uapi in app.state.clients.values():
-        await uapi.use(MockTransport(tmp_path))
+    await app.state.client.use(MockTransport(tmp_path))
     response = await client.get("/api/uapi/systems/x")
     assert response.status_code == 404
     body = response.json()

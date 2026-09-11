@@ -234,7 +234,6 @@ function ApiCallCardImpl({ group, open, focused, onToggle }: ApiCallCardProps) {
         >
           {stepLabel(call)}
         </Chip>
-        <Chip>{call.persona}</Chip>
         <Chip className={call.mode === "LIVE" ? "border-brand text-brand" : "text-warning-ink"}>
           {call.mode}
         </Chip>

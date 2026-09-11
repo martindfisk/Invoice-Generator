@@ -21,10 +21,8 @@ from app.models import (
     ModeState,
     ModeUpdate,
     OnboardingStatus,
-    PersonaState,
     ProvisionRequest,
     ProvisionResult,
-    RecipientState,
     RecordListing,
     SettingsState,
     SettingsUpdate,
@@ -44,9 +42,9 @@ from app.onboarding import (
     provision,
 )
 from app.recorder import CallRecord
-from app.session import BASE_URLS
-from app.settings import COUNTRIES, PERSONAS
+from app.settings import COUNTRIES
 from app.spec import load_schemas, manifest
+from app.store import BASE_URLS
 from app.validate import OPERATION_SCHEMAS, SCHEMAS
 from app.workflow import (
     ARTIFACT_KINDS,
@@ -62,11 +60,10 @@ from app.workflow import (
 
 router = APIRouter(prefix="/api")
 UPSTREAM_HEADERS = ("X-Trace-Identifier", "X-Api-Version", "X-Idempotency-Replayed")
-CREDENTIAL_TARGETS = (*PERSONAS, "all")
 
 
 def current_mode(app):
-    return app.state.clients["seller"].mode
+    return app.state.client.mode
 
 
 @router.get("/health", response_model=Health)
@@ -81,17 +78,14 @@ async def health(request: Request):
 @router.get("/config", response_model=Config)
 async def config(request: Request):
     store = request.app.state.store
-    personas = {}
-    for name in PERSONAS:
-        systems = store.persona(name).systems
-        personas[name] = {country: system for country, system in systems.items() if system}
+    systems = store.account().systems
     recorded = manifest(store.settings.spec_dir) or {}
     active = recorded.get("spec") or {}
     return Config(
         mode=current_mode(request.app),
         environment=store.environment,
         api_version=store.api_version,
-        personas=personas,
+        systems={country: system for country, system in systems.items() if system},
         spec_source=active.get("file") or _fallback_source(recorded),
         spec_sha256=active.get("sha256"),
         spec_origin=active.get("origin") or ("fetched" if recorded else None),
@@ -108,61 +102,44 @@ def _fallback_source(recorded):
 
 def settings_state(app):
     store = app.state.store
-    personas = {}
-    for name in PERSONAS:
-        systems = store.persona(name).systems
-        personas[name] = PersonaState(
-            credentials=CredentialState(**store.credential_state(name)),
-            systems={country: SystemState(**(system or {})) for country, system in systems.items()},
-            recipients=RecipientState(**store.recipients(name)),
-        )
+    systems = store.account().systems
     return SettingsState(
         mode=current_mode(app),
         environment=store.environment,
         base_url=store.base_url,
         api_version=store.api_version,
-        personas=personas,
+        credentials=CredentialState(**store.credential_state()),
+        systems={country: SystemState(**(system or {})) for country, system in systems.items()},
     )
 
 
-def persona_updates(personas):
-    updates = {}
-    for name, update in (personas or {}).items():
-        if name not in PERSONAS:
-            raise HTTPException(400, f"unknown persona {name!r}; expected one of {PERSONAS}")
-        api_key = (update.api_key or "").strip() or None
-        api_secret = (update.api_secret or "").strip() or None
-        if bool(api_key) != bool(api_secret):
-            raise HTTPException(
-                400,
-                f"persona {name!r}: api_key and api_secret must be set together",
-            )
-        systems = {}
-        for country, system in (update.systems or {}).items():
-            if country.upper() not in COUNTRIES:
-                raise HTTPException(
-                    400, f"unknown country {country!r}; expected one of {COUNTRIES}"
-                )
-            systems[country.upper()] = system
-        updates[name] = update.model_copy(
-            update={"api_key": api_key, "api_secret": api_secret, "systems": systems}
-        )
-    return updates
+def normalized_update(body):
+    api_key = (body.api_key or "").strip() or None
+    api_secret = (body.api_secret or "").strip() or None
+    if bool(api_key) != bool(api_secret):
+        raise HTTPException(400, "api_key and api_secret must be set together")
+    systems = {}
+    for country, system in (body.systems or {}).items():
+        if country.upper() not in COUNTRIES:
+            raise HTTPException(400, f"unknown country {country!r}; expected one of {COUNTRIES}")
+        systems[country.upper()] = system
+    return body.model_copy(
+        update={"api_key": api_key, "api_secret": api_secret, "systems": systems}
+    )
 
 
-def credentials_after(store, name, updates):
-    update = updates.get(name)
-    if update and update.api_key:
+def credentials_after(store, update):
+    if update.api_key:
         return True
-    return not store.persona(name).missing_credentials
+    return not store.account().missing_credentials
 
 
 async def apply_mode(app, mode):
+    app.state.store.set_mode(mode)
     if mode == current_mode(app):
         return
     transport = None if mode == "live" else MockTransport()
-    for client in app.state.clients.values():
-        await client.use(transport)
+    await app.state.client.use(transport)
 
 
 @router.get("/settings", response_model=SettingsState)
@@ -174,51 +151,36 @@ async def get_settings(request: Request):
 async def put_settings(body: SettingsUpdate, request: Request):
     app = request.app
     store = app.state.store
-    updates = persona_updates(body.personas)
+    update = normalized_update(body)
     if body.environment == "live" and not body.confirm_live:
         raise HTTPException(
             409,
             f"refusing to target the live environment ({BASE_URLS['live']}) without "
             f"confirm_live=true",
         )
-    if body.mode == "live":
-        for name in PERSONAS:
-            if not credentials_after(store, name, updates):
-                raise HTTPException(
-                    409, f"cannot switch mode to live: no API credentials for persona {name!r}"
-                )
-    for name, update in updates.items():
-        if update.api_key:
-            store.set_credentials(name, update.api_key, update.api_secret)
-        if update.systems:
-            store.set_systems(name, {c: s.model_dump() for c, s in update.systems.items()})
-        if update.recipients:
-            store.set_recipients(name, update.recipients.model_dump())
+    if body.mode == "live" and not credentials_after(store, update):
+        raise HTTPException(409, "cannot switch mode to live: no API credentials configured")
+    if update.api_key:
+        store.set_credentials(update.api_key, update.api_secret)
+    if update.systems:
+        store.set_systems({c: s.model_dump() for c, s in update.systems.items()})
     if body.environment:
         store.set_environment(body.environment)
-    for client in app.state.clients.values():
-        await client.sync()
+    await app.state.client.sync()
     if body.mode:
         await apply_mode(app, body.mode)
     return settings_state(app)
 
 
 @router.delete("/settings/credentials", response_model=SettingsState)
-async def delete_settings_credentials(request: Request, persona: str = "all"):
-    if persona not in CREDENTIAL_TARGETS:
-        raise HTTPException(
-            400, f"unknown persona {persona!r}; expected one of {CREDENTIAL_TARGETS}"
-        )
-    store = request.app.state.store
-    for name in PERSONAS if persona == "all" else (persona,):
-        store.clear_credentials(name)
-    for client in request.app.state.clients.values():
-        await client.sync()
+async def delete_settings_credentials(request: Request):
+    request.app.state.store.clear_credentials()
+    await request.app.state.client.sync()
     return settings_state(request.app)
 
 
 def live_available(app):
-    return not app.state.clients["seller"].persona.missing_credentials
+    return not app.state.store.account().missing_credentials
 
 
 @router.get("/mode", response_model=ModeState)
@@ -230,9 +192,13 @@ async def get_mode(request: Request):
 async def put_mode(body: ModeUpdate, request: Request):
     app = request.app
     if body.mode != current_mode(app):
-        missing = app.state.clients["seller"].persona.missing_credentials
+        missing = app.state.store.account().missing_credentials
         if body.mode == "live" and missing:
-            raise HTTPException(409, f"cannot switch to live: {', '.join(missing)} missing in .env")
+            raise HTTPException(
+                409,
+                f"cannot switch to live: no API credentials configured — set them in the "
+                f"settings dialog or {', '.join(missing)} in .env",
+            )
         await apply_mode(app, body.mode)
     return ModeState(mode=body.mode, live_available=live_available(app))
 
@@ -372,46 +338,47 @@ async def validate_uapi(body: UapiSchemaRequest, request: Request):
     return UapiSchemaResult(country=country, **result)
 
 
-def client_for(app, persona):
-    if persona not in PERSONAS:
-        raise HTTPException(400, f"unknown persona {persona!r}; expected one of {PERSONAS}")
-    return app.state.clients[persona]
+def mock_system_id(country):
+    return f"mock-system-{country.lower()}"
 
 
-def mock_system_id(persona, country):
-    return f"mock-{persona}-system-{country.lower()}"
-
-
-def system_for(app, persona, country):
+def system_for(app, country):
     if country not in COUNTRIES:
         raise HTTPException(400, f"unknown country {country!r}; expected one of {COUNTRIES}")
-    system = app.state.store.persona(persona).systems.get(country)
+    system = app.state.store.account().systems.get(country)
     if system and system["system_id"]:
         return system["system_id"]
-    if app.state.clients[persona].mode == "mock":
-        return mock_system_id(persona, country)
+    if app.state.client.mode == "mock":
+        return mock_system_id(country)
     return None
 
 
-def require_system(app, persona, country):
-    system_id = system_for(app, persona, country)
+def require_system(app, country):
+    system_id = system_for(app, country)
     if not system_id:
+        # Structured so the frontend can key on `code` instead of parsing the message.
         raise HTTPException(
-            409, f"{persona.upper()}_SYSTEM_ID_{country} is not set in .env; cannot reach {country}"
+            409,
+            {
+                "code": "SYSTEM_ID_MISSING",
+                "country": country,
+                "detail": f"no {country} system id configured; set it in the settings dialog "
+                f"(Identifiers) or UAPI_SYSTEM_ID_{country} in .env, or provision the account "
+                f"from the Test runner",
+            },
         )
     return system_id
 
 
 @router.get("/onboarding/status", response_model=OnboardingStatus)
-async def get_onboarding_status(request: Request, persona: str = "seller"):
-    client = client_for(request.app, persona)
-    return await onboarding_status(client, request.app.state.store)
+async def get_onboarding_status(request: Request):
+    return await onboarding_status(request.app.state.client, request.app.state.store)
 
 
 @router.post("/onboarding/provision", response_model=ProvisionResult)
 async def post_onboarding_provision(body: ProvisionRequest, request: Request):
     app = request.app
-    client = client_for(app, body.persona)
+    client = app.state.client
     country = body.country.upper()
     if country not in COUNTRIES:
         raise HTTPException(400, f"unknown country {country!r}; expected one of {COUNTRIES}")
@@ -435,34 +402,32 @@ async def post_onboarding_provision(body: ProvisionRequest, request: Request):
 
 @router.post("/invoices", response_model=InvoiceCreated)
 async def send_invoice(body: InvoiceRequest, request: Request):
-    client = client_for(request.app, body.persona)
-    system_id = require_system(request.app, body.persona, body.country)
-    return await create_invoice(client, system_id, body.operation, body.idempotency_key)
+    system_id = require_system(request.app, body.country)
+    return await create_invoice(
+        request.app.state.client, system_id, body.operation, body.idempotency_key
+    )
 
 
 @router.get("/invoices", response_model=RecordListing)
 async def list_invoices(
     request: Request,
-    persona: str = "seller",
     country: str = "IT",
     record_type: str = Query(INVOICE_TYPE, alias="type"),
     limit: int | None = None,
     token: str | None = None,
 ):
-    client = client_for(request.app, persona)
-    system_id = require_system(request.app, persona, country)
-    return await list_records(client, record_type, system_id, limit, token)
+    system_id = require_system(request.app, country)
+    return await list_records(request.app.state.client, record_type, system_id, limit, token)
 
 
 @router.get("/invoices/{transaction_id}/wait", response_model=TransmissionWait)
 async def wait_invoice(
     transaction_id: str,
     request: Request,
-    persona: str = "seller",
     timeout: float | None = None,
     transmission_id: str | None = None,
 ):
-    client = client_for(request.app, persona)
+    client = request.app.state.client
     limit = client.settings.poll_timeout_s
     timeout = limit if timeout is None else min(max(timeout, 0.0), limit)
     return await wait_for_transmission(
@@ -472,28 +437,28 @@ async def wait_invoice(
 
 @router.post("/invoices/{transaction_id}/correction", response_model=CorrectionCreated)
 async def correct_invoice(transaction_id: str, body: CorrectionRequest, request: Request):
-    client = client_for(request.app, body.persona)
-    system_id = require_system(request.app, body.persona, body.country)
+    system_id = require_system(request.app, body.country)
     return await create_correction(
-        client, system_id, transaction_id, body.operation, body.reason, body.idempotency_key
+        request.app.state.client,
+        system_id,
+        transaction_id,
+        body.operation,
+        body.reason,
+        body.idempotency_key,
     )
 
 
 @router.get("/records/{record_id}/artifact", response_model=Artifact)
-async def record_artifact(
-    record_id: str, request: Request, persona: str = "seller", kind: str = "compliance"
-):
+async def record_artifact(record_id: str, request: Request, kind: str = "compliance"):
     if kind not in ARTIFACT_KINDS:
         raise HTTPException(400, f"unknown kind {kind!r}; expected one of {sorted(ARTIFACT_KINDS)}")
-    client = client_for(request.app, persona)
-    artifact = await fetch_artifact(client, record_id, artifact_kind(kind))
+    artifact = await fetch_artifact(request.app.state.client, record_id, artifact_kind(kind))
     return Artifact(record_id=record_id, **artifact)
 
 
 @router.get("/records/{record_id}/files.zip")
-async def record_files(record_id: str, request: Request, persona: str = "seller"):
-    client = client_for(request.app, persona)
-    content = await fetch_files(client, record_id)
+async def record_files(record_id: str, request: Request):
+    content = await fetch_files(request.app.state.client, record_id)
     return Response(
         content=content,
         media_type="application/zip",
@@ -503,16 +468,13 @@ async def record_files(record_id: str, request: Request, persona: str = "seller"
 
 @router.api_route("/uapi/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 async def passthrough(path: str, request: Request):
-    persona = request.headers.get("X-Persona", "seller")
-    if persona not in PERSONAS:
-        raise HTTPException(400, f"unknown X-Persona {persona!r}; expected one of {PERSONAS}")
     raw = await request.body()
     try:
         body = json.loads(raw) if raw else None
     except ValueError as exc:
         raise HTTPException(400, f"request body is not valid JSON: {exc}") from exc
     url = f"/{path}?{request.url.query}" if request.url.query else f"/{path}"
-    client = request.app.state.clients[persona]
+    client = request.app.state.client
     upstream = await client.request(
         request.method,
         url,

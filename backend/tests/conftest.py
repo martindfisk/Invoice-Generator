@@ -1,5 +1,6 @@
 import contextlib
 import sys
+import tempfile
 from pathlib import Path
 
 import httpx
@@ -12,28 +13,24 @@ from app.settings import Settings
 # importable for the rule-set manifest tests without touching packaging.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 
-SELLER_KEY = "seller-key-0123456789"
-SELLER_SECRET = "seller-secret-0123456789"
-BUYER_KEY = "buyer-key-0123456789"
-BUYER_SECRET = "buyer-secret-0123456789"
+API_KEY = "test-key-0123456789"
+API_SECRET = "test-secret-0123456789"
 
 
-def make_settings(**overrides):
+def make_settings(tmp_path=None, **overrides):
     values = {
         "uapi_mode": "mock",
         "uapi_api_version": "2026-06-01",
-        "seller_api_key": SELLER_KEY,
-        "seller_api_secret": SELLER_SECRET,
-        "seller_system_id_it": "seller-system-it",
-        "seller_taxpayer_id_it": "seller-taxpayer-it",
-        "seller_system_id_be": "seller-system-be",
-        "seller_taxpayer_id_be": "seller-taxpayer-be",
-        "buyer_api_key": BUYER_KEY,
-        "buyer_api_secret": BUYER_SECRET,
-        "buyer_system_id_be": "buyer-system-be",
-        "buyer_taxpayer_id_be": "buyer-taxpayer-be",
-        "buyer_peppol_id": "0208:0123456789",
+        "uapi_api_key": API_KEY,
+        "uapi_api_secret": API_SECRET,
+        "uapi_system_id_it": "test-system-it",
+        "uapi_taxpayer_id_it": "test-taxpayer-it",
+        "uapi_system_id_be": "test-system-be",
+        "uapi_taxpayer_id_be": "test-taxpayer-be",
     }
+    if "uapi_settings_file" not in overrides:
+        # Tests must never read or write the developer's real persisted settings.
+        values["uapi_settings_file"] = Path(tempfile.mkdtemp()) / ".uapi-settings.json"
     return Settings(_env_file=None, **{**values, **overrides})
 
 

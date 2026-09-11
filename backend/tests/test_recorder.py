@@ -7,7 +7,6 @@ from app.recorder import CallRecord, CallRequest, Recorder
 def make_record(step="setup"):
     return CallRecord(
         step=step,
-        persona="seller",
         mode="mock",
         method="GET",
         url="https://test.api.fiskaly.com/systems/x",

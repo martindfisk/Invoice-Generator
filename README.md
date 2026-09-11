@@ -20,10 +20,12 @@ Then open **http://localhost:8080**.
   After that, everything runs **offline in MOCK mode** with zero configuration: every fiskaly
   response is replayed from committed fixtures through the same client code as a live call.
 - **Talking to the real TEST API** (`test.api.fiskaly.com`): open **Settings** in the app and paste
-  your fiskaly TEST API key — it is held in backend memory only, never persisted. Alternatively,
-  copy `.env.example` to `.env` and fill in the seller key before `docker compose up`. (The
-  optional `.env` is wired via `env_file: required: false`, which needs Docker Compose ≥ v2.24 —
-  Docker Desktop from 2024 on ships it.)
+  your fiskaly TEST API key. It is saved on the backend (`backend/.uapi-settings.json`,
+  git-ignored, chmod 600) and survives restarts — set it once. Alternatively, copy
+  `.env.example` to `.env` and fill in the key before `docker compose up`; `.env` is only the
+  bootstrap default, overridden by anything saved in Settings. (The optional `.env` is wired via
+  `env_file: required: false`, which needs Docker Compose ≥ v2.24 — Docker Desktop from 2024 on
+  ships it.)
 - **Windows**: same two commands from PowerShell.
 
 **Troubleshooting**
@@ -92,14 +94,14 @@ verification results. Nothing lands until the PR is merged; see
 ## `.env` setup
 
 1. Copy `.env.example` to `.env`.
-2. Fill in a Unit-level TEST API key for the **Seller** organisation (the **Buyer** key is optional — it only serves the test runner's buyer persona). Credentials can also be entered at runtime in the Settings dialog; they are held in backend memory only (ADR-0005).
-3. Never commit `.env` — it is git-ignored and holds real credentials.
+2. Fill in one Unit-level TEST API key (`UAPI_API_KEY`/`UAPI_API_SECRET`) and, per country you need, `UAPI_SYSTEM_ID_{IT,BE,DE}` / `UAPI_TAXPAYER_ID_{IT,BE,DE}`. `.env` is only the bootstrap default — the primary path is the app's **Settings** dialog, which writes whatever you enter (environment, credentials, per-country ids, mode) to `backend/.uapi-settings.json` (git-ignored, chmod 600) and it persists across backend restarts (ADR-0009).
+3. Never commit `.env` or `backend/.uapi-settings.json` — both are git-ignored and hold real credentials.
 
 ## LIVE vs MOCK
 
 - **MOCK** (default for local dev, CI, and Playwright): fixture-driven replay of recorded TEST responses, deterministic ids. No network calls to fiskaly.
-- **LIVE**: talks to `test.api.fiskaly.com` with the keys from `.env`. The backend fails loudly if secrets are missing in LIVE mode.
-- Current mode is shown as a badge in the UI and is switchable at runtime.
+- **LIVE**: real calls against whichever fiskaly host the stored credentials point at — `test.api.fiskaly.com` or `live.api.fiskaly.com`. The backend fails loudly at the point of use if credentials are missing.
+- One status badge in the UI: `MOCK`, `LIVE · TEST API`, or `LIVE · PRODUCTION` (the only case with a red banner). Mode and environment are switchable at runtime from Settings.
 
 ## How the demo works
 

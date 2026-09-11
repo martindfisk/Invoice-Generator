@@ -1,7 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const backendPort = 8000;
-const frontendPort = 5173;
+// Overridable so the suite can run beside a dev or docker stack already holding the defaults.
+const backendPort = Number(process.env.E2E_BACKEND_PORT ?? 8000);
+const frontendPort = Number(process.env.E2E_FRONTEND_PORT ?? 5173);
 
 export default defineConfig({
   testDir: "e2e",
@@ -26,19 +27,23 @@ export default defineConfig({
       // /api/uapi passthrough fallback and the backend endpoints had zero e2e coverage.
       env: {
         UAPI_MODE: "mock",
-        SELLER_SYSTEM_ID_IT: "e2e-system-it",
-        SELLER_TAXPAYER_ID_IT: "e2e-taxpayer-it",
-        SELLER_SYSTEM_ID_BE: "e2e-system-be",
-        SELLER_TAXPAYER_ID_BE: "e2e-taxpayer-be",
-        SELLER_SYSTEM_ID_DE: "e2e-system-de",
-        SELLER_TAXPAYER_ID_DE: "e2e-taxpayer-de",
+        // Never the real persisted store: a spec that saves settings or provisions would
+        // otherwise write mock ids into backend/.uapi-settings.json and poison a later LIVE run.
+        UAPI_SETTINGS_FILE: `/tmp/uapi-settings-e2e-${backendPort}.json`,
+        UAPI_SYSTEM_ID_IT: "e2e-system-it",
+        UAPI_TAXPAYER_ID_IT: "e2e-taxpayer-it",
+        UAPI_SYSTEM_ID_BE: "e2e-system-be",
+        UAPI_TAXPAYER_ID_BE: "e2e-taxpayer-be",
+        UAPI_SYSTEM_ID_DE: "e2e-system-de",
+        UAPI_TAXPAYER_ID_DE: "e2e-taxpayer-de",
       },
     },
     {
-      command: "npm run dev",
+      command: `npm run dev -- --port ${frontendPort} --strictPort`,
       url: `http://localhost:${frontendPort}`,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
+      env: { BACKEND_URL: `http://localhost:${backendPort}` },
     },
   ],
 });

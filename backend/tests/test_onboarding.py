@@ -3,7 +3,7 @@ import respx
 
 from app.onboarding import onboarding_status, provision
 from app.recorder import Recorder
-from app.session import SessionStore
+from app.store import SettingsStore
 from app.uapi import UapiClient
 from tests.conftest import PEPPOL_INVOICING, api_for, invoice_operation, make_settings
 from tests.test_uapi import BASE_URL, token_json
@@ -19,19 +19,17 @@ FISCONLINE = {
 }
 
 
-async def provision_country(client, country, persona="seller", **extra):
+async def provision_country(client, country, **extra):
     return await client.post(
-        "/api/onboarding/provision",
-        json={"persona": persona, "country": country, "confirm": True, **extra},
+        "/api/onboarding/provision", json={"country": country, "confirm": True, **extra}
     )
 
 
 async def test_status_on_an_empty_account(api):
     _, client = api
-    response = await client.get("/api/onboarding/status?persona=seller")
+    response = await client.get("/api/onboarding/status")
     assert response.status_code == 200
     body = response.json()
-    assert body["persona"] == "seller"
     assert body["environment"] == "test"
     assert body["credentials"]["configured"] is True
     assert body["counts"] == {"organizations": 0, "subjects": 0, "taxpayers": 0, "systems": 0}
@@ -42,8 +40,8 @@ async def test_status_on_an_empty_account(api):
 
 
 async def test_status_without_credentials_reports_instead_of_erroring():
-    store = SessionStore(make_settings(seller_api_key=None, seller_api_secret=None))
-    client = UapiClient("seller", store, Recorder(10), None)
+    store = SettingsStore(make_settings(uapi_api_key=None, uapi_api_secret=None))
+    client = UapiClient(store, Recorder(10), None)
     body = await onboarding_status(client, store)
     assert body["credentials"] == {"configured": False, "source": "none", "fingerprint": None}
     assert body["counts"] == {"organizations": 0, "subjects": 0, "taxpayers": 0, "systems": 0}
@@ -56,7 +54,7 @@ async def test_status_without_credentials_reports_instead_of_erroring():
 
 async def test_status_tree_fields_on_a_fresh_account(api):
     _, client = api
-    body = (await client.get("/api/onboarding/status?persona=seller")).json()
+    body = (await client.get("/api/onboarding/status")).json()
     assert body["organizations"] == []
     assert body["subjects"] == []
     assert body["taxpayers"] == []
@@ -67,10 +65,10 @@ async def test_status_tree_fields_on_a_fresh_account(api):
 async def test_status_tree_fields_after_de_provision(api):
     _, client = api
     created = (await provision_country(client, "DE")).json()["created"]
-    status = (await client.get("/api/onboarding/status?persona=seller")).json()
+    status = (await client.get("/api/onboarding/status")).json()
     taxpayer = status["taxpayers"][0]
     assert taxpayer["id"] == created["taxpayer_id"]
-    assert taxpayer["vat_id"] == "DE123456789"
+    assert taxpayer["vat_id"] == "DE123456788"
     assert taxpayer["fiscalization_type"] == "DE"
     system = status["systems"][0]
     assert system["id"] == created["system_id"]
@@ -81,8 +79,8 @@ async def test_status_tree_fields_after_de_provision(api):
 
 
 async def test_status_lists_entities_and_flags_blocked_peppol_systems():
-    store = SessionStore(make_settings())
-    client = UapiClient("seller", store, Recorder(50), None)
+    store = SettingsStore(make_settings())
+    client = UapiClient(store, Recorder(50), None)
 
     def listing(*contents):
         return httpx.Response(200, json={"results": [{"content": c} for c in contents]})
@@ -162,8 +160,8 @@ async def test_status_lists_entities_and_flags_blocked_peppol_systems():
 
 
 async def test_status_names_a_failed_listing_instead_of_blanking_the_tree():
-    store = SessionStore(make_settings())
-    client = UapiClient("seller", store, Recorder(50), None)
+    store = SettingsStore(make_settings())
+    client = UapiClient(store, Recorder(50), None)
 
     def listing(*contents):
         return httpx.Response(200, json={"results": [{"content": c} for c in contents]})
@@ -197,9 +195,7 @@ async def test_status_names_a_failed_listing_instead_of_blanking_the_tree():
 
 async def test_provision_without_confirm_is_refused(api):
     _, client = api
-    response = await client.post(
-        "/api/onboarding/provision", json={"persona": "seller", "country": "DE"}
-    )
+    response = await client.post("/api/onboarding/provision", json={"country": "DE"})
     assert response.status_code == 409
     detail = response.json()["detail"]
     assert "confirm=true" in detail
@@ -208,14 +204,11 @@ async def test_provision_without_confirm_is_refused(api):
     assert (await client.get("/api/uapi/taxpayers")).json() == {"results": []}
 
 
-async def test_provision_unknown_country_and_persona_are_rejected(api):
+async def test_provision_unknown_country_is_rejected(api):
     _, client = api
     response = await provision_country(client, "FR")
     assert response.status_code == 400
     assert "unknown country" in response.json()["detail"]
-    response = await provision_country(client, "DE", persona="auditor")
-    assert response.status_code == 400
-    assert "unknown persona" in response.json()["detail"]
 
 
 async def test_provision_de_then_status_ready_then_send(api):
@@ -236,12 +229,12 @@ async def test_provision_de_then_status_ready_then_send(api):
     assert created["location_id"] is None
 
     settings = (await client.get("/api/settings")).json()
-    assert settings["personas"]["seller"]["systems"]["DE"] == {
+    assert settings["systems"]["DE"] == {
         "system_id": created["system_id"],
         "taxpayer_id": created["taxpayer_id"],
     }
 
-    status = (await client.get("/api/onboarding/status?persona=seller")).json()
+    status = (await client.get("/api/onboarding/status")).json()
     assert status["counts"]["taxpayers"] == 1
     assert status["counts"]["systems"] == 1
     assert status["ready"] == {"IT": False, "BE": False, "DE": True}
@@ -251,15 +244,11 @@ async def test_provision_de_then_status_ready_then_send(api):
     system = status["systems"][0]
     assert system["taxpayer_id"] == created["taxpayer_id"]
     assert system["compliance_state"] == "TRANSMISSION_RECEPTION"
-    assert system["peppol_id"] == "9930:DE123456789"
+    assert system["peppol_id"] == "9930:DE123456788"
 
     sent = await client.post(
         "/api/invoices",
-        json={
-            "persona": "seller",
-            "country": "DE",
-            "operation": invoice_operation(invoicing=PEPPOL_INVOICING),
-        },
+        json={"country": "DE", "operation": invoice_operation(invoicing=PEPPOL_INVOICING)},
     )
     assert sent.status_code == 200
     transaction_id = sent.json()["transaction_id"]
@@ -322,9 +311,8 @@ async def test_provision_reuse_false_refuses_a_duplicate(api):
 
 
 async def test_provision_stops_at_the_first_failure_and_returns_partial_steps():
-    store = SessionStore(make_settings())
-    recorder = Recorder(50)
-    client = UapiClient("seller", store, recorder, None)
+    store = SettingsStore(make_settings())
+    client = UapiClient(store, Recorder(50), None)
     taxpayer_id = "70000000-0000-4000-8000-000000000001"
     with respx.mock(base_url=BASE_URL, assert_all_called=False) as router:
         router.post("/tokens").mock(return_value=httpx.Response(200, json=token_json()))
@@ -369,26 +357,20 @@ async def test_provision_stops_at_the_first_failure_and_returns_partial_steps():
         "system_id": None,
     }
     assert result["ready"] is False
-    assert store.persona("seller").systems["DE"] is None
+    assert store.account().systems["DE"] is None
     await client.aclose()
 
 
 async def test_de_is_accepted_everywhere_it_and_be_are(api):
     _, client = api
-    update = {
-        "personas": {
-            "seller": {
-                "systems": {"DE": {"system_id": "sess-sys-de", "taxpayer_id": "sess-tax-de"}}
-            }
-        }
-    }
+    update = {"systems": {"DE": {"system_id": "sess-sys-de", "taxpayer_id": "sess-tax-de"}}}
     body = (await client.put("/api/settings", json=update)).json()
-    assert body["personas"]["seller"]["systems"]["DE"] == {
+    assert body["systems"]["DE"] == {
         "system_id": "sess-sys-de",
         "taxpayer_id": "sess-tax-de",
     }
     config = (await client.get("/api/config")).json()
-    assert config["personas"]["seller"]["DE"] == {
+    assert config["systems"]["DE"] == {
         "system_id": "sess-sys-de",
         "taxpayer_id": "sess-tax-de",
     }
@@ -404,11 +386,7 @@ async def test_mock_send_works_for_de_without_provisioning():
     async with api_for(make_settings()) as (_, client):
         response = await client.post(
             "/api/invoices",
-            json={
-                "persona": "seller",
-                "country": "DE",
-                "operation": invoice_operation(invoicing=PEPPOL_INVOICING),
-            },
+            json={"country": "DE", "operation": invoice_operation(invoicing=PEPPOL_INVOICING)},
         )
         assert response.status_code == 200
         assert response.json()["state"] == "ACCEPTED"

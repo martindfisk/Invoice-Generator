@@ -1,4 +1,4 @@
-import type { ApiCall, Persona } from "./api-log";
+import type { ApiCall } from "./api-log";
 import type {
   Collection,
   CollectionStep,
@@ -13,6 +13,8 @@ export type StepStatus = "pending" | "running" | "passed" | "failed" | "skipped"
 
 export type AssertionResult = { pointer: string; expected: string; actual: string; ok: boolean };
 
+export type BinarySummary = { contentType: string; bytes: number };
+
 export type StepResult = {
   status: StepStatus;
   durationMs?: number;
@@ -25,6 +27,7 @@ export type StepResult = {
   skipReason?: string;
   runId?: string;
   sent?: boolean;
+  binary?: BinarySummary;
 };
 
 export type TransportRequest = {
@@ -56,6 +59,10 @@ export type RunOutcome = {
   results: Record<number, StepResult>;
   variables: Vars;
   haltedAt: number | null;
+  // Index of the first step the loop never reached because the run was stopped; null when the
+  // run ran to its end. The steps from here on keep their pending results, so a later run
+  // resumes instead of reporting them skipped.
+  stoppedAt: number | null;
 };
 
 const TEMPLATE = /\{\{([^{}]+)\}\}/g;
@@ -186,6 +193,16 @@ function reason(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function binarySummary(response: unknown): BinarySummary | undefined {
+  if (response === null || typeof response !== "object") return undefined;
+  const record = response as Record<string, unknown>;
+  if (record.binary !== true) return undefined;
+  return {
+    contentType: typeof record.content_type === "string" ? record.content_type : "unknown",
+    bytes: typeof record.bytes === "number" ? record.bytes : 0,
+  };
+}
+
 type StepContext = {
   transport: RunTransport;
   pollIntervalMs: number;
@@ -296,6 +313,7 @@ async function runStep(step: CollectionStep, vars: Vars, ctx: StepContext): Prom
     captured,
     assertions,
     sent,
+    binary: binarySummary(response),
     error: problems.length === 0 ? undefined : problems.join("; "),
   };
 }
@@ -316,6 +334,7 @@ export async function runSteps(options: RunOptions): Promise<RunOutcome> {
   const variables: Vars = { ...options.variables };
   const results: Record<number, StepResult> = {};
   let haltedAt: number | null = null;
+  let stoppedAt: number | null = null;
 
   const report = (index: number, result: StepResult) => {
     results[index] = result;
@@ -324,12 +343,14 @@ export async function runSteps(options: RunOptions): Promise<RunOutcome> {
 
   for (let index = Math.max(from, 0); index <= to && index < steps.length; index += 1) {
     const step = steps[index];
+    // A stop is a pause, not a verdict: the steps not reached keep their pending results so
+    // the next run can resume from here instead of reporting them skipped.
+    if (signal?.aborted) {
+      stoppedAt = index;
+      break;
+    }
     if (!step.runnable) {
       report(index, skipped(step.skipReason ?? "not runnable"));
-      continue;
-    }
-    if (signal?.aborted) {
-      report(index, skipped("run stopped"));
       continue;
     }
     if (haltedAt !== null && !continueOnFailure) {
@@ -347,8 +368,12 @@ export async function runSteps(options: RunOptions): Promise<RunOutcome> {
     Object.assign(variables, result.captured);
     if (result.status === "failed" && haltedAt === null) haltedAt = index;
     report(index, result);
+    if (signal?.aborted) {
+      stoppedAt = index + 1;
+      break;
+    }
   }
-  return { results, variables, haltedAt: continueOnFailure ? null : haltedAt };
+  return { results, variables, haltedAt: continueOnFailure ? null : haltedAt, stoppedAt };
 }
 
 export type SeededVariable = {
@@ -371,15 +396,11 @@ const MOCK_PLACEHOLDERS: Record<string, string> = {
   taxpayerId: "demo-taxpayer",
 };
 
-export function seedVariables(
-  settings: Settings | null,
-  persona: Persona,
-  collectionId: string,
-): SeededVariable[] {
+export function seedVariables(settings: Settings | null, collectionId: string): SeededVariable[] {
   const country = COLLECTION_COUNTRY[collectionId];
-  const system = country ? settings?.personas?.[persona]?.systems?.[country] : undefined;
+  const system = country ? settings?.systems?.[country] : undefined;
   const identifierSource = country
-    ? `Settings → Identifiers (${persona}, ${country})`
+    ? `Settings → Identifiers (${country})`
     : "Settings → Identifiers";
   const identifier = (
     name: keyof typeof MOCK_PLACEHOLDERS,
@@ -473,9 +494,6 @@ export type RunnerUiState = {
   loading: boolean;
   results: Record<number, StepResult>;
   captured: Vars;
-  // Which persona's run produced the captured values — ids captured as the seller are
-  // meaningless (403/404) against the buyer's credentials, so a persona switch drops them.
-  capturedBy: "seller" | "buyer" | null;
   running: boolean;
   runId: string | null;
   haltedAt: number | null;
@@ -484,6 +502,7 @@ export type RunnerUiState = {
 };
 
 const COLLECTION_KEY = "runner:collection";
+const NOTES_DISMISSED_KEY = "runner:notes-dismissed";
 
 export function savedCollectionId(): string | null {
   try {
@@ -501,6 +520,37 @@ export function saveCollectionId(id: string): void {
   }
 }
 
+// Dismissals are per collection id and survive collection switches and reloads — the notes
+// describe the published collection, not this browser session.
+export function savedNotesDismissed(collectionId: string | null): boolean {
+  if (!collectionId) return false;
+  try {
+    const raw = localStorage.getItem(NOTES_DISMISSED_KEY);
+    const parsed: unknown = raw === null ? {} : JSON.parse(raw);
+    if (parsed === null || typeof parsed !== "object") return false;
+    return (parsed as Record<string, unknown>)[collectionId] === true;
+  } catch {
+    return false;
+  }
+}
+
+export function saveNotesDismissed(collectionId: string): void {
+  try {
+    const raw = localStorage.getItem(NOTES_DISMISSED_KEY);
+    let parsed: unknown;
+    try {
+      parsed = raw === null ? {} : JSON.parse(raw);
+    } catch {
+      parsed = {};
+    }
+    const map = parsed !== null && typeof parsed === "object" ? { ...parsed } : {};
+    (map as Record<string, boolean>)[collectionId] = true;
+    localStorage.setItem(NOTES_DISMISSED_KEY, JSON.stringify(map));
+  } catch {
+    // Site data disabled: the dismissal simply is not remembered.
+  }
+}
+
 export function initialRunnerUi(collectionId: string | null = null): RunnerUiState {
   return {
     collections: null,
@@ -511,12 +561,11 @@ export function initialRunnerUi(collectionId: string | null = null): RunnerUiSta
     loading: false,
     results: {},
     captured: {},
-    capturedBy: null,
     running: false,
     runId: null,
     haltedAt: null,
     status: null,
-    notesDismissed: false,
+    notesDismissed: savedNotesDismissed(collectionId),
   };
 }
 
@@ -550,6 +599,28 @@ export function finishLine(
   if (failed.length === 0) return base;
   const name = steps[failed[0]]?.name ?? `step ${failed[0] + 1}`;
   return `${base} — first failure: ${name}`;
+}
+
+export function stoppedLine(
+  steps: CollectionStep[],
+  results: Record<number, StepResult>,
+  stoppedAt: number,
+): string {
+  const pending = steps.filter(
+    (_, index) => (results[index]?.status ?? "pending") === "pending",
+  ).length;
+  const tail = `${pending} step${pending === 1 ? "" : "s"} pending`;
+  if (stoppedAt === 0) return `Stopped before the first step — ${tail}`;
+  return `Stopped after step ${stoppedAt} — ${tail}`;
+}
+
+export function runnableSummary(steps: CollectionStep[]): string {
+  const runnable = steps.filter((step) => step.runnable).length;
+  if (runnable === steps.length) return `All ${steps.length} steps run against the API.`;
+  return (
+    `${runnable} of ${steps.length} steps run against the API; ` +
+    "the rest are skipped with a reason inline."
+  );
 }
 
 // A step is matched to its recorded call by run_id + step_name. Names repeat across folders

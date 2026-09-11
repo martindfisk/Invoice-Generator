@@ -25,3 +25,4 @@ Each ADR has four sections:
 | [0006](0006-drop-in-spec-and-field-metadata.md)       | Drop-in OpenAPI spec in `spec/drop/`, and field metadata served from it                                   |
 | [0007](0007-schematron-on-the-main-thread.md)         | Schematron runs on the main thread; four SEFs ship (amends 0004)                                          |
 | [0008](0008-upstream-watch.md)                        | Monthly upstream watch: detection PRs with diff reports, manual merge                                     |
+| [0009](0009-single-account-persisted-settings.md)     | Single account, persisted settings, two modes (amends 0005)                                               |

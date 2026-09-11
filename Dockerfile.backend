@@ -14,6 +14,9 @@ COPY spec/ /srv/spec/
 COPY --from=assets /vendor /srv/vendor
 ENV VENDOR_DIR=/srv/vendor
 RUN pip install --no-cache-dir /srv/backend
+# UI-saved settings persist here (docker-compose mounts a volume over it); must be writable
+# by the non-root user or every settings save fails with EACCES.
+RUN mkdir -p /data && chown app /data
 USER app
 WORKDIR /srv/backend
 EXPOSE 8000

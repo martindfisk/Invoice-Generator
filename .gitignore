@@ -38,3 +38,6 @@ frontend/dist/saxon/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# UI-saved backend settings (holds credentials)
+.uapi-settings.json

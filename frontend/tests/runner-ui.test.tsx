@@ -117,6 +117,26 @@ describe("RunnerStepRow", () => {
     ).toBeInTheDocument();
   });
 
+  it("summarises a binary response body instead of rendering it", () => {
+    render(
+      <ol>
+        <RunnerStepRow
+          index={0}
+          step={step({ method: "GET", path: "/files/rec-1.zip" })}
+          result={result({
+            status: "passed",
+            binary: { contentType: "application/zip", bytes: 512 },
+          })}
+          disabled={false}
+          onRunFrom={() => {}}
+        />
+      </ol>,
+    );
+    const summary = document.querySelector("[data-binary]") as HTMLElement;
+    expect(summary).not.toBeNull();
+    expect(summary).toHaveTextContent("zip, 512 bytes");
+  });
+
   it("lists captured variables and offers Run from here", () => {
     const onRunFrom = vi.fn();
     render(
@@ -178,40 +198,6 @@ describe("VariablePanel", () => {
     );
     screen.getByRole("button", { name: "Settings → Identifiers (seller, BE)" }).click();
     expect(store.getState().settingsRequest?.section).toBe("settings-identifiers");
-  });
-
-  it("tags captures with the persona that made them and offers clearing stale ones", () => {
-    const onClear = vi.fn();
-    render(
-      <VariablePanel
-        seeds={[]}
-        captured={{ eInvoiceId: "rec-1" }}
-        capturedBy="seller"
-        persona="buyer"
-        missing={[]}
-        onClearCaptured={onClear}
-      />,
-    );
-    const panel = screen.getByRole("region", { name: "Runner variables" });
-    expect(within(panel).getByText("captured at runtime as seller")).toBeInTheDocument();
-    expect(
-      within(panel).getByText(/captured as the seller — the next run as the buyer/),
-    ).toBeInTheDocument();
-    within(panel).getByRole("button", { name: "Clear captured" }).click();
-    expect(onClear).toHaveBeenCalled();
-  });
-
-  it("shows no stale-capture notice when the persona matches", () => {
-    render(
-      <VariablePanel
-        seeds={[]}
-        captured={{ eInvoiceId: "rec-1" }}
-        capturedBy="seller"
-        persona="seller"
-        missing={[]}
-      />,
-    );
-    expect(screen.queryByText(/the next run as the/)).not.toBeInTheDocument();
   });
 });
 
