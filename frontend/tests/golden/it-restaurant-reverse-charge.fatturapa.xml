@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<p:FatturaElettronica xmlns:p="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2" versione="FPR12">
+  <FatturaElettronicaHeader>
+    <DatiTrasmissione>
+      <IdTrasmittente>
+        <IdPaese>IT</IdPaese>
+        <IdCodice>04567890126</IdCodice>
+      </IdTrasmittente>
+      <ProgressivoInvio>RC20260031</ProgressivoInvio>
+      <FormatoTrasmissione>FPR12</FormatoTrasmissione>
+      <CodiceDestinatario>SUBM70N</CodiceDestinatario>
+    </DatiTrasmissione>
+    <CedentePrestatore>
+      <DatiAnagrafici>
+        <IdFiscaleIVA>
+          <IdPaese>IT</IdPaese>
+          <IdCodice>04567890126</IdCodice>
+        </IdFiscaleIVA>
+        <CodiceFiscale>04567890126</CodiceFiscale>
+        <Anagrafica>
+          <Denominazione>Impianti Tiburtini S.r.l.</Denominazione>
+        </Anagrafica>
+        <RegimeFiscale>RF01</RegimeFiscale>
+      </DatiAnagrafici>
+      <Sede>
+        <Indirizzo>Via Tiburtina</Indirizzo>
+        <NumeroCivico>512</NumeroCivico>
+        <CAP>00159</CAP>
+        <Comune>Roma</Comune>
+        <Provincia>RM</Provincia>
+        <Nazione>IT</Nazione>
+      </Sede>
+      <IscrizioneREA>
+        <Ufficio>RM</Ufficio>
+        <NumeroREA>1567890</NumeroREA>
+        <CapitaleSociale>50000.00</CapitaleSociale>
+        <SocioUnico>SM</SocioUnico>
+        <StatoLiquidazione>LN</StatoLiquidazione>
+      </IscrizioneREA>
+      <Contatti>
+        <Telefono>+39064400123</Telefono>
+        <Email>amministrazione@impiantitiburtini.example</Email>
+      </Contatti>
+    </CedentePrestatore>
+    <CessionarioCommittente>
+      <DatiAnagrafici>
+        <IdFiscaleIVA>
+          <IdPaese>IT</IdPaese>
+          <IdCodice>02345678901</IdCodice>
+        </IdFiscaleIVA>
+        <CodiceFiscale>02345678901</CodiceFiscale>
+        <Anagrafica>
+          <Denominazione>Trattoria del Colosseo S.r.l.</Denominazione>
+        </Anagrafica>
+      </DatiAnagrafici>
+      <Sede>
+        <Indirizzo>Via dei Fori Imperiali</Indirizzo>
+        <NumeroCivico>22</NumeroCivico>
+        <CAP>00184</CAP>
+        <Comune>Roma</Comune>
+        <Provincia>RM</Provincia>
+        <Nazione>IT</Nazione>
+      </Sede>
+    </CessionarioCommittente>
+  </FatturaElettronicaHeader>
+  <FatturaElettronicaBody>
+    <DatiGenerali>
+      <DatiGeneraliDocumento>
+        <TipoDocumento>TD01</TipoDocumento>
+        <Divisa>EUR</Divisa>
+        <Data>2026-08-26</Data>
+        <Numero>IT-RC-2026-0031</Numero>
+        <ImportoTotaleDocumento>5520.00</ImportoTotaleDocumento>
+        <Causale>Installazione impianto di aspirazione cucina - cantiere Via dei Fori Imperiali 22</Causale>
+      </DatiGeneraliDocumento>
+      <DatiOrdineAcquisto>
+        <IdDocumento>ORD-TDC-2026-0044</IdDocumento>
+      </DatiOrdineAcquisto>
+      <DatiContratto>
+        <IdDocumento>CTR-TDC-2026-02</IdDocumento>
+      </DatiContratto>
+    </DatiGenerali>
+    <DatiBeniServizi>
+      <DettaglioLinee>
+        <NumeroLinea>1</NumeroLinea>
+        <Descrizione>Installazione impianto di aspirazione cucina</Descrizione>
+        <Quantita>1.00</Quantita>
+        <UnitaMisura>C62</UnitaMisura>
+        <PrezzoUnitario>4800.00</PrezzoUnitario>
+        <PrezzoTotale>4800.00</PrezzoTotale>
+        <AliquotaIVA>0.00</AliquotaIVA>
+        <Natura>N6.7</Natura>
+      </DettaglioLinee>
+      <DettaglioLinee>
+        <NumeroLinea>2</NumeroLinea>
+        <Descrizione>Manodopera specializzata</Descrizione>
+        <Quantita>16.00</Quantita>
+        <UnitaMisura>HUR</UnitaMisura>
+        <PrezzoUnitario>45.00</PrezzoUnitario>
+        <PrezzoTotale>720.00</PrezzoTotale>
+        <AliquotaIVA>0.00</AliquotaIVA>
+        <Natura>N6.7</Natura>
+      </DettaglioLinee>
+      <DatiRiepilogo>
+        <AliquotaIVA>0.00</AliquotaIVA>
+        <Natura>N6.7</Natura>
+        <ImponibileImporto>5520.00</ImponibileImporto>
+        <Imposta>0.00</Imposta>
+        <EsigibilitaIVA>I</EsigibilitaIVA>
+        <RiferimentoNormativo>Inversione contabile - art. 17 c. 6 lett. a-ter) DPR 633/1972</RiferimentoNormativo>
+      </DatiRiepilogo>
+    </DatiBeniServizi>
+    <DatiPagamento>
+      <CondizioniPagamento>TP02</CondizioniPagamento>
+      <DettaglioPagamento>
+        <Beneficiario>Impianti Tiburtini S.r.l.</Beneficiario>
+        <ModalitaPagamento>MP05</ModalitaPagamento>
+        <DataScadenzaPagamento>2026-09-25</DataScadenzaPagamento>
+        <ImportoPagamento>5520.00</ImportoPagamento>
+        <IBAN>IT80X0306909606100000123456</IBAN>
+        <BIC>BCITITMMXXX</BIC>
+      </DettaglioPagamento>
+    </DatiPagamento>
+  </FatturaElettronicaBody>
+</p:FatturaElettronica>

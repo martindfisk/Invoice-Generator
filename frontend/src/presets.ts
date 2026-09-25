@@ -11,20 +11,26 @@ export type PresetId =
   | "it-restaurant-b2c-pec"
   | "it-restaurant-b2b-fattura"
   | "it-restaurant-b2g-fpa12"
-  | "it-restaurant-td04-credit";
+  | "it-restaurant-td04-credit"
+  | "be-peppol-reverse-charge"
+  | "de-hotel-reverse-charge"
+  | "it-restaurant-reverse-charge";
 
 export const PRESET_IDS: PresetId[] = [
   "it-b2b-sdi",
   "be-peppol",
   "broken",
   "be-peppol-broken",
+  "be-peppol-reverse-charge",
   "de-hotel-b2b-zugferd",
   "de-hotel-b2g-xrechnung",
   "de-hotel-b2g-broken",
+  "de-hotel-reverse-charge",
   "it-restaurant-b2c-pec",
   "it-restaurant-b2b-fattura",
   "it-restaurant-b2g-fpa12",
   "it-restaurant-td04-credit",
+  "it-restaurant-reverse-charge",
 ];
 
 export const PRESET_LABELS: Record<PresetId, string> = {
@@ -39,6 +45,9 @@ export const PRESET_LABELS: Record<PresetId, string> = {
   "it-restaurant-b2b-fattura": "Business lunch (FPR12)",
   "it-restaurant-b2g-fpa12": "Ministry catering (FPA12)",
   "it-restaurant-td04-credit": "Credit note (TD04)",
+  "be-peppol-reverse-charge": "Reverse charge (intra-EU)",
+  "de-hotel-reverse-charge": "Reverse charge (§ 13b UStG)",
+  "it-restaurant-reverse-charge": "Reverse charge (N6.7)",
 };
 
 export type PresetAudience = "B2C" | "B2B" | "B2G";
@@ -195,6 +204,45 @@ export const PRESET_META: Record<PresetId, PresetMeta> = {
       "A TD04 nota di credito that partially reverses IT-RM-2026-0117: two covers were never consumed. DatiFattureCollegate carries the original number and date; amounts stay positive, the TD04 type code conveys the credit.",
     legalBasis:
       "DPR 633/1972 art. 26 (variazioni in diminuzione); TipoDocumento TD04, FatturaPA specs 1.9.1",
+  },
+  "be-peppol-reverse-charge": {
+    id: "be-peppol-reverse-charge",
+    label: "Reverse charge (intra-EU)",
+    group: "Reference",
+    country: "BE",
+    audience: "B2B",
+    formatLabel: "Peppol BIS Billing 3.0 (UBL 2.1)",
+    channel: "PEPPOL",
+    summary:
+      "Ardennes Bureau runs its Peppol workshop for a Dutch customer: a B2B service taxed where the customer is established, so no Belgian VAT is charged and the recipient self-assesses. Every line is category AE with VATEX-EU-AE and the legal mention 'Btw verlegd'; the fiskaly JSON carries it as a VAT_EXEMPTION with code and reason.",
+    legalBasis:
+      "Directive 2006/112/EC art. 44 and art. 196; WBTW art. 21 §2 and art. 51 §2; KB nr. 1 art. 5 §1 4° (mention 'Btw verlegd'); EN 16931-1:2017 BR-AE-01..10",
+  },
+  "de-hotel-reverse-charge": {
+    id: "de-hotel-reverse-charge",
+    label: "Reverse charge (§ 13b UStG)",
+    group: "Munich hotel (DE)",
+    country: "DE",
+    audience: "B2B",
+    formatLabel: "CII - ZUGFeRD 2.4 / Factur-X 1.08 profile EN 16931",
+    channel: "EMAIL",
+    summary:
+      "An IT reseller supplies the hotel with 40 tablets: a domestic supply of mobile devices above EUR 5,000 net, so the hotel owes the VAT (category AE, 'Steuerschuldnerschaft des Leistungsempfaengers'), while the protective cases on the second line stay at 19%. One invoice, two VAT categories, sent as ZUGFeRD by e-mail.",
+    legalBasis:
+      "UStG § 13b Abs. 2 Nr. 10 and Abs. 5; UStG § 14a Abs. 5 (mandatory mention); EN 16931-1:2017 BR-AE-01..10; ZUGFeRD 2.4 / Factur-X 1.08 profile EN16931",
+  },
+  "it-restaurant-reverse-charge": {
+    id: "it-restaurant-reverse-charge",
+    label: "Reverse charge (N6.7)",
+    group: "Rome restaurants (IT)",
+    country: "IT",
+    audience: "B2B",
+    formatLabel: "FatturaPA 1.2.3 (FPR12)",
+    channel: "SDI",
+    summary:
+      "An installer fits the trattoria's new kitchen extraction system: a building-related service under domestic reverse charge, so AliquotaIVA is 0.00 with Natura N6.7 and the trattoria integrates the invoice itself. The fiskaly JSON carries the line as a VAT_EXEMPTION with the CAUSE code fiskaly maps to N6.7 and the legal reference as reason.",
+    legalBasis:
+      "DPR 633/1972 art. 17 c. 6 lett. a-ter); Natura N6.7, FatturaPA specs 1.9.1 / XSD 1.2.3; D.Lgs. 127/2015 art. 1 c. 3",
   },
 };
 
@@ -395,6 +443,25 @@ function italianB2bSdi(): Invoice {
   };
 }
 
+function ardennesBureauSeller(): Party {
+  return {
+    name: "Ardennes Bureau BV",
+    vatId: "BE0999999922",
+    legalRegId: "0999999922",
+    legalRegScheme: "0208",
+    electronicAddress: { scheme: "0208", id: "0999999922" },
+    address: {
+      street: "Rue de la Loi",
+      number: "16",
+      city: "Bruxelles",
+      postCode: "1000",
+      region: "BE-BRU",
+      country: "BE",
+    },
+    contact: { name: "Billing", email: "billing@example.be" },
+  };
+}
+
 function belgianPeppol(): Invoice {
   return {
     format: "ubl",
@@ -424,22 +491,7 @@ function belgianPeppol(): Invoice {
         },
       },
     },
-    seller: {
-      name: "Ardennes Bureau BV",
-      vatId: "BE0999999922",
-      legalRegId: "0999999922",
-      legalRegScheme: "0208",
-      electronicAddress: { scheme: "0208", id: "0999999922" },
-      address: {
-        street: "Rue de la Loi",
-        number: "16",
-        city: "Bruxelles",
-        postCode: "1000",
-        region: "BE-BRU",
-        country: "BE",
-      },
-      contact: { name: "Billing", email: "billing@example.be" },
-    },
+    seller: ardennesBureauSeller(),
     buyer: {
       name: "Meuse Logistics NV",
       vatId: "BE0888888895",
@@ -1206,6 +1258,338 @@ function italianRestaurantB2cPec(): Invoice {
   };
 }
 
+const REVERSE_CHARGE_VATEX = "VATEX-EU-AE";
+const BE_REVERSE_CHARGE_REASON =
+  "Btw verlegd - art. 21 par. 2 en art. 51 par. 2 WBTW; art. 196 Richtlijn 2006/112/EG";
+const DE_REVERSE_CHARGE_REASON =
+  "Steuerschuldnerschaft des Leistungsempfaengers, § 13b Abs. 2 Nr. 10 UStG";
+const IT_REVERSE_CHARGE_REASON = "Inversione contabile - art. 17 c. 6 lett. a-ter) DPR 633/1972";
+
+// Intra-EU B2B service: the place of supply is where the customer is established (art. 44 of the
+// VAT Directive), the customer owes the VAT (art. 196), and the Belgian invoice shows no VAT at all.
+// EN 16931 spells that as category AE with VATEX-EU-AE; BR-AE-02/03 want both parties' VAT ids.
+function belgianPeppolReverseCharge(): Invoice {
+  const number = "BE-INV-2026-0012";
+  return {
+    format: "ubl",
+    number,
+    issueDate: ISSUE_DATE,
+    dueDate: DUE_DATE,
+    typeCode: "380",
+    currency: "EUR",
+    note: "Peppol onboarding workshop, Rotterdam, 20-21 August 2026. VAT reverse charged.",
+    references: {
+      buyerReference: "MAAS-PRJ-2026-11",
+      purchaseOrder: "PO-NL-2026-031",
+      contract: "CTR-BE-2026-14",
+    },
+    uapi: {
+      buyerAccountingRef: "MAAS-PRJ-2026-11",
+      buyer: { buyerId: "0106:58201256", origin: "INTERNATIONAL" },
+    },
+    seller: ardennesBureauSeller(),
+    buyer: {
+      name: "Maas Logistiek B.V.",
+      vatId: "NL802315896B01",
+      legalRegId: "58201256",
+      legalRegScheme: "0106",
+      electronicAddress: { scheme: "0106", id: "58201256" },
+      address: {
+        street: "Weena",
+        number: "505",
+        city: "Rotterdam",
+        postCode: "3013 AL",
+        region: "Zuid-Holland",
+        country: "NL",
+      },
+      contact: { name: "Crediteurenadministratie", email: "facturen@maaslogistiek.example" },
+      channel: { kind: "PEPPOL", participantId: "0106:58201256" },
+    },
+    lines: [
+      {
+        id: "1",
+        name: "Peppol onboarding workshop",
+        description: "Two-day on-site workshop, Rotterdam",
+        quantity: "2.00",
+        unitCode: "DAY",
+        unitPriceNet: "1200.00",
+        netAmount: "2400.00",
+        vat: { category: "AE", rate: "0.00", reason: BE_REVERSE_CHARGE_REASON },
+      },
+      {
+        id: "2",
+        name: "Remote integration support",
+        quantity: "10.00",
+        unitCode: "HUR",
+        unitPriceNet: "125.00",
+        netAmount: "1250.00",
+        vat: { category: "AE", rate: "0.00", reason: BE_REVERSE_CHARGE_REASON },
+      },
+    ],
+    vatBreakdown: [
+      {
+        category: "AE",
+        rate: "0.00",
+        taxableAmount: "3650.00",
+        taxAmount: "0.00",
+        vatexCode: REVERSE_CHARGE_VATEX,
+        reason: BE_REVERSE_CHARGE_REASON,
+      },
+    ],
+    payment: {
+      meansCode: "58",
+      meansText: "SEPA credit transfer",
+      conditions: "TP02",
+      terms:
+        "Payable within 30 days of the invoice date. VAT to be accounted for by the recipient.",
+      iban: "BE68539007547034",
+      accountName: "Ardennes Bureau BV",
+      bic: "GEBABEBB",
+      remittanceInformation: number,
+    },
+    totals: {
+      lineExtension: "3650.00",
+      taxExclusive: "3650.00",
+      taxAmount: "0.00",
+      taxInclusive: "3650.00",
+      payable: "3650.00",
+    },
+  };
+}
+
+function munichResellerSeller(): Party {
+  return {
+    name: "Isartal IT-Handel GmbH",
+    vatId: "DE815432198",
+    legalRegId: "HRB 234567",
+    address: {
+      street: "Landsberger Strasse",
+      number: "155",
+      city: "Muenchen",
+      postCode: "80687",
+      region: "Bayern",
+      country: "DE",
+    },
+    contact: {
+      name: "Vertriebsinnendienst",
+      phone: "+49 89 5559900",
+      email: "rechnung@isartal-it.example",
+    },
+    electronicAddress: { scheme: "EM", id: "rechnung@isartal-it.example" },
+  };
+}
+
+// § 13b Abs. 2 Nr. 10 UStG shifts the VAT on a supply of tablets, mobile phones or integrated
+// circuits to the business customer once the invoice reaches EUR 5,000 net for those goods; the
+// accessories on line 2 are not "such devices" and stay at the standard rate. § 14a Abs. 5 UStG
+// prescribes the mention "Steuerschuldnerschaft des Leistungsempfaengers" on the invoice.
+function germanHotelReverseCharge(): Invoice {
+  const number = "DE-RC-2026-00077";
+  const hotel = munichHotelSeller();
+  return {
+    format: "cii",
+    number,
+    issueDate: ISSUE_DATE,
+    dueDate: MUNICH_DUE_DATE,
+    typeCode: "380",
+    currency: "EUR",
+    note: "Lieferung von 40 Tablets fuer Rezeption und Zimmerservice. Steuerschuldnerschaft des Leistungsempfaengers fuer Position 1.",
+    references: {
+      buyerReference: "EINKAUF-FRONTOFFICE",
+      purchaseOrder: "BST-HI-2026-0090",
+    },
+    uapi: {
+      buyerAccountingRef: "KST-1100",
+      buyer: { origin: "NATIONAL" },
+      delivery: {
+        name: hotel.name,
+        address: hotel.address,
+      },
+    },
+    seller: munichResellerSeller(),
+    buyer: {
+      name: hotel.name,
+      vatId: hotel.vatId,
+      legalRegId: "HRB 98761",
+      electronicAddress: hotel.electronicAddress,
+      address: hotel.address,
+      contact: hotel.contact,
+      channel: { kind: "EMAIL", email: hotel.contact!.email!, format: "ZUGFERD_V2" },
+    },
+    lines: [
+      {
+        id: "1",
+        name: "Tablet 10.9 Zoll, 256 GB, WLAN",
+        description: "Rezeption und Zimmerservice, Seriennummern laut Lieferschein LS-2026-3310",
+        quantity: "40.00",
+        unitCode: "C62",
+        unitPriceNet: "389.00",
+        netAmount: "15560.00",
+        vat: { category: "AE", rate: "0.00", reason: DE_REVERSE_CHARGE_REASON },
+      },
+      {
+        id: "2",
+        name: "Schutzhuelle mit Tastatur",
+        quantity: "40.00",
+        unitCode: "C62",
+        unitPriceNet: "79.00",
+        netAmount: "3160.00",
+        vat: { category: "S", rate: "19.00" },
+      },
+    ],
+    vatBreakdown: [
+      {
+        category: "AE",
+        rate: "0.00",
+        taxableAmount: "15560.00",
+        taxAmount: "0.00",
+        vatexCode: REVERSE_CHARGE_VATEX,
+        reason: DE_REVERSE_CHARGE_REASON,
+      },
+      { category: "S", rate: "19.00", taxableAmount: "3160.00", taxAmount: "600.40" },
+    ],
+    payment: {
+      meansCode: "58",
+      meansText: "SEPA-Ueberweisung",
+      italianMeansCode: "MP05",
+      conditions: "TP02",
+      terms: "Zahlbar innerhalb von 14 Tagen ohne Abzug",
+      iban: "DE20700500000001234567",
+      accountName: "Isartal IT-Handel GmbH",
+      bic: "BYLADEMMXXX",
+      remittanceInformation: number,
+    },
+    totals: {
+      lineExtension: "18720.00",
+      taxExclusive: "18720.00",
+      taxAmount: "600.40",
+      taxInclusive: "19320.40",
+      payable: "19320.40",
+    },
+  };
+}
+
+function romeInstallerSeller(): Party {
+  return {
+    name: "Impianti Tiburtini S.r.l.",
+    tradeName: "Impianti Tiburtini",
+    vatId: "IT04567890126",
+    taxId: "04567890126",
+    legalRegId: "04567890126",
+    legalRegScheme: "0211",
+    electronicAddress: { scheme: "0211", id: "04567890126" },
+    address: {
+      street: "Via Tiburtina",
+      number: "512",
+      city: "Roma",
+      postCode: "00159",
+      region: "RM",
+      country: "IT",
+    },
+    contact: {
+      name: "Ufficio Amministrazione",
+      phone: "+39064400123",
+      email: "amministrazione@impiantitiburtini.example",
+    },
+    it: {
+      regimeFiscale: "RF01",
+      rea: {
+        office: "RM",
+        number: "1567890",
+        capital: "50000.00",
+        soleShareholder: "SM",
+        liquidation: "LN",
+      },
+    },
+  };
+}
+
+// Art. 17 c. 6 lett. a-ter) DPR 633/1972: cleaning, demolition, plant installation and completion
+// services relating to buildings are invoiced without VAT to any VAT-registered customer, who
+// integrates the invoice (TD16). FatturaPA spells that as AliquotaIVA 0.00 + Natura N6.7 with the
+// legal reference in RiferimentoNormativo; EN 16931 as category AE with VATEX-EU-AE.
+function italianRestaurantReverseCharge(): Invoice {
+  const number = "IT-RC-2026-0031";
+  const trattoria = romeRestaurantSeller();
+  return {
+    format: "fatturapa",
+    number,
+    issueDate: ISSUE_DATE,
+    dueDate: DUE_DATE,
+    typeCode: "380",
+    currency: "EUR",
+    note: "Installazione impianto di aspirazione cucina - cantiere Via dei Fori Imperiali 22",
+    references: { purchaseOrder: "ORD-TDC-2026-0044", contract: "CTR-TDC-2026-02" },
+    uapi: {
+      buyer: { buyerId: `0211:${trattoria.taxId}`, origin: "NATIONAL" },
+      delivery: { name: trattoria.name, address: trattoria.address },
+    },
+    seller: romeInstallerSeller(),
+    buyer: {
+      name: trattoria.name,
+      vatId: trattoria.vatId,
+      taxId: trattoria.taxId,
+      legalRegId: trattoria.legalRegId,
+      legalRegScheme: trattoria.legalRegScheme,
+      electronicAddress: trattoria.electronicAddress,
+      address: trattoria.address,
+      contact: trattoria.contact,
+      channel: { kind: "SDI", codiceDestinatario: "SUBM70N" },
+    },
+    lines: [
+      {
+        id: "1",
+        name: "Installazione impianto di aspirazione cucina",
+        description: "Cappa industriale, canalizzazione e motore di estrazione, posa in opera",
+        quantity: "1.00",
+        unitCode: "C62",
+        unitPriceNet: "4800.00",
+        netAmount: "4800.00",
+        vat: { category: "AE", rate: "0.00", natura: "N6.7", reason: IT_REVERSE_CHARGE_REASON },
+      },
+      {
+        id: "2",
+        name: "Manodopera specializzata",
+        quantity: "16.00",
+        unitCode: "HUR",
+        unitPriceNet: "45.00",
+        netAmount: "720.00",
+        vat: { category: "AE", rate: "0.00", natura: "N6.7", reason: IT_REVERSE_CHARGE_REASON },
+      },
+    ],
+    vatBreakdown: [
+      {
+        category: "AE",
+        rate: "0.00",
+        taxableAmount: "5520.00",
+        taxAmount: "0.00",
+        natura: "N6.7",
+        vatexCode: REVERSE_CHARGE_VATEX,
+        reason: IT_REVERSE_CHARGE_REASON,
+        esigibilita: "I",
+      },
+    ],
+    payment: {
+      meansCode: "30",
+      meansText: "Bonifico bancario",
+      italianMeansCode: "MP05",
+      conditions: "TP02",
+      terms: "Pagamento a 30 giorni data fattura",
+      iban: "IT80X0306909606100000123456",
+      accountName: "Impianti Tiburtini S.r.l.",
+      bic: "BCITITMMXXX",
+      remittanceInformation: number,
+    },
+    totals: {
+      lineExtension: "5520.00",
+      taxExclusive: "5520.00",
+      taxAmount: "0.00",
+      taxInclusive: "5520.00",
+      payable: "5520.00",
+    },
+  };
+}
+
 const BUILDERS: Record<PresetId, () => Invoice> = {
   "it-b2b-sdi": italianB2bSdi,
   "be-peppol": belgianPeppol,
@@ -1218,6 +1602,9 @@ const BUILDERS: Record<PresetId, () => Invoice> = {
   "it-restaurant-b2b-fattura": italianRestaurantB2bFattura,
   "it-restaurant-b2g-fpa12": italianRestaurantB2gFpa12,
   "it-restaurant-td04-credit": italianRestaurantTd04Credit,
+  "be-peppol-reverse-charge": belgianPeppolReverseCharge,
+  "de-hotel-reverse-charge": germanHotelReverseCharge,
+  "it-restaurant-reverse-charge": italianRestaurantReverseCharge,
 };
 
 export function preset(id: PresetId): Invoice {

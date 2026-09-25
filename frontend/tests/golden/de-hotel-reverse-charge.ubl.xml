@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2" xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+  <cbc:CustomizationID>urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0</cbc:CustomizationID>
+  <cbc:ProfileID>urn:fdc:peppol.eu:2017:poacc:billing:01:1.0</cbc:ProfileID>
+  <cbc:ID>DE-RC-2026-00077</cbc:ID>
+  <cbc:IssueDate>2026-08-26</cbc:IssueDate>
+  <cbc:DueDate>2026-09-09</cbc:DueDate>
+  <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>
+  <cbc:Note>Lieferung von 40 Tablets fuer Rezeption und Zimmerservice. Steuerschuldnerschaft des Leistungsempfaengers fuer Position 1.</cbc:Note>
+  <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
+  <cbc:BuyerReference>EINKAUF-FRONTOFFICE</cbc:BuyerReference>
+  <cac:OrderReference>
+    <cbc:ID>BST-HI-2026-0090</cbc:ID>
+  </cac:OrderReference>
+  <cac:AccountingSupplierParty>
+    <cac:Party>
+      <cbc:EndpointID schemeID="EM">rechnung@isartal-it.example</cbc:EndpointID>
+      <cac:PostalAddress>
+        <cbc:StreetName>Landsberger Strasse</cbc:StreetName>
+        <cbc:AdditionalStreetName>155</cbc:AdditionalStreetName>
+        <cbc:CityName>Muenchen</cbc:CityName>
+        <cbc:PostalZone>80687</cbc:PostalZone>
+        <cbc:CountrySubentity>Bayern</cbc:CountrySubentity>
+        <cac:Country>
+          <cbc:IdentificationCode>DE</cbc:IdentificationCode>
+        </cac:Country>
+      </cac:PostalAddress>
+      <cac:PartyTaxScheme>
+        <cbc:CompanyID>DE815432198</cbc:CompanyID>
+        <cac:TaxScheme>
+          <cbc:ID>VAT</cbc:ID>
+        </cac:TaxScheme>
+      </cac:PartyTaxScheme>
+      <cac:PartyLegalEntity>
+        <cbc:RegistrationName>Isartal IT-Handel GmbH</cbc:RegistrationName>
+        <cbc:CompanyID>HRB 234567</cbc:CompanyID>
+      </cac:PartyLegalEntity>
+      <cac:Contact>
+        <cbc:Name>Vertriebsinnendienst</cbc:Name>
+        <cbc:Telephone>+49 89 5559900</cbc:Telephone>
+        <cbc:ElectronicMail>rechnung@isartal-it.example</cbc:ElectronicMail>
+      </cac:Contact>
+    </cac:Party>
+  </cac:AccountingSupplierParty>
+  <cac:AccountingCustomerParty>
+    <cac:Party>
+      <cbc:EndpointID schemeID="EM">rechnung@hotel-isartor.example</cbc:EndpointID>
+      <cac:PostalAddress>
+        <cbc:StreetName>Zweibrueckenstrasse</cbc:StreetName>
+        <cbc:AdditionalStreetName>8</cbc:AdditionalStreetName>
+        <cbc:CityName>Muenchen</cbc:CityName>
+        <cbc:PostalZone>80331</cbc:PostalZone>
+        <cbc:CountrySubentity>Bayern</cbc:CountrySubentity>
+        <cac:Country>
+          <cbc:IdentificationCode>DE</cbc:IdentificationCode>
+        </cac:Country>
+      </cac:PostalAddress>
+      <cac:PartyTaxScheme>
+        <cbc:CompanyID>DE811234567</cbc:CompanyID>
+        <cac:TaxScheme>
+          <cbc:ID>VAT</cbc:ID>
+        </cac:TaxScheme>
+      </cac:PartyTaxScheme>
+      <cac:PartyLegalEntity>
+        <cbc:RegistrationName>Hotel Isartor Betriebs GmbH</cbc:RegistrationName>
+        <cbc:CompanyID>HRB 98761</cbc:CompanyID>
+      </cac:PartyLegalEntity>
+      <cac:Contact>
+        <cbc:Name>Rechnungswesen</cbc:Name>
+        <cbc:Telephone>+49 89 5551200</cbc:Telephone>
+        <cbc:ElectronicMail>rechnung@hotel-isartor.example</cbc:ElectronicMail>
+      </cac:Contact>
+    </cac:Party>
+  </cac:AccountingCustomerParty>
+  <cac:PaymentMeans>
+    <cbc:PaymentMeansCode name="SEPA-Ueberweisung">58</cbc:PaymentMeansCode>
+    <cbc:PaymentID>DE-RC-2026-00077</cbc:PaymentID>
+    <cac:PayeeFinancialAccount>
+      <cbc:ID>DE20700500000001234567</cbc:ID>
+      <cbc:Name>Isartal IT-Handel GmbH</cbc:Name>
+      <cac:FinancialInstitutionBranch>
+        <cbc:ID>BYLADEMMXXX</cbc:ID>
+      </cac:FinancialInstitutionBranch>
+    </cac:PayeeFinancialAccount>
+  </cac:PaymentMeans>
+  <cac:PaymentTerms>
+    <cbc:Note>Zahlbar innerhalb von 14 Tagen ohne Abzug</cbc:Note>
+  </cac:PaymentTerms>
+  <cac:TaxTotal>
+    <cbc:TaxAmount currencyID="EUR">600.40</cbc:TaxAmount>
+    <cac:TaxSubtotal>
+      <cbc:TaxableAmount currencyID="EUR">15560.00</cbc:TaxableAmount>
+      <cbc:TaxAmount currencyID="EUR">0.00</cbc:TaxAmount>
+      <cac:TaxCategory>
+        <cbc:ID>AE</cbc:ID>
+        <cbc:Percent>0.00</cbc:Percent>
+        <cbc:TaxExemptionReasonCode>VATEX-EU-AE</cbc:TaxExemptionReasonCode>
+        <cbc:TaxExemptionReason>Steuerschuldnerschaft des Leistungsempfaengers, § 13b Abs. 2 Nr. 10 UStG</cbc:TaxExemptionReason>
+        <cac:TaxScheme>
+          <cbc:ID>VAT</cbc:ID>
+        </cac:TaxScheme>
+      </cac:TaxCategory>
+    </cac:TaxSubtotal>
+    <cac:TaxSubtotal>
+      <cbc:TaxableAmount currencyID="EUR">3160.00</cbc:TaxableAmount>
+      <cbc:TaxAmount currencyID="EUR">600.40</cbc:TaxAmount>
+      <cac:TaxCategory>
+        <cbc:ID>S</cbc:ID>
+        <cbc:Percent>19.00</cbc:Percent>
+        <cac:TaxScheme>
+          <cbc:ID>VAT</cbc:ID>
+        </cac:TaxScheme>
+      </cac:TaxCategory>
+    </cac:TaxSubtotal>
+  </cac:TaxTotal>
+  <cac:LegalMonetaryTotal>
+    <cbc:LineExtensionAmount currencyID="EUR">18720.00</cbc:LineExtensionAmount>
+    <cbc:TaxExclusiveAmount currencyID="EUR">18720.00</cbc:TaxExclusiveAmount>
+    <cbc:TaxInclusiveAmount currencyID="EUR">19320.40</cbc:TaxInclusiveAmount>
+    <cbc:PayableAmount currencyID="EUR">19320.40</cbc:PayableAmount>
+  </cac:LegalMonetaryTotal>
+  <cac:InvoiceLine>
+    <cbc:ID>1</cbc:ID>
+    <cbc:InvoicedQuantity unitCode="C62">40.00</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="EUR">15560.00</cbc:LineExtensionAmount>
+    <cac:Item>
+      <cbc:Description>Rezeption und Zimmerservice, Seriennummern laut Lieferschein LS-2026-3310</cbc:Description>
+      <cbc:Name>Tablet 10.9 Zoll, 256 GB, WLAN</cbc:Name>
+      <cac:ClassifiedTaxCategory>
+        <cbc:ID>AE</cbc:ID>
+        <cbc:Percent>0.00</cbc:Percent>
+        <cac:TaxScheme>
+          <cbc:ID>VAT</cbc:ID>
+        </cac:TaxScheme>
+      </cac:ClassifiedTaxCategory>
+    </cac:Item>
+    <cac:Price>
+      <cbc:PriceAmount currencyID="EUR">389.00</cbc:PriceAmount>
+    </cac:Price>
+  </cac:InvoiceLine>
+  <cac:InvoiceLine>
+    <cbc:ID>2</cbc:ID>
+    <cbc:InvoicedQuantity unitCode="C62">40.00</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="EUR">3160.00</cbc:LineExtensionAmount>
+    <cac:Item>
+      <cbc:Name>Schutzhuelle mit Tastatur</cbc:Name>
+      <cac:ClassifiedTaxCategory>
+        <cbc:ID>S</cbc:ID>
+        <cbc:Percent>19.00</cbc:Percent>
+        <cac:TaxScheme>
+          <cbc:ID>VAT</cbc:ID>
+        </cac:TaxScheme>
+      </cac:ClassifiedTaxCategory>
+    </cac:Item>
+    <cac:Price>
+      <cbc:PriceAmount currencyID="EUR">79.00</cbc:PriceAmount>
+    </cac:Price>
+  </cac:InvoiceLine>
+</Invoice>

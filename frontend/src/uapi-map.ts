@@ -49,6 +49,8 @@ export type UapiVat =
       inclusive: string;
     }
   | { type: "VAT_EXEMPTION"; code: string; reason?: string }
+  // Never written for the e-invoice countries (see REVERSE_CHARGE_EXEMPTION); still read back
+  // from a hand-edited JSON so the type the spec declares round-trips onto category AE.
   | { type: "VAT_REVERSE_CHARGE" };
 
 export type UapiBreakdownEntry =
@@ -209,26 +211,48 @@ export const FALLBACK_VAT_RATES: Record<string, Record<string, string>> = {
   DE: { "19": "STANDARD", "7": "REDUCED_1" },
 };
 
+// fiskaly's own Natura table for E-INVOICE IT (unified v5.5.0, changelog 2026-07-27 "Reconcile
+// Italian VAT-exemption CAUSE→Natura mapping"): every Natura sub-code is one CAUSE_n, and the
+// gateway rejects NOT_SUBJECT / NOT_TAXABLE for an Italian e-invoice before it reaches SDI. The
+// "NOT_SUBJECT for N2, NOT_TAXABLE for N3" prose in the public 2026-06-01 spec describes SIGN IT
+// (IT_S), not the e-invoice product.
 export const FALLBACK_VAT_EXEMPTIONS: Record<string, string> = {
-  N1: "NOT_SUBJECT",
-  "N2.1": "NOT_SUBJECT",
-  "N2.2": "NOT_SUBJECT",
-  "N3.1": "NOT_TAXABLE",
-  "N3.2": "NOT_TAXABLE",
-  "N3.3": "NOT_TAXABLE",
-  "N3.4": "NOT_TAXABLE",
-  "N3.5": "NOT_TAXABLE",
-  "N3.6": "NOT_TAXABLE",
-  N4: "CAUSE_1",
-  N5: "CAUSE_2",
-  N7: "NOT_TAXABLE",
+  N1: "CAUSE_1",
+  "N2.1": "CAUSE_5",
+  "N2.2": "CAUSE_6",
+  "N3.1": "CAUSE_7",
+  "N3.2": "CAUSE_8",
+  "N3.3": "CAUSE_9",
+  "N3.4": "CAUSE_10",
+  "N3.5": "CAUSE_11",
+  "N3.6": "CAUSE_12",
+  N4: "CAUSE_2",
+  N5: "CAUSE_3",
+  "N6.1": "CAUSE_13",
+  "N6.2": "CAUSE_14",
+  "N6.3": "CAUSE_15",
+  "N6.4": "CAUSE_16",
+  "N6.5": "CAUSE_17",
+  "N6.6": "CAUSE_18",
+  "N6.7": "CAUSE_19",
+  "N6.8": "CAUSE_20",
+  "N6.9": "CAUSE_21",
+  N7: "CAUSE_22",
 };
+
+// Reverse charge (AE) travels as a VAT_EXEMPTION with a code and a reason: the spec's own
+// VAT_REVERSE_CHARGE type is "Not applicable" for BE_EI, DE_EI and IT_EI (2026-06-01,
+// VatReverseChargeCategory) and only exists for SIGN ES. SystemVatExemptionCode has no
+// reverse-charge value of its own, so outside Italy the code is whichever entry the system's
+// vat_exemptions list describes as reverse charge — CAUSE_3 in the mock system — and the legal
+// mention rides in `reason` (BT-120).
+export const REVERSE_CHARGE_EXEMPTION = "CAUSE_3";
 
 export const FALLBACK_CATEGORY_EXEMPTIONS: Record<VatCategory, string> = {
   S: "NOT_SUBJECT",
   Z: "NOT_TAXABLE",
   E: "CAUSE_1",
-  AE: "NOT_SUBJECT",
+  AE: REVERSE_CHARGE_EXEMPTION,
   K: "NOT_TAXABLE",
   G: "NOT_TAXABLE",
   O: "NOT_SUBJECT",
@@ -273,11 +297,18 @@ export function exemptionCode(
     const fallback = FALLBACK_VAT_EXEMPTIONS[natura];
     if (fallback) return fallback;
   }
+  if (category === "AE") {
+    const configured = ctx?.vatExemptions?.find((entry) =>
+      /reverse charge/i.test(entry.description ?? ""),
+    );
+    if (configured) return configured.code;
+  }
   return FALLBACK_CATEGORY_EXEMPTIONS[category];
 }
 
+// Every non-standard category, reverse charge included, is a VAT_EXEMPTION; see
+// REVERSE_CHARGE_EXEMPTION for why AE does not become VAT_REVERSE_CHARGE.
 function lineVat(line: Line, country: string, ctx?: UapiContext): UapiVat {
-  if (line.vat.category === "AE") return { type: "VAT_REVERSE_CHARGE" };
   if (line.vat.category !== "S") {
     return {
       type: "VAT_EXEMPTION",
@@ -301,9 +332,6 @@ function breakdownEntry(
   country: string,
   ctx?: UapiContext,
 ): UapiBreakdownEntry {
-  if (row.category === "AE") {
-    return { type: "VAT_REVERSE_CHARGE", exclusive: money(row.taxableAmount) };
-  }
   if (row.category !== "S") {
     return {
       type: "VAT_EXEMPTION",
@@ -860,10 +888,7 @@ function vatFacts(entry: UapiVatFacts, base: Vat | undefined, ctx?: UapiContext)
   }
   const code = entry.code ?? "";
   const reusable =
-    base &&
-    base.category !== "S" &&
-    base.category !== "AE" &&
-    exemptionCode(base.category, base.natura, ctx) === code;
+    base && base.category !== "S" && exemptionCode(base.category, base.natura, ctx) === code;
   if (reusable) {
     return entry.reason === undefined || entry.reason === base.reason
       ? base

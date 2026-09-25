@@ -1,0 +1,151 @@
+{
+  "type": "INVOICE",
+  "document": {
+    "number": "IT-RC-2026-0031",
+    "issued_at": "2026-08-26T00:00:00+00:00",
+    "text": "Installazione impianto di aspirazione cucina - cantiere Via dei Fori Imperiali 22",
+    "payment_terms": "Pagamento a 30 giorni data fattura",
+    "references": {
+      "contract": "CTR-TDC-2026-02",
+      "purchase_order": "ORD-TDC-2026-0044"
+    }
+  },
+  "entries": [
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Installazione impianto di aspirazione cucina",
+        "unit": {
+          "quantity": "1.00",
+          "measure": "C62",
+          "factor": "1",
+          "price": {
+            "exclusive": "4800.00",
+            "inclusive": "4800.00"
+          }
+        },
+        "value": {
+          "base": "4800.00"
+        },
+        "vat": {
+          "type": "VAT_EXEMPTION",
+          "code": "CAUSE_19",
+          "reason": "Inversione contabile - art. 17 c. 6 lett. a-ter) DPR 633/1972"
+        }
+      },
+      "details": {
+        "concept": "GOOD",
+        "description": "Cappa industriale, canalizzazione e motore di estrazione, posa in opera",
+        "number": "1"
+      }
+    },
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Manodopera specializzata",
+        "unit": {
+          "quantity": "16.00",
+          "measure": "HUR",
+          "factor": "1",
+          "price": {
+            "exclusive": "45.00",
+            "inclusive": "45.00"
+          }
+        },
+        "value": {
+          "base": "720.00"
+        },
+        "vat": {
+          "type": "VAT_EXEMPTION",
+          "code": "CAUSE_19",
+          "reason": "Inversione contabile - art. 17 c. 6 lett. a-ter) DPR 633/1972"
+        }
+      },
+      "details": {
+        "concept": "SERVICE",
+        "number": "2"
+      }
+    }
+  ],
+  "recipients": [
+    {
+      "type": "BUSINESS",
+      "name": "Trattoria del Colosseo S.r.l.",
+      "address": {
+        "line": {
+          "type": "STREET_NUMBER",
+          "street": "Via dei Fori Imperiali",
+          "number": "22"
+        },
+        "code": "00184",
+        "city": "Roma",
+        "country": "IT",
+        "region": "RM"
+      },
+      "buyer_id": "0211:02345678901",
+      "company_id": "02345678901",
+      "origin": "NATIONAL",
+      "shipping": {
+        "address": {
+          "line": {
+            "type": "STREET_NUMBER",
+            "street": "Via dei Fori Imperiali",
+            "number": "22"
+          },
+          "code": "00184",
+          "city": "Roma",
+          "country": "IT",
+          "region": "RM"
+        },
+        "name": "Trattoria del Colosseo S.r.l."
+      },
+      "identification": {
+        "type": "VAT",
+        "number": "02345678901"
+      },
+      "invoicing": {
+        "type": "SDI",
+        "destination_code": "SUBM70N"
+      }
+    }
+  ],
+  "payments": [
+    {
+      "type": "OUTSTANDING",
+      "details": {
+        "amount": "5520.00",
+        "currency": "EUR",
+        "date": "2026-09-25"
+      },
+      "concept": "INVOICE",
+      "instruction": {
+        "type": "CREDIT_TRANSFER",
+        "account": "IT80X0306909606100000123456",
+        "name": "Impianti Tiburtini S.r.l.",
+        "payment_service_provider": "BCITITMMXXX",
+        "text": "IT-RC-2026-0031"
+      }
+    }
+  ],
+  "breakdown": [
+    {
+      "type": "VAT_EXEMPTION",
+      "code": "CAUSE_19",
+      "exclusive": "5520.00"
+    }
+  ],
+  "totals": {
+    "vat": {
+      "amount": "0.00",
+      "exclusive": "5520.00",
+      "inclusive": "5520.00"
+    }
+  },
+  "seller": {
+    "name": "Ufficio Amministrazione",
+    "phone": "+39064400123",
+    "email": "amministrazione@impiantitiburtini.example"
+  }
+}

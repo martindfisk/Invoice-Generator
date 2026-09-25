@@ -1,0 +1,163 @@
+{
+  "type": "INVOICE",
+  "document": {
+    "number": "DE-RC-2026-00077",
+    "issued_at": "2026-08-26T00:00:00+00:00",
+    "text": "Lieferung von 40 Tablets fuer Rezeption und Zimmerservice. Steuerschuldnerschaft des Leistungsempfaengers fuer Position 1.",
+    "payment_terms": "Zahlbar innerhalb von 14 Tagen ohne Abzug",
+    "references": {
+      "buyer": "EINKAUF-FRONTOFFICE",
+      "buyer_routing": "KST-1100",
+      "purchase_order": "BST-HI-2026-0090"
+    }
+  },
+  "entries": [
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Tablet 10.9 Zoll, 256 GB, WLAN",
+        "unit": {
+          "quantity": "40.00",
+          "measure": "C62",
+          "factor": "1",
+          "price": {
+            "exclusive": "389.00",
+            "inclusive": "389.00"
+          }
+        },
+        "value": {
+          "base": "15560.00"
+        },
+        "vat": {
+          "type": "VAT_EXEMPTION",
+          "code": "CAUSE_3",
+          "reason": "Steuerschuldnerschaft des Leistungsempfaengers, § 13b Abs. 2 Nr. 10 UStG"
+        }
+      },
+      "details": {
+        "concept": "GOOD",
+        "description": "Rezeption und Zimmerservice, Seriennummern laut Lieferschein LS-2026-3310",
+        "number": "1"
+      }
+    },
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Schutzhuelle mit Tastatur",
+        "unit": {
+          "quantity": "40.00",
+          "measure": "C62",
+          "factor": "1",
+          "price": {
+            "exclusive": "79.00",
+            "inclusive": "94.01"
+          }
+        },
+        "value": {
+          "base": "3160.00"
+        },
+        "vat": {
+          "type": "VAT_RATE",
+          "code": "STANDARD",
+          "percentage": "19.00",
+          "amount": "600.40",
+          "exclusive": "3160.00",
+          "inclusive": "3760.40"
+        }
+      },
+      "details": {
+        "concept": "GOOD",
+        "number": "2"
+      }
+    }
+  ],
+  "recipients": [
+    {
+      "type": "BUSINESS",
+      "name": "Hotel Isartor Betriebs GmbH",
+      "address": {
+        "line": {
+          "type": "STREET_NUMBER",
+          "street": "Zweibrueckenstrasse",
+          "number": "8"
+        },
+        "code": "80331",
+        "city": "Muenchen",
+        "country": "DE",
+        "region": "Bayern"
+      },
+      "company_id": "HRB 98761",
+      "origin": "NATIONAL",
+      "shipping": {
+        "address": {
+          "line": {
+            "type": "STREET_NUMBER",
+            "street": "Zweibrueckenstrasse",
+            "number": "8"
+          },
+          "code": "80331",
+          "city": "Muenchen",
+          "country": "DE",
+          "region": "Bayern"
+        },
+        "name": "Hotel Isartor Betriebs GmbH"
+      },
+      "identification": {
+        "type": "VAT",
+        "number": "811234567"
+      },
+      "invoicing": {
+        "type": "EMAIL",
+        "email": "rechnung@hotel-isartor.example",
+        "format": "ZUGFERD_V2"
+      }
+    }
+  ],
+  "payments": [
+    {
+      "type": "OUTSTANDING",
+      "details": {
+        "amount": "19320.40",
+        "currency": "EUR",
+        "date": "2026-09-09"
+      },
+      "concept": "INVOICE",
+      "instruction": {
+        "type": "CREDIT_TRANSFER",
+        "account": "DE20700500000001234567",
+        "name": "Isartal IT-Handel GmbH",
+        "payment_service_provider": "BYLADEMMXXX",
+        "text": "DE-RC-2026-00077"
+      }
+    }
+  ],
+  "breakdown": [
+    {
+      "type": "VAT_EXEMPTION",
+      "code": "CAUSE_3",
+      "exclusive": "15560.00"
+    },
+    {
+      "type": "VAT_RATE",
+      "code": "STANDARD",
+      "percentage": "19.00",
+      "amount": "600.40",
+      "exclusive": "3160.00",
+      "inclusive": "3760.40"
+    }
+  ],
+  "totals": {
+    "vat": {
+      "amount": "600.40",
+      "exclusive": "18720.00",
+      "inclusive": "19320.40"
+    }
+  },
+  "seller": {
+    "name": "Vertriebsinnendienst",
+    "phone": "+49 89 5559900",
+    "email": "rechnung@isartal-it.example"
+  }
+}

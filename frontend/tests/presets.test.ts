@@ -77,9 +77,9 @@ describe("listPresets", () => {
       presetGroups().map((section) => [section.group, section.presets.length]),
     );
     expect(counts).toEqual({
-      Reference: 4,
-      "Munich hotel (DE)": 3,
-      "Rome restaurants (IT)": 4,
+      Reference: 5,
+      "Munich hotel (DE)": 4,
+      "Rome restaurants (IT)": 5,
     });
   });
 });
@@ -102,6 +102,9 @@ describe("preset", () => {
     expect(preset("it-restaurant-b2b-fattura").format).toBe("fatturapa");
     expect(preset("it-restaurant-b2g-fpa12").format).toBe("fatturapa");
     expect(preset("it-restaurant-td04-credit").format).toBe("fatturapa");
+    expect(preset("be-peppol-reverse-charge").format).toBe("ubl");
+    expect(preset("de-hotel-reverse-charge").format).toBe("cii");
+    expect(preset("it-restaurant-reverse-charge").format).toBe("fatturapa");
   });
 
   it("gives every preset at least one document reference", () => {
@@ -243,10 +246,16 @@ describe("preset", () => {
       "broken",
       "it-restaurant-b2b-fattura",
       "it-restaurant-td04-credit",
+      "it-restaurant-reverse-charge",
     ]);
     expect(cell("IT", "B2G")).toEqual(["it-restaurant-b2g-fpa12"]);
+    expect(cell("DE", "B2B")).toEqual(["de-hotel-b2b-zugferd", "de-hotel-reverse-charge"]);
     expect(cell("DE", "B2G")).toEqual(["de-hotel-b2g-xrechnung", "de-hotel-b2g-broken"]);
-    expect(cell("BE", "B2B")).toEqual(["be-peppol", "be-peppol-broken"]);
+    expect(cell("BE", "B2B")).toEqual([
+      "be-peppol",
+      "be-peppol-broken",
+      "be-peppol-reverse-charge",
+    ]);
     for (const country of ["DE", "IT", "BE"]) {
       expect(
         listPresets().some((meta) => meta.country === country),
@@ -314,6 +323,53 @@ describe("preset", () => {
       total += index % 2 === 0 ? odd[position] : position < 10 ? position : position - 10;
     }
     expect("ABCDEFGHIJKLMNOPQRSTUVWXYZ"[total % 26]).toBe(cf[15]);
+  });
+
+  it("gives every country a reverse-charge scenario that satisfies BR-AE-01..10", () => {
+    const REVERSE_CHARGE: PresetId[] = [
+      "be-peppol-reverse-charge",
+      "de-hotel-reverse-charge",
+      "it-restaurant-reverse-charge",
+    ];
+    expect(REVERSE_CHARGE.map((id) => PRESET_META[id].country).sort()).toEqual(["BE", "DE", "IT"]);
+    for (const id of REVERSE_CHARGE) {
+      const invoice = preset(id);
+      const lines = invoice.lines.filter((line) => line.vat.category === "AE");
+      expect(lines.length, `${id} has no AE line`).toBeGreaterThan(0);
+      // BR-AE-05: an AE line carries a zero rate; the fiskaly JSON wants the reason on the line.
+      for (const line of lines) {
+        expect(line.vat.rate).toBe("0.00");
+        expect(line.vat.reason, `${id}: AE line without a reason`).toBeTruthy();
+      }
+      const rows = invoice.vatBreakdown.filter((row) => row.category === "AE");
+      expect(rows, `${id} has no AE breakdown`).toHaveLength(1);
+      // BR-AE-08/09/10: the taxable amount is the sum of the AE lines, the tax is zero, and both
+      // BT-120 and BT-121 (VATEX-EU-AE) are present.
+      const sum = lines.reduce((total, line) => total + Number(line.netAmount), 0);
+      expect(Number(rows[0].taxableAmount)).toBeCloseTo(sum, 2);
+      expect(rows[0].taxAmount).toBe("0.00");
+      expect(rows[0].vatexCode).toBe("VATEX-EU-AE");
+      expect(rows[0].reason).toBe(lines[0].vat.reason);
+      // BR-AE-02/03: the seller and the buyer are both identified for VAT.
+      expect(invoice.seller.vatId, `${id}: seller without VAT id`).toBeTruthy();
+      expect(invoice.buyer.vatId, `${id}: buyer without VAT id`).toBeTruthy();
+      expect(PRESET_META[id].audience).toBe("B2B");
+    }
+    // Italy spells the category as Natura N6.7 on every reverse-charged line and in the summary.
+    const italian = preset("it-restaurant-reverse-charge");
+    expect(italian.lines.every((line) => line.vat.natura === "N6.7")).toBe(true);
+    expect(italian.vatBreakdown[0].natura).toBe("N6.7");
+    expect(italian.buyer.name).toBe(preset("it-restaurant-b2b-fattura").seller.name);
+    // Germany mixes the § 13b line with a standard-rated accessory line.
+    const german = preset("de-hotel-reverse-charge");
+    expect(german.lines.map((line) => line.vat.category)).toEqual(["AE", "S"]);
+    expect(german.buyer.name).toBe(preset("de-hotel-b2b-zugferd").seller.name);
+    expect(german.totals.taxAmount).toBe("600.40");
+    // Belgium invoices a customer in another Member State with its own VAT id.
+    const belgian = preset("be-peppol-reverse-charge");
+    expect(belgian.buyer.address.country).toBe("NL");
+    expect(belgian.buyer.vatId).toMatch(/^NL\d{9}B\d{2}$/);
+    expect(belgian.seller).toEqual(preset("be-peppol").seller);
   });
 
   it("breaks the Belgian preset on the KBO mod-97 check digit and nothing else", () => {

@@ -67,11 +67,25 @@ diff before committing.
   be of type `BUSINESS`", but the schema accepts the shape and
   `backend/tests/test_validate_uapi.py` validates every golden against it.
 
+## Reverse charge in the fixtures
+
+`be-peppol-reverse-charge`, `de-hotel-reverse-charge` and `it-restaurant-reverse-charge` carry EN 16931
+category **AE** with `VATEX-EU-AE` (BT-121) and the national legal mention as BT-120 — `Btw verlegd`
+(KB nr. 1 art. 5 §1 4°), `Steuerschuldnerschaft des Leistungsempfaengers` (UStG § 14a Abs. 5) and
+`Inversione contabile - art. 17 c. 6 lett. a-ter) DPR 633/1972` (Natura `N6.7`). Their `*.uapi.json`
+goldens carry the same lines as `VAT_EXEMPTION` with a `code` and a `reason`: the spec's
+`VAT_REVERSE_CHARGE` type is "Not applicable" for `BE_EI`, `DE_EI` and `IT_EI`
+(`VatReverseChargeCategory`, 2026-06-01). Italy uses `CAUSE_19`, fiskaly's own code for `N6.7`; the
+other two use `CAUSE_3`, the entry the mock system lists as reverse charge. What fiskaly then writes
+into the transmitted XML is not AE — its mapper renders non-Italian exemption causes as category E —
+so the DiffView of these presets is expected to show that gap.
+
 ## Schema validity of the XML goldens
 
 - Every `*.ubl.xml` and `*.xrechnung.xml` is valid against `UBL-Invoice-2.1.xsd`.
-- `it-b2b-sdi`, `it-restaurant-b2c-pec`, `it-restaurant-b2b-fattura`, `it-restaurant-b2g-fpa12` and
-  `it-restaurant-td04-credit` are valid against `Schema_VFPR12_v1.2.3.xsd`. `it-restaurant-b2c-pec`
+- `it-b2b-sdi`, `it-restaurant-b2c-pec`, `it-restaurant-b2b-fattura`, `it-restaurant-b2g-fpa12`,
+  `it-restaurant-td04-credit` and `it-restaurant-reverse-charge` are valid against
+  `Schema_VFPR12_v1.2.3.xsd`. `it-restaurant-b2c-pec`
   is the B2C case: `CessionarioCommittente/DatiAnagrafici` carries `CodiceFiscale` with **no**
   `IdFiscaleIVA` (both are `minOccurs="0"` in `DatiAnagraficiCessionarioType`) and `Anagrafica`
   takes the `Nome` + `Cognome` branch of the `xs:choice` in `AnagraficaType` instead of
@@ -84,7 +98,7 @@ diff before committing.
   vendored, because `tools/fetch_assets.py` has no redistributable pinned source for it and
   `backend/app/validate.py` has no `cii-*` schema key. `formats.ts` therefore sets
   `xsdSchemaKey: null` for the `cii` plugin rather than pointing it at a wrong schema. The CII
-  golden was checked by hand against the Factur-X 1.08 EN16931 XSD and validates.
+  goldens were checked by hand against the Factur-X 1.08 EN16931 XSD and validate.
 
 ## Document references (BT-10 … BT-26) in the fixtures
 
@@ -128,16 +142,17 @@ values configured in `.env`; nothing in this directory is used to address a real
 would apply (`*.ubl.xml` → `cen-ubl` + `peppol-ubl`, `*.xrechnung.xml` → `cen-ubl` +
 `xrechnung-ubl`, `*.cii.xml` → `en16931-cii`) and pins the exact set of failing rule ids. A
 **native rendering** — a preset serialised in the syntax it declares — must be clean:
-`be-peppol.ubl.xml`, `de-hotel-b2g-xrechnung.xrechnung.xml`, `de-hotel-b2b-zugferd.cii.xml`.
+`be-peppol.ubl.xml`, `be-peppol-reverse-charge.ubl.xml`, `de-hotel-b2g-xrechnung.xrechnung.xml`,
+`de-hotel-b2b-zugferd.cii.xml`, `de-hotel-reverse-charge.cii.xml`.
 `be-peppol-broken.ubl.xml` is the one native rendering that cannot be clean — the preset exists to
 fail a Peppol rule and Belgium's own syntax is UBL — so that test needs a deliberately-broken
 exemption alongside its expectations.
 
 Cross-format renderings keep the findings that follow from the scenario, not from a defect:
 
-- `PEPPOL-EN16931-CL008` on `de-hotel-b2b-zugferd.ubl.xml` (×2) and
-  `de-hotel-b2g-xrechnung.ubl.xml` (×1) — EAS `EM` is a CEF code and correct for an EN 16931
-  invoice delivered by e-mail, but is not in the Peppol EAS subset.
+- `PEPPOL-EN16931-CL008` on `de-hotel-b2b-zugferd.ubl.xml` (×2), `de-hotel-reverse-charge.ubl.xml`
+  (×2) and `de-hotel-b2g-xrechnung.ubl.xml` (×1) — EAS `EM` is a CEF code and correct for an
+  EN 16931 invoice delivered by e-mail, but is not in the Peppol EAS subset.
 - `PEPPOL-EN16931-R010` on `it-restaurant-b2g-fpa12.ubl.xml` — the ministry is addressed by its
   codice univoco ufficio over SDI, so the Peppol rendering has no BT-49.
 - `BR-CL-01` + `PEPPOL-EN16931-P0100` on `it-restaurant-td04-credit.ubl.xml` — a credit note in an

@@ -1,0 +1,138 @@
+{
+  "type": "INVOICE",
+  "document": {
+    "number": "BE-INV-2026-0012",
+    "issued_at": "2026-08-26T00:00:00+00:00",
+    "text": "Peppol onboarding workshop, Rotterdam, 20-21 August 2026. VAT reverse charged.",
+    "payment_terms": "Payable within 30 days of the invoice date. VAT to be accounted for by the recipient.",
+    "references": {
+      "buyer": "MAAS-PRJ-2026-11",
+      "buyer_routing": "MAAS-PRJ-2026-11",
+      "contract": "CTR-BE-2026-14",
+      "purchase_order": "PO-NL-2026-031"
+    }
+  },
+  "entries": [
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Peppol onboarding workshop",
+        "unit": {
+          "quantity": "2.00",
+          "measure": "DAY",
+          "factor": "1",
+          "price": {
+            "exclusive": "1200.00",
+            "inclusive": "1200.00"
+          }
+        },
+        "value": {
+          "base": "2400.00"
+        },
+        "vat": {
+          "type": "VAT_EXEMPTION",
+          "code": "CAUSE_3",
+          "reason": "Btw verlegd - art. 21 par. 2 en art. 51 par. 2 WBTW; art. 196 Richtlijn 2006/112/EG"
+        }
+      },
+      "details": {
+        "concept": "GOOD",
+        "description": "Two-day on-site workshop, Rotterdam",
+        "number": "1"
+      }
+    },
+    {
+      "type": "SALE",
+      "data": {
+        "type": "ITEM",
+        "text": "Remote integration support",
+        "unit": {
+          "quantity": "10.00",
+          "measure": "HUR",
+          "factor": "1",
+          "price": {
+            "exclusive": "125.00",
+            "inclusive": "125.00"
+          }
+        },
+        "value": {
+          "base": "1250.00"
+        },
+        "vat": {
+          "type": "VAT_EXEMPTION",
+          "code": "CAUSE_3",
+          "reason": "Btw verlegd - art. 21 par. 2 en art. 51 par. 2 WBTW; art. 196 Richtlijn 2006/112/EG"
+        }
+      },
+      "details": {
+        "concept": "SERVICE",
+        "number": "2"
+      }
+    }
+  ],
+  "recipients": [
+    {
+      "type": "BUSINESS",
+      "name": "Maas Logistiek B.V.",
+      "address": {
+        "line": {
+          "type": "STREET_NUMBER",
+          "street": "Weena",
+          "number": "505"
+        },
+        "code": "3013 AL",
+        "city": "Rotterdam",
+        "country": "NL",
+        "region": "Zuid-Holland"
+      },
+      "buyer_id": "0106:58201256",
+      "company_id": "58201256",
+      "origin": "INTERNATIONAL",
+      "identification": {
+        "type": "VAT",
+        "number": "802315896B01"
+      },
+      "invoicing": {
+        "type": "PEPPOL",
+        "identifier": "0106:58201256"
+      }
+    }
+  ],
+  "payments": [
+    {
+      "type": "OUTSTANDING",
+      "details": {
+        "amount": "3650.00",
+        "currency": "EUR",
+        "date": "2026-09-25"
+      },
+      "concept": "INVOICE",
+      "instruction": {
+        "type": "CREDIT_TRANSFER",
+        "account": "BE68539007547034",
+        "name": "Ardennes Bureau BV",
+        "payment_service_provider": "GEBABEBB",
+        "text": "BE-INV-2026-0012"
+      }
+    }
+  ],
+  "breakdown": [
+    {
+      "type": "VAT_EXEMPTION",
+      "code": "CAUSE_3",
+      "exclusive": "3650.00"
+    }
+  ],
+  "totals": {
+    "vat": {
+      "amount": "0.00",
+      "exclusive": "3650.00",
+      "inclusive": "3650.00"
+    }
+  },
+  "seller": {
+    "name": "Billing",
+    "email": "billing@example.be"
+  }
+}

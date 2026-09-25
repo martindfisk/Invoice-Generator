@@ -11,7 +11,7 @@ import { parseCii } from "../src/cii-parse";
 import { writeCii } from "../src/cii-write";
 import { preset, PRESET_IDS } from "../src/presets";
 
-const CII_GOLDEN_PRESETS = ["de-hotel-b2b-zugferd"] as const;
+const CII_GOLDEN_PRESETS = ["de-hotel-b2b-zugferd", "de-hotel-reverse-charge"] as const;
 
 const SEQUENCES: Record<string, string[]> = {
   CrossIndustryInvoice: [

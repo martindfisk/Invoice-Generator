@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<p:FatturaElettronica xmlns:p="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2" versione="FPR12">
+  <FatturaElettronicaHeader>
+    <DatiTrasmissione>
+      <IdTrasmittente>
+        <IdPaese>BE</IdPaese>
+        <IdCodice>0999999922</IdCodice>
+      </IdTrasmittente>
+      <ProgressivoInvio>NV20260012</ProgressivoInvio>
+      <FormatoTrasmissione>FPR12</FormatoTrasmissione>
+      <CodiceDestinatario>XXXXXXX</CodiceDestinatario>
+    </DatiTrasmissione>
+    <CedentePrestatore>
+      <DatiAnagrafici>
+        <IdFiscaleIVA>
+          <IdPaese>BE</IdPaese>
+          <IdCodice>0999999922</IdCodice>
+        </IdFiscaleIVA>
+        <Anagrafica>
+          <Denominazione>Ardennes Bureau BV</Denominazione>
+        </Anagrafica>
+        <RegimeFiscale>RF01</RegimeFiscale>
+      </DatiAnagrafici>
+      <Sede>
+        <Indirizzo>Rue de la Loi</Indirizzo>
+        <NumeroCivico>16</NumeroCivico>
+        <CAP>1000</CAP>
+        <Comune>Bruxelles</Comune>
+        <Provincia>BE-BRU</Provincia>
+        <Nazione>BE</Nazione>
+      </Sede>
+      <Contatti>
+        <Email>billing@example.be</Email>
+      </Contatti>
+    </CedentePrestatore>
+    <CessionarioCommittente>
+      <DatiAnagrafici>
+        <IdFiscaleIVA>
+          <IdPaese>NL</IdPaese>
+          <IdCodice>802315896B01</IdCodice>
+        </IdFiscaleIVA>
+        <Anagrafica>
+          <Denominazione>Maas Logistiek B.V.</Denominazione>
+        </Anagrafica>
+      </DatiAnagrafici>
+      <Sede>
+        <Indirizzo>Weena</Indirizzo>
+        <NumeroCivico>505</NumeroCivico>
+        <CAP>3013 AL</CAP>
+        <Comune>Rotterdam</Comune>
+        <Provincia>Zuid-Holland</Provincia>
+        <Nazione>NL</Nazione>
+      </Sede>
+    </CessionarioCommittente>
+  </FatturaElettronicaHeader>
+  <FatturaElettronicaBody>
+    <DatiGenerali>
+      <DatiGeneraliDocumento>
+        <TipoDocumento>TD01</TipoDocumento>
+        <Divisa>EUR</Divisa>
+        <Data>2026-08-26</Data>
+        <Numero>BE-INV-2026-0012</Numero>
+        <ImportoTotaleDocumento>3650.00</ImportoTotaleDocumento>
+        <Causale>Peppol onboarding workshop, Rotterdam, 20-21 August 2026. VAT reverse charged.</Causale>
+      </DatiGeneraliDocumento>
+      <DatiOrdineAcquisto>
+        <IdDocumento>PO-NL-2026-031</IdDocumento>
+      </DatiOrdineAcquisto>
+      <DatiContratto>
+        <IdDocumento>CTR-BE-2026-14</IdDocumento>
+      </DatiContratto>
+    </DatiGenerali>
+    <DatiBeniServizi>
+      <DettaglioLinee>
+        <NumeroLinea>1</NumeroLinea>
+        <Descrizione>Peppol onboarding workshop</Descrizione>
+        <Quantita>2.00</Quantita>
+        <UnitaMisura>DAY</UnitaMisura>
+        <PrezzoUnitario>1200.00</PrezzoUnitario>
+        <PrezzoTotale>2400.00</PrezzoTotale>
+        <AliquotaIVA>0.00</AliquotaIVA>
+      </DettaglioLinee>
+      <DettaglioLinee>
+        <NumeroLinea>2</NumeroLinea>
+        <Descrizione>Remote integration support</Descrizione>
+        <Quantita>10.00</Quantita>
+        <UnitaMisura>HUR</UnitaMisura>
+        <PrezzoUnitario>125.00</PrezzoUnitario>
+        <PrezzoTotale>1250.00</PrezzoTotale>
+        <AliquotaIVA>0.00</AliquotaIVA>
+      </DettaglioLinee>
+      <DatiRiepilogo>
+        <AliquotaIVA>0.00</AliquotaIVA>
+        <ImponibileImporto>3650.00</ImponibileImporto>
+        <Imposta>0.00</Imposta>
+        <EsigibilitaIVA>I</EsigibilitaIVA>
+        <RiferimentoNormativo>Btw verlegd - art. 21 par. 2 en art. 51 par. 2 WBTW; art. 196 Richtlijn 2006/112/EG</RiferimentoNormativo>
+      </DatiRiepilogo>
+    </DatiBeniServizi>
+    <DatiPagamento>
+      <CondizioniPagamento>TP02</CondizioniPagamento>
+      <DettaglioPagamento>
+        <Beneficiario>Ardennes Bureau BV</Beneficiario>
+        <ModalitaPagamento>MP05</ModalitaPagamento>
+        <DataScadenzaPagamento>2026-09-25</DataScadenzaPagamento>
+        <ImportoPagamento>3650.00</ImportoPagamento>
+        <IBAN>BE68539007547034</IBAN>
+        <BIC>GEBABEBB</BIC>
+      </DettaglioPagamento>
+    </DatiPagamento>
+  </FatturaElettronicaBody>
+</p:FatturaElettronica>

@@ -92,6 +92,14 @@ const EXPECTED: Record<string, string[]> = {
     "PEPPOL-EN16931-CL008:fatal",
   ],
   "de-hotel-b2g-xrechnung.ubl.xml": ["DE-R-019:warning", "PEPPOL-EN16931-CL008:fatal"],
+  // Same scenario shape as the ZUGFeRD preset: both parties are reached by e-mail, so both EM
+  // endpoints fire CL008, and the SEPA IBAN hits the mod defect. The AE rows themselves are
+  // clean - BR-AE-01..10 pass, which is the point of the fixture.
+  "de-hotel-reverse-charge.ubl.xml": [
+    "DE-R-019:warning",
+    "PEPPOL-EN16931-CL008:fatal",
+    "PEPPOL-EN16931-CL008:fatal",
+  ],
 
   // Native XRechnung. Clean except for the SaxonJS mod defect above.
   "de-hotel-b2g-xrechnung.xrechnung.xml": ["BR-DE-19:warning"],
@@ -213,9 +221,11 @@ describe.skipIf(!sefReady)("Schematron over every golden", () => {
     }
     expect([...covered].sort()).toEqual([
       "be-peppol-broken.ubl.xml",
+      "be-peppol-reverse-charge.ubl.xml",
       "be-peppol.ubl.xml",
       "de-hotel-b2b-zugferd.cii.xml",
       "de-hotel-b2g-xrechnung.xrechnung.xml",
+      "de-hotel-reverse-charge.cii.xml",
     ]);
   });
 

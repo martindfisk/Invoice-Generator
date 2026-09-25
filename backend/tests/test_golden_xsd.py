@@ -19,6 +19,8 @@ CROSS_FORMAT_INVALID = {
     "de-hotel-b2b-zugferd.fatturapa.xml": "Provincia",
     "de-hotel-b2g-xrechnung.fatturapa.xml": "Provincia",
     "de-hotel-b2g-broken.fatturapa.xml": "Provincia",
+    "de-hotel-reverse-charge.fatturapa.xml": "Provincia",
+    "be-peppol-reverse-charge.fatturapa.xml": "CAP",
 }
 
 # One preset per country exists to fail. The marker names the element the deliberate defect breaks,

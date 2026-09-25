@@ -96,6 +96,13 @@ Around the structural core sit three declared tables (all rendered in [04](04-ma
   (PresenceStrip, gap report) so the claim is auditable.
 - **`UAPI_PARTIAL_FIELDS`** — carried, but incompletely (e.g. a reference that loses its date).
 
+VAT categories other than `S` all become a `VAT_EXEMPTION` with a `code` and a `reason`, reverse
+charge included: the spec's `VAT_REVERSE_CHARGE` type is "Not applicable" for the e-invoice
+countries. Italian Natura codes map one-to-one onto fiskaly's `CAUSE_n` table
+(`FALLBACK_VAT_EXEMPTIONS`, e.g. N3.5→`CAUSE_11`, N6.7→`CAUSE_19`); outside Italy an AE line takes
+the system's reverse-charge exemption entry (`REVERSE_CHARGE_EXEMPTION`), and the legal mention
+rides in `reason` (BT-120).
+
 Two operation facts shape everything downstream:
 
 - **The seller is not authored per invoice.** `CedentePrestatore` comes from the commissioned

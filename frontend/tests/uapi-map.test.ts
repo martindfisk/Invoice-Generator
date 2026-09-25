@@ -11,6 +11,7 @@ import {
   toInvoiceTransaction,
   type UapiContext,
   type UapiTaxpayer,
+  REVERSE_CHARGE_EXEMPTION,
 } from "../src/uapi-map";
 
 const REQUIRED_KEYS = [
@@ -85,9 +86,55 @@ describe("toInvoiceTransaction", () => {
   it("maps Natura to the system's exemption causes, then to the fallback", () => {
     expect(exemptionCode("E", "N3.5", IT_CONTEXT)).toBe("CAUSE_7");
     expect(exemptionCode("E", "N4", IT_CONTEXT)).toBe("CAUSE_3");
-    expect(exemptionCode("E", "N3.5")).toBe("NOT_TAXABLE");
-    expect(exemptionCode("E", "N4")).toBe("CAUSE_1");
+    expect(exemptionCode("E", "N3.5")).toBe("CAUSE_11");
+    expect(exemptionCode("E", "N4")).toBe("CAUSE_2");
+    expect(exemptionCode("E", "N1")).toBe("CAUSE_1");
+    expect(exemptionCode("AE", "N6.7")).toBe("CAUSE_19");
     expect(exemptionCode("O", undefined)).toBe("NOT_SUBJECT");
+  });
+
+  it("carries reverse charge as a VAT_EXEMPTION with the system's code and the legal reason", () => {
+    // VAT_REVERSE_CHARGE is "Not applicable" for BE_EI, DE_EI and IT_EI in the 2026-06-01 spec.
+    expect(exemptionCode("AE", undefined)).toBe(REVERSE_CHARGE_EXEMPTION);
+    expect(
+      exemptionCode("AE", undefined, {
+        vatExemptions: [{ code: "CAUSE_9", description: "Reverse charge (art. 196)" }],
+      }),
+    ).toBe("CAUSE_9");
+
+    const belgian = toInvoiceTransaction(preset("be-peppol-reverse-charge"));
+    expect(belgian.entries[0].data.vat).toEqual({
+      type: "VAT_EXEMPTION",
+      code: REVERSE_CHARGE_EXEMPTION,
+      reason: "Btw verlegd - art. 21 par. 2 en art. 51 par. 2 WBTW; art. 196 Richtlijn 2006/112/EG",
+    });
+    expect(belgian.breakdown).toEqual([
+      { type: "VAT_EXEMPTION", code: REVERSE_CHARGE_EXEMPTION, exclusive: "3650.00" },
+    ]);
+    expect(belgian.totals.vat).toEqual({
+      amount: "0.00",
+      exclusive: "3650.00",
+      inclusive: "3650.00",
+    });
+
+    const italian = toInvoiceTransaction(preset("it-restaurant-reverse-charge"), IT_CONTEXT);
+    expect(italian.entries[0].data.vat).toEqual({
+      type: "VAT_EXEMPTION",
+      code: "CAUSE_19",
+      reason: "Inversione contabile - art. 17 c. 6 lett. a-ter) DPR 633/1972",
+    });
+    expect(italian.breakdown[0]).toEqual({
+      type: "VAT_EXEMPTION",
+      code: "CAUSE_19",
+      exclusive: "5520.00",
+    });
+
+    const german = toInvoiceTransaction(preset("de-hotel-reverse-charge"));
+    expect(german.entries.map((entry) => entry.data.vat.type)).toEqual([
+      "VAT_EXEMPTION",
+      "VAT_RATE",
+    ]);
+    expect(JSON.stringify(german)).not.toContain("VAT_REVERSE_CHARGE");
   });
 
   it("discriminates entry and breakdown VAT by type", () => {

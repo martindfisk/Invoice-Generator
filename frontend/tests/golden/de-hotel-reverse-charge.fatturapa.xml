@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<p:FatturaElettronica xmlns:p="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2" versione="FPR12">
+  <FatturaElettronicaHeader>
+    <DatiTrasmissione>
+      <IdTrasmittente>
+        <IdPaese>DE</IdPaese>
+        <IdCodice>815432198</IdCodice>
+      </IdTrasmittente>
+      <ProgressivoInvio>C202600077</ProgressivoInvio>
+      <FormatoTrasmissione>FPR12</FormatoTrasmissione>
+      <CodiceDestinatario>XXXXXXX</CodiceDestinatario>
+    </DatiTrasmissione>
+    <CedentePrestatore>
+      <DatiAnagrafici>
+        <IdFiscaleIVA>
+          <IdPaese>DE</IdPaese>
+          <IdCodice>815432198</IdCodice>
+        </IdFiscaleIVA>
+        <Anagrafica>
+          <Denominazione>Isartal IT-Handel GmbH</Denominazione>
+        </Anagrafica>
+        <RegimeFiscale>RF01</RegimeFiscale>
+      </DatiAnagrafici>
+      <Sede>
+        <Indirizzo>Landsberger Strasse</Indirizzo>
+        <NumeroCivico>155</NumeroCivico>
+        <CAP>80687</CAP>
+        <Comune>Muenchen</Comune>
+        <Provincia>Bayern</Provincia>
+        <Nazione>DE</Nazione>
+      </Sede>
+      <Contatti>
+        <Telefono>+49 89 5559900</Telefono>
+        <Email>rechnung@isartal-it.example</Email>
+      </Contatti>
+    </CedentePrestatore>
+    <CessionarioCommittente>
+      <DatiAnagrafici>
+        <IdFiscaleIVA>
+          <IdPaese>DE</IdPaese>
+          <IdCodice>811234567</IdCodice>
+        </IdFiscaleIVA>
+        <Anagrafica>
+          <Denominazione>Hotel Isartor Betriebs GmbH</Denominazione>
+        </Anagrafica>
+      </DatiAnagrafici>
+      <Sede>
+        <Indirizzo>Zweibrueckenstrasse</Indirizzo>
+        <NumeroCivico>8</NumeroCivico>
+        <CAP>80331</CAP>
+        <Comune>Muenchen</Comune>
+        <Provincia>Bayern</Provincia>
+        <Nazione>DE</Nazione>
+      </Sede>
+    </CessionarioCommittente>
+  </FatturaElettronicaHeader>
+  <FatturaElettronicaBody>
+    <DatiGenerali>
+      <DatiGeneraliDocumento>
+        <TipoDocumento>TD01</TipoDocumento>
+        <Divisa>EUR</Divisa>
+        <Data>2026-08-26</Data>
+        <Numero>DE-RC-2026-00077</Numero>
+        <ImportoTotaleDocumento>19320.40</ImportoTotaleDocumento>
+        <Causale>Lieferung von 40 Tablets fuer Rezeption und Zimmerservice. Steuerschuldnerschaft des Leistungsempfaengers fuer Position 1.</Causale>
+      </DatiGeneraliDocumento>
+      <DatiOrdineAcquisto>
+        <IdDocumento>BST-HI-2026-0090</IdDocumento>
+      </DatiOrdineAcquisto>
+    </DatiGenerali>
+    <DatiBeniServizi>
+      <DettaglioLinee>
+        <NumeroLinea>1</NumeroLinea>
+        <Descrizione>Tablet 10.9 Zoll, 256 GB, WLAN</Descrizione>
+        <Quantita>40.00</Quantita>
+        <UnitaMisura>C62</UnitaMisura>
+        <PrezzoUnitario>389.00</PrezzoUnitario>
+        <PrezzoTotale>15560.00</PrezzoTotale>
+        <AliquotaIVA>0.00</AliquotaIVA>
+      </DettaglioLinee>
+      <DettaglioLinee>
+        <NumeroLinea>2</NumeroLinea>
+        <Descrizione>Schutzhuelle mit Tastatur</Descrizione>
+        <Quantita>40.00</Quantita>
+        <UnitaMisura>C62</UnitaMisura>
+        <PrezzoUnitario>79.00</PrezzoUnitario>
+        <PrezzoTotale>3160.00</PrezzoTotale>
+        <AliquotaIVA>19.00</AliquotaIVA>
+      </DettaglioLinee>
+      <DatiRiepilogo>
+        <AliquotaIVA>0.00</AliquotaIVA>
+        <ImponibileImporto>15560.00</ImponibileImporto>
+        <Imposta>0.00</Imposta>
+        <EsigibilitaIVA>I</EsigibilitaIVA>
+        <RiferimentoNormativo>Steuerschuldnerschaft des Leistungsempfaengers, § 13b Abs. 2 Nr. 10 UStG</RiferimentoNormativo>
+      </DatiRiepilogo>
+      <DatiRiepilogo>
+        <AliquotaIVA>19.00</AliquotaIVA>
+        <ImponibileImporto>3160.00</ImponibileImporto>
+        <Imposta>600.40</Imposta>
+        <EsigibilitaIVA>I</EsigibilitaIVA>
+      </DatiRiepilogo>
+    </DatiBeniServizi>
+    <DatiPagamento>
+      <CondizioniPagamento>TP02</CondizioniPagamento>
+      <DettaglioPagamento>
+        <Beneficiario>Isartal IT-Handel GmbH</Beneficiario>
+        <ModalitaPagamento>MP05</ModalitaPagamento>
+        <DataScadenzaPagamento>2026-09-09</DataScadenzaPagamento>
+        <ImportoPagamento>19320.40</ImportoPagamento>
+        <IBAN>DE20700500000001234567</IBAN>
+        <BIC>BYLADEMMXXX</BIC>
+      </DettaglioPagamento>
+    </DatiPagamento>
+  </FatturaElettronicaBody>
+</p:FatturaElettronica>

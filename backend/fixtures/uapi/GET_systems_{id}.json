@@ -91,6 +91,10 @@
       {
         "code": "CAUSE_2",
         "description": "Exempt: export outside the EU (Art. 39 WBTW)"
+      },
+      {
+        "code": "CAUSE_3",
+        "description": "Reverse charge: VAT to be accounted for by the recipient (art. 196 Directive 2006/112/EC)"
       }
     ],
     "annotations": {
