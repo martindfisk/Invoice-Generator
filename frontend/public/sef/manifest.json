@@ -1,22 +1,22 @@
 {
-  "generatedAt": "2026-09-11T08:20:51Z",
+  "generatedAt": "2026-10-03T11:41:59Z",
   "saxonJs": "2.7.0",
   "ruleSets": [
     {
       "id": "en16931-cii",
-      "title": "CEN/TC 434 EN 16931 CII 1.3.15",
-      "version": "1.3.15",
+      "title": "CEN/TC 434 EN 16931 CII 1.3.16",
+      "version": "1.3.16",
       "licence": "EUPL-1.2 (CEN/TC 434 validation artefacts)",
       "formats": [
         "cii"
       ],
       "order": 0,
-      "sourceSha": "e55f1b01ffcbcc037dd1b9d01c52423a3f91f45a2e966e6bc8a56ea6c69188b6",
+      "sourceSha": "0b234dea2bbfee739b7761e607a992c17fab88773014ef56355b6158cfb1cc53",
       "sef": {
-        "sha256": "5ffa27a468f90c8915bfa0bcee0ba78cc4c8be4253938ec24ae2787bf8950a62",
-        "bytes": 4886126,
+        "sha256": "264b1a0d095c46896eae50de1359449edcb982c930306846f2df2addc11cecd8",
+        "bytes": 5024827,
         "saxonVersion": "SaxonJS 2.7",
-        "buildDateTime": "2026-09-11T10:20:35.593+02:00"
+        "buildDateTime": "2026-10-03T11:41:20.073Z"
       }
     },
     {
@@ -30,10 +30,10 @@
       "order": 1,
       "sourceSha": "5ddf3a2f6633147b20b7805df9902d825af1a984f10014fcee186d4170364b1d",
       "sef": {
-        "sha256": "c03e7e0c91d3698219ee4a52df8d1bb016a384a9262a75026d6a032192153f56",
-        "bytes": 1857642,
+        "sha256": "f611c183c9cb43db8a227d4a53fb687a0c003ad0c65bfb9c6fb3a3a17057e66a",
+        "bytes": 1857482,
         "saxonVersion": "SaxonJS 2.7",
-        "buildDateTime": "2026-09-11T10:20:40.438+02:00"
+        "buildDateTime": "2026-10-03T11:41:32.172Z"
       }
     },
     {
@@ -48,10 +48,10 @@
       "order": 0,
       "sourceSha": "bdcbb7b702cce55c7f8c789bef0cb9bebf6d376140c1776e683bd6d9bc0ad331",
       "sef": {
-        "sha256": "cfe98b916c553669f22d1fe313d993407b3541da301eebdb85ed8321749677a5",
-        "bytes": 8227436,
+        "sha256": "d8f4c73ee4065aa3779f13bc93ee3bce07d7b373134ebe027ec92fc56d497c5c",
+        "bytes": 8227379,
         "saxonVersion": "SaxonJS 2.7",
-        "buildDateTime": "2026-09-11T10:20:46.86+02:00"
+        "buildDateTime": "2026-10-03T11:41:47.813Z"
       }
     },
     {
@@ -65,10 +65,10 @@
       "order": 1,
       "sourceSha": "0cadcbde2eb320c2e7e83a8057b93bc48076e223dda36308e31704684ee9ecf3",
       "sef": {
-        "sha256": "8d1de1e0482dcb8955e8c16286b84f491b097d7e603d0c2f8f507e7de863e11b",
-        "bytes": 1832215,
+        "sha256": "7a6c0658a2839fd5ab81e738f6183b668f7a1247a4ac91af4af0fadca612e4be",
+        "bytes": 1832194,
         "saxonVersion": "SaxonJS 2.7",
-        "buildDateTime": "2026-09-11T10:20:50.929+02:00"
+        "buildDateTime": "2026-10-03T11:41:57.16Z"
       }
     }
   ]
