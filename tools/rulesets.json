@@ -97,7 +97,7 @@
     },
     {
       "id": "xrechnung",
-      "version": "2.5.0",
+      "version": "2.6.0",
       "vars": {
         "cius": "3.0.2"
       },
@@ -114,12 +114,12 @@
         "XRechnung-UBL-validation.xsl": {
           "zip": "xrechnung-{cius}-schematron-{version}.zip",
           "member": "schematron/ubl/XRechnung-UBL-validation.xsl",
-          "sha256": "0cadcbde2eb320c2e7e83a8057b93bc48076e223dda36308e31704684ee9ecf3"
+          "sha256": "aa7d495e02990d88a9dc91b5eceb3349f7ee5565241d93ef99e90e1760fdd70f"
         },
         "XRechnung-CII-validation.xsl": {
           "zip": "xrechnung-{cius}-schematron-{version}.zip",
           "member": "schematron/cii/XRechnung-CII-validation.xsl",
-          "sha256": "ce8f257114eccb49d369a2c77c6cccd7d3cd9f1286e9ff158b543a1311182b2a"
+          "sha256": "30e64d8bddf0bebded89e2bedab0b4856f0c4f1e852bd303e1957a7d627c0e6c"
         },
         "XRechnung-LICENSE.txt": {
           "zip": "xrechnung-{cius}-schematron-{version}.zip",
@@ -127,7 +127,7 @@
           "sha256": "57e93bb611b8aeb93ff0f23b271a23291217b0016f6e66297dfd5e9467538a5f"
         }
       },
-      "fetchedAt": "2026-08-26"
+      "fetchedAt": "2026-10-03"
     },
     {
       "id": "peppol",
@@ -188,7 +188,9 @@
       "source": "cen",
       "file": "EN16931-CII-validation.xslt",
       "compile": "none",
-      "formats": ["cii"],
+      "formats": [
+        "cii"
+      ],
       "order": 0,
       "title": "CEN/TC 434 EN 16931 CII",
       "licence": "EUPL-1.2 (CEN/TC 434 validation artefacts)"
@@ -198,7 +200,9 @@
       "source": "peppol",
       "file": "PEPPOL-EN16931-UBL.sch",
       "compile": "sch",
-      "formats": ["ubl"],
+      "formats": [
+        "ubl"
+      ],
       "order": 1,
       "title": "Peppol BIS Billing",
       "licence": "OpenPeppol AISBL (redistribution with attribution)"
@@ -208,7 +212,10 @@
       "source": "peppol",
       "file": "CEN-EN16931-UBL.sch",
       "compile": "sch",
-      "formats": ["ubl", "xrechnung"],
+      "formats": [
+        "ubl",
+        "xrechnung"
+      ],
       "order": 0,
       "title": "CEN/TC 434 EN 16931 UBL",
       "licence": "EUPL-1.2 (CEN/TC 434), redistributed by OpenPeppol"
@@ -218,7 +225,9 @@
       "source": "xrechnung",
       "file": "XRechnung-UBL-validation.xsl",
       "compile": "none",
-      "formats": ["xrechnung"],
+      "formats": [
+        "xrechnung"
+      ],
       "order": 1,
       "title": "KoSIT XRechnung {cius} UBL Schematron",
       "licence": "Apache-2.0 (KoSIT xrechnung-schematron)"

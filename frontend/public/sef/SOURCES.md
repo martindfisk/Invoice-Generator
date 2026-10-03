@@ -1,6 +1,6 @@
 # frontend/public/sef provenance
 
-Generated 2026-09-11T08:20:51Z by `frontend/scripts/build-sef.mjs` (`make sef`). Do not hand-edit.
+Generated 2026-10-03T11:41:33Z by `frontend/scripts/build-sef.mjs` (`make sef`). Do not hand-edit.
 Inputs come from `vendor/schematron/` (`make schemas`); versions and sha256 pins live in
 `tools/rulesets.json`. `manifest.json` next to this file is the machine-readable catalogue.
 
@@ -9,10 +9,10 @@ Built with saxon-js 2.7.0 (declared ^2.7.0), xslt3 2.7.0 (declared ^2.7.0).
 
 | sef | build pipeline | rule set | licence | raw | gzip | sha256 | built |
 |---|---|---|---|---|---|---|---|
-| en16931-cii.sef.json | EN16931-CII-validation.xslt | CEN/TC 434 EN 16931 CII 1.3.15 (last update 2025-10-16) | EUPL-1.2 (CEN/TC 434 validation artefacts) | 4.89 MB | 135 kB | 5ffa27a468f90c8915bfa0bcee0ba78cc4c8be4253938ec24ae2787bf8950a62 | 2026-09-11 |
-| peppol-ubl.sef.json | PEPPOL-EN16931-UBL.sch -> iso_svrl_for_xslt2.xsl | Peppol BIS Billing 3.0 - 2025 November release 3.0.20 | OpenPeppol AISBL (redistribution with attribution) | 1.86 MB | 64 kB | c03e7e0c91d3698219ee4a52df8d1bb016a384a9262a75026d6a032192153f56 | 2026-09-11 |
-| cen-ubl.sef.json | CEN-EN16931-UBL.sch -> iso_svrl_for_xslt2.xsl | CEN/TC 434 EN 16931 UBL 1.3.15 (last update 2025-10-16) | EUPL-1.2 (CEN/TC 434), redistributed by OpenPeppol | 8.23 MB | 174 kB | cfe98b916c553669f22d1fe313d993407b3541da301eebdb85ed8321749677a5 | 2026-09-11 |
-| xrechnung-ubl.sef.json | XRechnung-UBL-validation.xsl | KoSIT XRechnung 3.0.2 UBL Schematron 2.5.0, compiled by SchXslt 1.10.1 / Saxon HE 12.8 | Apache-2.0 (KoSIT xrechnung-schematron) | 1.83 MB | 61 kB | 8d1de1e0482dcb8955e8c16286b84f491b097d7e603d0c2f8f507e7de863e11b | 2026-09-11 |
+| en16931-cii.sef.json | EN16931-CII-validation.xslt | CEN/TC 434 EN 16931 CII 1.3.15 (last update 2025-10-16) | EUPL-1.2 (CEN/TC 434 validation artefacts) | 4.89 MB | 136 kB | 21f5a06517abdad22c4eab275348af8d3a65ceb1b7488ce3fb5d67bed47ee73f | 2026-10-03 |
+| peppol-ubl.sef.json | PEPPOL-EN16931-UBL.sch -> iso_svrl_for_xslt2.xsl | Peppol BIS Billing 3.0 - 2025 November release 3.0.20 | OpenPeppol AISBL (redistribution with attribution) | 1.86 MB | 64 kB | f934ca8d103772833ae11b8454377defabbcb246b9b7942a224ed29ab5322d66 | 2026-10-03 |
+| cen-ubl.sef.json | CEN-EN16931-UBL.sch -> iso_svrl_for_xslt2.xsl | CEN/TC 434 EN 16931 UBL 1.3.15 (last update 2025-10-16) | EUPL-1.2 (CEN/TC 434), redistributed by OpenPeppol | 8.23 MB | 173 kB | 20b88810f55b1c11faa031c556d6e44d573744c23102827531d7ae6fa940b628 | 2026-10-03 |
+| xrechnung-ubl.sef.json | XRechnung-UBL-validation.xsl | KoSIT XRechnung 3.0.2 UBL Schematron 2.6.0, compiled by SchXslt 1.10.1 / Saxon HE 12.8 | Apache-2.0 (KoSIT xrechnung-schematron) | 1.88 MB | 61 kB | 63659b6dabf0995631c52790f6ae72b141f6d7ac3bcaf6925decb08ce5db301b | 2026-10-03 |
 
 ## Sources
 
@@ -22,8 +22,8 @@ Built with saxon-js 2.7.0 (declared ^2.7.0), xslt3 2.7.0 (declared ^2.7.0).
   from https://raw.githubusercontent.com/OpenPEPPOL/peppol-bis-invoice-3/v3.0.20/rules/sch/PEPPOL-EN16931-UBL.sch
 - `CEN-EN16931-UBL.sch` (sha256 bdcbb7b702cce55c7f8c789bef0cb9bebf6d376140c1776e683bd6d9bc0ad331)
   from https://raw.githubusercontent.com/OpenPEPPOL/peppol-bis-invoice-3/v3.0.20/rules/sch/CEN-EN16931-UBL.sch
-- `XRechnung-UBL-validation.xsl` (sha256 0cadcbde2eb320c2e7e83a8057b93bc48076e223dda36308e31704684ee9ecf3)
-  from https://github.com/itplr-kosit/xrechnung-schematron/releases/download/v2.5.0/xrechnung-3.0.2-schematron-2.5.0.zip
+- `XRechnung-UBL-validation.xsl` (sha256 aa7d495e02990d88a9dc91b5eceb3349f7ee5565241d93ef99e90e1760fdd70f)
+  from https://github.com/itplr-kosit/xrechnung-schematron/releases/download/v2.6.0/xrechnung-3.0.2-schematron-2.6.0.zip
 
 ## Notes
 
