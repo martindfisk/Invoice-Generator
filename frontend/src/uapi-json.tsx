@@ -9,6 +9,7 @@ import {
   UAPI_LOSSY_FIELDS,
   UAPI_PARTIAL_FIELDS,
   UAPI_POINTER_FIELDS,
+  type UapiContext,
   type UapiOperation,
 } from "./uapi-map";
 
@@ -327,12 +328,104 @@ export function stringifyOperation(value: unknown): string {
   }
 }
 
-export function applyOperation(operation: unknown, base: Invoice): Invoice {
+export function applyOperation(operation: unknown, base: Invoice, ctx?: UapiContext): Invoice {
   const held = operation as UapiOperation;
   if (held === null || typeof held !== "object") {
     throw new Error("The operation must be a JSON object.");
   }
-  return { ...fromInvoiceTransaction(held, base), format: base.format };
+  return { ...fromInvoiceTransaction(held, base, ctx), format: base.format };
+}
+
+export type UnwrappedPayload = {
+  operation: UapiOperation;
+  // What the pasted text was: the bare operation, the `content` object of a POST /records body,
+  // or the whole request body — the Mapper keeps whichever the user pasted verbatim and reads
+  // the operation out of it at this prefix.
+  prefix: "" | "/operation" | "/content/operation";
+  label: "TRANSACTION::INVOICE" | "TRANSACTION::CORRECTION";
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+// A customer pastes whatever their HTTP client shows: the operation itself, the `content` of
+// the TRANSACTION record, or the full `{content: {...}}` request body. All three carry the same
+// operation; INTENTION bodies and anything else are refused with the reason.
+export function unwrapPayload(parsed: unknown): UnwrappedPayload {
+  if (!isRecord(parsed)) throw new Error("The payload must be a JSON object.");
+  const typed = parsed.type;
+  if (typed === "INVOICE" || typed === "CORRECTION") {
+    const operation = parsed as unknown as UapiOperation;
+    if (typed === "CORRECTION" && !isRecord(parsed.data)) {
+      throw new Error("A TRANSACTION::CORRECTION needs a `data` object holding the invoice.");
+    }
+    return {
+      operation,
+      prefix: "",
+      label: typed === "CORRECTION" ? "TRANSACTION::CORRECTION" : "TRANSACTION::INVOICE",
+    };
+  }
+  if (typed === "TRANSACTION" && isRecord(parsed.operation)) {
+    const inner = unwrapPayload(parsed.operation);
+    if (inner.prefix !== "")
+      throw new Error("`operation` must hold the INVOICE or CORRECTION operation itself.");
+    return { ...inner, prefix: "/operation" };
+  }
+  if (typed === "INTENTION") {
+    throw new Error(
+      "This is an INTENTION record. Paste the TRANSACTION record (or just its `operation`) that carries the invoice.",
+    );
+  }
+  if (isRecord(parsed.content) && typed === undefined) {
+    const inner = unwrapPayload(parsed.content);
+    if (inner.prefix !== "/operation") {
+      throw new Error("`content` must be a TRANSACTION record with an `operation`.");
+    }
+    return { ...inner, prefix: "/content/operation" };
+  }
+  throw new Error(
+    'Not a fiskaly e-invoice payload: expected an operation with `type: "INVOICE"` or `"CORRECTION"`, a TRANSACTION record, or a `{content: ...}` request body.',
+  );
+}
+
+function leaves(value: unknown, pointer: string, out: Map<string, unknown>): void {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => leaves(item, `${pointer}/${index}`, out));
+    return;
+  }
+  if (isRecord(value)) {
+    for (const [key, item] of Object.entries(value)) {
+      leaves(item, `${pointer}/${key.replace(/~/g, "~0").replace(/\//g, "~1")}`, out);
+    }
+    return;
+  }
+  out.set(pointer, value);
+}
+
+// The JSON pointers of the pasted operation that the model does not carry back out: a leaf the
+// re-derived operation lacks, or holds with another value. This is what "lossy" means for a
+// pasted payload, named pointer by pointer so the banner can say which keys the predicted XML
+// cannot reflect rather than only that something was dropped.
+export function lossyPointers(invoice: Invoice, operation: unknown, prefix: string): string[] {
+  const derived = buildOperation(invoice, null);
+  if (derived.error !== null || derived.value === null) return [];
+  let body: unknown = operation;
+  for (const segment of prefix.split("/").filter(Boolean)) {
+    body = isRecord(body) ? body[segment] : undefined;
+  }
+  if (isRecord(body) && body.type === "CORRECTION") body = body.data;
+  const pasted = new Map<string, unknown>();
+  const expected = new Map<string, unknown>();
+  leaves(body, "", pasted);
+  leaves(derived.value, "", expected);
+  const lost: string[] = [];
+  for (const [pointer, value] of pasted) {
+    if (!expected.has(pointer) || JSON.stringify(expected.get(pointer)) !== JSON.stringify(value)) {
+      lost.push(pointer);
+    }
+  }
+  return lost;
 }
 
 // True when regenerating this pane from the model would not reproduce what the user typed —

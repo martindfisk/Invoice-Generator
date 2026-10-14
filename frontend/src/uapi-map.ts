@@ -1,4 +1,5 @@
 import { add, format, parse as canonical, percentOf } from "./decimal";
+import { NATURA_CATEGORY } from "./fatturapa-map";
 import type {
   Buyer,
   Channel,
@@ -37,6 +38,9 @@ export type UapiVatExemption = { code: string; description?: string };
 export type UapiContext = {
   vatRates?: UapiVatRate[];
   vatExemptions?: UapiVatExemption[];
+  // The seller's country, when the reverse map has no base invoice to lean on (a pasted
+  // payload): an Italian CAUSE_n is decoded back to its Natura through FALLBACK_VAT_EXEMPTIONS.
+  country?: string;
 };
 
 export type UapiVat =
@@ -894,7 +898,27 @@ function vatFacts(entry: UapiVatFacts, base: Vat | undefined, ctx?: UapiContext)
       ? base
       : { ...base, reason: entry.reason };
   }
-  return { category: EXEMPTION_CATEGORIES[code] ?? "E", rate: ZERO, reason: entry.reason };
+  return { ...decodeExemption(code, ctx), reason: entry.reason };
+}
+
+// Without a base row (a pasted payload) the code is all there is. An Italian CAUSE_n is one
+// Natura in fiskaly's table, and the Natura names the EN 16931 category; elsewhere only the
+// reverse-charge entry and the two generic codes say anything, the rest is "exempt".
+function decodeExemption(code: string, ctx?: UapiContext): Vat {
+  if (ctx?.country === "IT") {
+    const natura = Object.keys(FALLBACK_VAT_EXEMPTIONS).find(
+      (candidate) => FALLBACK_VAT_EXEMPTIONS[candidate] === code,
+    );
+    if (natura) return { category: NATURA_CATEGORY[natura] ?? "E", rate: ZERO, natura };
+  } else if (
+    code === REVERSE_CHARGE_EXEMPTION ||
+    ctx?.vatExemptions?.some(
+      (entry) => entry.code === code && /reverse charge/i.test(entry.description ?? ""),
+    )
+  ) {
+    return { category: "AE", rate: ZERO };
+  }
+  return { category: EXEMPTION_CATEGORIES[code] ?? "E", rate: ZERO };
 }
 
 function lineFrom(
@@ -962,6 +986,20 @@ function extrasFrom(operation: InvoiceTransaction): UapiExtras | undefined {
       : undefined,
   };
   return Object.values(value).some((item) => item !== undefined) ? value : undefined;
+}
+
+// The operation carries BT-120 on the entries only; a breakdown row that arrives without one
+// takes the reason of the lines it summarises, so the model rule BR-E-10 and friends see what
+// the payload really says rather than a reason the base happened to hold.
+function withLineReason(row: VatBreakdownRow, lines: Line[]): VatBreakdownRow {
+  if (row.reason || row.category === "S") return row;
+  const line = lines.find(
+    (candidate) =>
+      candidate.vat.category === row.category &&
+      (candidate.vat.natura ?? "") === (row.natura ?? "") &&
+      candidate.vat.reason,
+  );
+  return line ? { ...row, reason: line.vat.reason } : row;
 }
 
 function breakdownFrom(
@@ -1108,6 +1146,9 @@ export function fromInvoiceTransaction(
   // runtime state from a previous call, deliberately not stored on the model.
   const invoice = invoiceOperation(operation);
   const payment = invoice.payments[0];
+  const lines = invoice.entries.map((entry, index) =>
+    lineFrom(entry, base.lines[index], index, ctx),
+  );
   return {
     ...base,
     number: invoice.document.number,
@@ -1119,9 +1160,9 @@ export function fromInvoiceTransaction(
     references: referencesFrom(invoice, base.references),
     seller: sellerFrom(invoice, base.seller),
     buyer: buyerFrom(invoice.recipients[0], base.buyer),
-    lines: invoice.entries.map((entry, index) => lineFrom(entry, base.lines[index], index, ctx)),
+    lines,
     vatBreakdown: invoice.breakdown.map((entry, index) =>
-      breakdownFrom(entry, base.vatBreakdown[index], ctx),
+      withLineReason(breakdownFrom(entry, base.vatBreakdown[index], ctx), lines),
     ),
     payment: paymentFrom(invoice, base.payment),
     totals: totalsFrom(invoice, base.totals),

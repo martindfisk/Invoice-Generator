@@ -14,13 +14,21 @@ account (ADR-0009). A red "backend offline" pill shows when `/api/config` is unr
 
 ## Step 1 — Setup
 
-A preset matrix: rows Germany/Italy/Belgium, columns B2C/B2B/B2G, eleven scenario cards. Each card
+A preset matrix: rows Germany/Italy/Belgium, columns B2C/B2B/B2G, fourteen scenario cards. Each card
 carries chips for the channel (SDI/PEPPOL/EMAIL), its scenario group, and — where applicable — an
 amber **"broken on purpose"** chip; the tooltip holds the scenario's story. Clicking a card loads
 its invoice and jumps to the Mapper. Re-clicking the already-chosen card _keeps your work_ and just
 returns to the Mapper; an explicit **Reset preset** control (shown once something is chosen) is the
 deliberate start-over. On narrow viewports the matrix becomes a country-grouped list. Later steps
 stay disabled until a preset is chosen — the only gate in the stepper.
+
+Above the matrix sits **Paste your own payload**: a dialog with country and format selects, a
+textarea (drop or upload a `.json`), a **Load example** button and an advisory contract pre-check.
+It accepts the bare `TRANSACTION::INVOICE` or `::CORRECTION` operation, the `TRANSACTION` record,
+or the whole `POST /records` body, and warns when the recipient block contradicts the chosen country
+(an SDI destination code under Belgium). **Open in Mapper** loads the text verbatim as the JSON
+pane; the seller comes from your fiskaly taxpayer in LIVE and from a labelled placeholder otherwise,
+and the pasted payload survives a reload. Send stays locked for it — this journey ends at Validate.
 
 ## Step 2 — Mapper
 

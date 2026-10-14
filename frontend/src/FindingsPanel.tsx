@@ -243,6 +243,7 @@ export function FindingsPanel({
     (stage) => stage.status === "passed" || stage.status === "failed",
   ).length;
   const notRun = stages.filter((stage) => stage.status === "unavailable").length;
+  const skipped = stages.filter((stage) => stage.status === "skipped").length;
 
   const empty = (): string | null => {
     if (visible.length > 0) return null;
@@ -250,9 +251,11 @@ export function FindingsPanel({
     if (rows.length === 0 && running) return "Validating — no findings so far.";
     if (rows.length > 0) return `All ${rows.length} findings are hidden by the filters.`;
     const clean = `No findings from the ${ran} stage${ran === 1 ? "" : "s"} that ran.`;
+    const chosen =
+      skipped > 0 ? ` ${skipped} stage${skipped === 1 ? "" : "s"} skipped by choice.` : "";
     return notRun === 0
-      ? clean
-      : `${clean} ${notRun} stage${notRun === 1 ? "" : "s"} could not run, so this is not a clean bill of health.`;
+      ? `${clean}${chosen}`
+      : `${clean} ${notRun} stage${notRun === 1 ? "" : "s"} could not run, so this is not a clean bill of health.${chosen}`;
   };
 
   const message = empty();

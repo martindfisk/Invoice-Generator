@@ -71,7 +71,16 @@ describe("serialise -> parse round trip", () => {
     expect(parsed.buyer.channel).toEqual(source.buyer.channel);
     expect(parsed.seller.it).toEqual(source.seller.it);
     expect(parsed.lines[2].it).toEqual(source.lines[2].it);
-    expect(parsed.lines.map((line) => line.vat)).toEqual(source.lines.map((line) => line.vat));
+    // FatturaPA carries BT-120 once, in DatiRiepilogo/RiferimentoNormativo; the line-level
+    // reason (the operation's own carrier) has no DettaglioLinee slot and is not read back.
+    const withoutReason = (vat: (typeof source.lines)[number]["vat"]) => {
+      const { reason, ...rest } = vat;
+      void reason;
+      return rest;
+    };
+    expect(parsed.lines.map((line) => withoutReason(line.vat))).toEqual(
+      source.lines.map((line) => withoutReason(line.vat)),
+    );
   });
 
   it("rebuilds the Belgian invoice from its own UBL output", () => {

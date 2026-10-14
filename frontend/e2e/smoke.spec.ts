@@ -1063,3 +1063,60 @@ test.describe("entity tree", () => {
     await expect(tree.locator("[data-account-tree]")).toBeVisible();
   });
 });
+
+test.describe("pasted payload", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/");
+  });
+
+  test("runs a self-authored operation through Mapper and Validate, Send stays off", async ({
+    page,
+  }) => {
+    await picker(page)
+      .getByRole("button", { name: /Paste your own payload/ })
+      .click();
+    const dialog = page.getByRole("dialog", { name: "Paste your own payload" });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Open in Mapper" })).toBeDisabled();
+
+    await dialog.getByLabel("Country").selectOption("BE");
+    await expect(dialog.getByLabel("Predicted format")).toHaveValue("ubl");
+    await dialog.getByRole("button", { name: "Load example" }).click();
+    await expect(dialog.getByText(/Recognised as/)).toContainText("TRANSACTION::INVOICE");
+    // The pre-check reaches the backend in MOCK too: the spec is the same.
+    await expect(dialog.locator("[data-precheck='ok']")).toBeVisible();
+    await dialog.getByRole("button", { name: "Open in Mapper" }).click();
+
+    await expect(page.getByRole("heading", { name: /Pasted payload · BE · Peppol/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: "fiskaly JSON view" })).toBeVisible();
+    await expect(page.locator("[data-readonly-hint]")).toBeVisible();
+    await expect(page.locator("[data-seller-source='placeholder']")).toBeVisible();
+    const send = stepper(page).getByRole("button", { name: /Send$/ });
+    await expect(send).toBeDisabled();
+    await expect(send).toHaveAttribute("title", /not transmitted from here/);
+
+    await stepper(page)
+      .getByRole("button", { name: /Validate$/ })
+      .click();
+    const stages = page.getByRole("region", { name: "Validation stages" });
+    await expect(stages).toBeVisible();
+    await expect(stages.locator("[data-stage='uapi-schema'][data-status='passed']")).toBeVisible();
+    await expect(stages.locator("[data-stage='model'][data-status='passed']")).toBeVisible();
+    await expect(page.getByText(/Send is off for a pasted payload/)).toBeVisible();
+
+    // Unticking a stage skips it on the next run and the choice survives a reload.
+    await stages.getByRole("checkbox", { name: "Run Schematron (EN 16931 / Peppol)" }).uncheck();
+    await expect(stages.locator("[data-stage='schematron'][data-status='skipped']")).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole("heading", { name: /Pasted payload · BE · Peppol/ })).toBeVisible();
+    await expect(
+      page.getByRole("region", { name: "Validation stages" }).getByRole("checkbox", {
+        name: "Run Schematron (EN 16931 / Peppol)",
+      }),
+    ).not.toBeChecked();
+    await page
+      .getByRole("region", { name: "Validation stages" })
+      .getByRole("checkbox", { name: "Run Schematron (EN 16931 / Peppol)" })
+      .check();
+  });
+});

@@ -67,6 +67,9 @@ export const XML_PREDICTION_NOTE =
   "Predicted XML — what this browser expects fiskaly to generate. Nothing here is transmitted; " +
   "fiskaly's actual document is fetched in Send.";
 
+export const READ_ONLY_NOTE =
+  "Read-only for a pasted payload — the JSON pane is the single source; edit the text there.";
+
 function Groups({ title, groups }: { title: string; groups: LossyGroup[] }) {
   if (groups.length === 0) return null;
   return (
@@ -168,6 +171,10 @@ export type InvoiceViewerProps = {
   edit: EditState;
   presetLabel: string;
   country?: string;
+  // A pasted payload: the JSON pane is the single source, so the fields and the XML cannot be
+  // edited, and the pointers the model does not carry back are listed under the JSON header.
+  readOnly?: boolean;
+  lossyPointers?: string[];
   findings?: Finding[];
   onFormat: (formatId: FormatId) => void;
   onEditField: (field: FieldId, value: string) => void;
@@ -190,6 +197,8 @@ export function InvoiceViewer({
   edit,
   presetLabel,
   country,
+  readOnly = false,
+  lossyPointers: lost = [],
   findings: provided,
   onFormat,
   onEditField,
@@ -301,14 +310,14 @@ export function InvoiceViewer({
   const editContext: EditContext = useMemo(
     () => ({
       findings: findings.byField,
-      onEdit: setEditing,
+      onEdit: readOnly ? () => undefined : setEditing,
       onCommit: (field: FieldId, value: string) => {
         setEditing(null);
-        onEditField(field, value);
+        if (!readOnly) onEditField(field, value);
       },
       onCancelEdit: () => setEditing(null),
     }),
-    [findings.byField, onEditField],
+    [findings.byField, onEditField, readOnly],
   );
 
   const showHuman = panes.human;
@@ -468,6 +477,14 @@ export function InvoiceViewer({
             aria-label="Fields view"
             className="flex min-h-0 min-w-0 flex-col"
           >
+            {readOnly && (
+              <p
+                data-readonly-hint
+                className="shrink-0 border-b border-line px-3 py-1.5 text-[11px] text-muted"
+              >
+                {READ_ONLY_NOTE}
+              </p>
+            )}
             <HumanView
               invoice={invoice}
               fields={fields}
@@ -495,6 +512,15 @@ export function InvoiceViewer({
                 {OPERATION_PRIMARY_NOTE}
               </p>
               {jsonNote && <p className="mt-0.5 text-[11px] text-warning-ink">{jsonNote}</p>}
+              {readOnly && lost.length > 0 && (
+                <p data-lossy-pointers className="mt-0.5 text-[11px] text-warning-ink">
+                  <span aria-hidden="true">▲ </span>
+                  {lost.length} key{lost.length === 1 ? "" : "s"} the predicted XML cannot reflect:{" "}
+                  <span className="font-mono">{lost.slice(0, 8).join(", ")}</span>
+                  {lost.length > 8 ? ` … and ${lost.length - 8} more` : ""}. The contract check
+                  still sees them.
+                </p>
+              )}
               {fateMarks.length > 0 && (
                 <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted">
                   <span className="font-semibold">Field fates:</span>
@@ -577,6 +603,7 @@ export function InvoiceViewer({
           >
             <p className="shrink-0 border-b border-line px-3 py-1.5 text-[11px] text-muted">
               {XML_PREDICTION_NOTE}
+              {readOnly ? ` ${READ_ONLY_NOTE}` : ""}
             </p>
             {xmlError && (
               <p
@@ -589,10 +616,10 @@ export function InvoiceViewer({
             <div className="min-h-0 flex-1">
               <XmlView
                 text={xmlText}
-                label={`${format.label} XML, editable`}
+                label={`${format.label} XML, ${readOnly ? "read-only" : "editable"}`}
                 range={range}
                 scrollTo={selection?.source !== "xml" && edit.source !== "xml"}
-                editable
+                editable={!readOnly}
                 onPickOffset={selectOffset}
                 onChange={onEditXml}
               />

@@ -105,7 +105,7 @@ verification results. Nothing lands until the PR is merged; see
 
 ## How the demo works
 
-1. Pick one of the fourteen presets — reference scenarios (IT/BE), a German hotel group (XRechnung/ZUGFeRD-CII), Roman restaurant scenarios (FatturaPA, including a TD04 credit note) and a reverse-charge invoice per country (IT Natura N6.7, DE § 13b UStG, BE intra-EU). Deliberately broken presets are labelled.
+1. Pick one of the fourteen presets — reference scenarios (IT/BE), a German hotel group (XRechnung/ZUGFeRD-CII), Roman restaurant scenarios (FatturaPA, including a TD04 credit note) and a reverse-charge invoice per country (IT Natura N6.7, DE § 13b UStG, BE intra-EU). Deliberately broken presets are labelled. Or **paste your own payload** (a `TRANSACTION::INVOICE` operation, the record, or the whole `POST /records` body) to run it through the Mapper and every validation layer without a round trip — Send stays off for it.
 2. **Mapper**: edit the invoice in any of its three panes — Human view, the fiskaly JSON operation (what Send actually posts), and the predicted XML — and the other two follow.
 3. **Validate**: model rules, well-formedness, XSD, Schematron (EN 16931 + Peppol BIS 3.0), and FatturaPA SDI rules run client-side; findings highlight the offending field and XML range.
 4. **Send**: the backend proxies the invoice to the UAPI as an `INTENTION`, then a `TRANSACTION::INVOICE`, polls it to completion, and fetches the compliance artifact — the XML fiskaly actually transmitted.

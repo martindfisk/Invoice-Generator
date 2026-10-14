@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CONTRACT_STAGE } from "./uapi-json";
 import { documentTierFateNote } from "./field-fate";
 import { FindingsPanel, type FindingRow } from "./FindingsPanel";
 import { Split } from "./Split";
@@ -19,7 +20,9 @@ import {
   countBySeverity,
   emptyRun,
   runValidation,
+  stagesFor,
   type Finding,
+  type FindingSource,
   type Severity,
   type StageResult,
   type StageStatus,
@@ -33,9 +36,31 @@ import {
   type FieldIndex,
   type XmlIndex,
 } from "./xml-locate";
-import { composeOperation } from "./workflow";
+import { composeOperation, operationBody, type PastedPayload } from "./workflow";
 
 const RUN_DEBOUNCE_MS = 250;
+
+// Which stages the user unticked, remembered per browser so a colleague checking only the
+// contract (or only Schematron) does not re-tick on every visit.
+const SKIPPED_KEY = "validation:skipped";
+
+function readSkipped(): Set<FindingSource> {
+  try {
+    const raw = localStorage.getItem(SKIPPED_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(parsed) ? (parsed as FindingSource[]) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeSkipped(skipped: Set<FindingSource>): void {
+  try {
+    localStorage.setItem(SKIPPED_KEY, JSON.stringify([...skipped]));
+  } catch {
+    // Site data disabled: the choice lasts for the session only.
+  }
+}
 
 const SEVERITIES: Severity[] = ["fatal", "error", "warning", "info"];
 
@@ -74,18 +99,30 @@ const STATUS: Record<StageStatus, { label: string; glyph: string; chip: string; 
     chip: "border-dashed border-line text-muted",
     mark: "text-muted",
   },
+  skipped: {
+    label: "Skipped",
+    glyph: "○",
+    chip: "border-dashed border-line text-muted",
+    mark: "text-muted",
+  },
 };
 
 function ran(stage: StageResult): boolean {
   return stage.status === "passed" || stage.status === "failed";
 }
 
-function StageRows({ stages }: { stages: StageResult[] }) {
+type StageChoice = {
+  skipped: ReadonlySet<FindingSource>;
+  onToggle: (id: FindingSource, run: boolean) => void;
+};
+
+function StageRows({ stages, choice }: { stages: StageResult[]; choice?: StageChoice }) {
   return (
     <ul className="relative py-1">
       {stages.map((stage) => {
         const status = STATUS[stage.status];
         const counts = countBySeverity(stage.findings);
+        const enabled = !choice?.skipped.has(stage.id);
         return (
           <li
             key={stage.id}
@@ -104,7 +141,18 @@ function StageRows({ stages }: { stages: StageResult[] }) {
               {status.glyph}
             </span>
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span className="text-xs font-medium text-ink">{stage.label}</span>
+              {choice && (
+                <input
+                  type="checkbox"
+                  checked={enabled}
+                  aria-label={`Run ${stage.label}`}
+                  onChange={(event) => choice.onToggle(stage.id, event.target.checked)}
+                  className="h-3.5 w-3.5 accent-brand"
+                />
+              )}
+              <span className={`text-xs font-medium ${enabled ? "text-ink" : "text-muted"}`}>
+                {stage.label}
+              </span>
               <span
                 className={`rounded-m border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase ${status.chip}`}
               >
@@ -164,7 +212,15 @@ function StageRows({ stages }: { stages: StageResult[] }) {
   );
 }
 
-export function StageList({ stages, formatId }: { stages: StageResult[]; formatId?: FormatId }) {
+export function StageList({
+  stages,
+  formatId,
+  choice,
+}: {
+  stages: StageResult[];
+  formatId?: FormatId;
+  choice?: StageChoice;
+}) {
   const contract = stages.filter((stage) => isContractStage(stage.id));
   const documentTier = stages.filter((stage) => !isContractStage(stage.id));
   const fateNote = documentTierFateNote(formatId);
@@ -184,7 +240,7 @@ export function StageList({ stages, formatId }: { stages: StageResult[]; formatI
           <p className="border-b border-line px-3 py-1 text-[10px] leading-snug text-muted">
             {CONTRACT_TIER_NOTE}
           </p>
-          <StageRows stages={contract} />
+          <StageRows stages={contract} choice={choice} />
         </div>
         <div data-tier="document">
           <h4 className="border-b border-line bg-surface-raised px-3 py-1.5 text-[11px] font-semibold text-muted">
@@ -201,7 +257,7 @@ export function StageList({ stages, formatId }: { stages: StageResult[]; formatI
               {fateNote}
             </p>
           )}
-          <StageRows stages={documentTier} />
+          <StageRows stages={documentTier} choice={choice} />
         </div>
       </div>
     </section>
@@ -318,20 +374,45 @@ function actionLine(
   const contract = contractLine(stages);
   const blocking = counts.fatal + counts.error;
   const missing = stages.filter((stage) => stage.status === "unavailable").length;
+  const skipped = stages.filter((stage) => stage.status === "skipped").length;
+  const skippedNote =
+    skipped > 0 ? ` ${skipped} stage${skipped === 1 ? "" : "s"} skipped by choice.` : "";
   if (blocking > 0) {
-    return `${contract} ${blocking} error${blocking === 1 ? "" : "s"} in total — sending anyway will likely be rejected.`;
+    return `${contract} ${blocking} error${blocking === 1 ? "" : "s"} in total — sending anyway will likely be rejected.${skippedNote}`;
   }
   if (missing > 0) {
-    return `${contract} ${missing} stage${missing === 1 ? "" : "s"} could not run — this is not a clean bill of health.`;
+    return `${contract} ${missing} stage${missing === 1 ? "" : "s"} could not run — this is not a clean bill of health.${skippedNote}`;
   }
   if (counts.warning > 0) {
-    return `${contract} ${counts.warning} warning${counts.warning === 1 ? "" : "s"} — every stage passed.`;
+    return `${contract} ${counts.warning} warning${counts.warning === 1 ? "" : "s"} — every stage that ran passed.${skippedNote}`;
   }
-  return `${contract} Every stage passed.`;
+  return `${contract} Every stage${skipped > 0 ? " that ran" : ""} passed.${skippedNote}`;
 }
 
-function Validating({ invoice, presetId }: { invoice: Invoice; presetId: PresetId }) {
+function Validating({
+  invoice,
+  presetId,
+  pasted,
+}: {
+  invoice: Invoice;
+  presetId: PresetId | null;
+  pasted: PastedPayload | null;
+}) {
   const formatId = useStore((state) => state.workflow.formatId);
+  const [skipped, setSkipped] = useState<Set<FindingSource>>(readSkipped);
+  const onToggle = (id: FindingSource, run: boolean) => {
+    setSkipped((current) => {
+      const next = new Set(current);
+      if (run) next.delete(id);
+      else next.add(id);
+      writeSkipped(next);
+      return next;
+    });
+  };
+  const skipKey = stagesFor(formatId)
+    .filter((stage) => skipped.has(stage.id))
+    .map((stage) => stage.id)
+    .join(",");
   const selection = useStore((state) => state.workflow.selection);
   const validation = useStore((state) => state.workflow.validation);
   const workflow = useStore((state) => state.workflow);
@@ -347,13 +428,18 @@ function Validating({ invoice, presetId }: { invoice: Invoice; presetId: PresetI
   const controller = useRef<AbortController | null>(null);
 
   const { xml, error } = source;
-  const value = operation.value ?? undefined;
+  // A pasted full request body nests the operation; the contract stage checks the operation
+  // itself and its pointers are re-rooted at that prefix for the JSON pane.
+  const contractPrefix = pasted?.prefix ?? "";
+  const value = pasted
+    ? (operationBody(operation.text, contractPrefix) ?? undefined)
+    : (operation.value ?? undefined);
   const stamp = useMemo(() => JSON.stringify(invoice), [invoice]);
   // The digest hashes the whole XML + operation text on every render otherwise — cheap FNV,
   // but the inputs run to hundreds of KB and this component re-renders on every selection.
   const key = useMemo(
-    () => `${nonce} ${formatId} ${digest(`${stamp} ${xml} ${operation.text}`)}`,
-    [nonce, formatId, stamp, xml, operation.text],
+    () => `${nonce} ${formatId} ${skipKey} ${digest(`${stamp} ${xml} ${operation.text}`)}`,
+    [nonce, formatId, skipKey, stamp, xml, operation.text],
   );
   const stored = validation.key;
 
@@ -374,7 +460,17 @@ function Validating({ invoice, presetId }: { invoice: Invoice; presetId: PresetI
       // The contract stage checks the JSON Send will post, hand edits and all — not a payload
       // re-derived from the model behind the user's back.
       void runValidation(
-        { invoice, formatId, xml, xmlError: error, operation: value, signal: aborter.signal },
+        {
+          invoice,
+          formatId,
+          xml,
+          xmlError: error,
+          operation: value,
+          country: pasted?.country,
+          uapiContext: pasted?.vatContext,
+          skip: skipped,
+          signal: aborter.signal,
+        },
         (stage) => {
           if (run.current === id) store.dispatch({ type: "validationStage", key, stage });
         },
@@ -383,7 +479,7 @@ function Validating({ invoice, presetId }: { invoice: Invoice; presetId: PresetI
       });
     }, RUN_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [invoice, formatId, xml, error, key, stored, value]);
+  }, [invoice, formatId, xml, error, key, stored, value, pasted, skipped]);
 
   useEffect(
     () => () => {
@@ -412,10 +508,19 @@ function Validating({ invoice, presetId }: { invoice: Invoice; presetId: PresetI
     () =>
       stages.flatMap((stage) =>
         stage.findings.map((finding, index) =>
-          resolve(finding, `${stage.id} ${index}`, fields, xmlIndex, xml, jsonPrefix),
+          resolve(
+            stage.id === CONTRACT_STAGE && contractPrefix && finding.pointer?.startsWith("/")
+              ? { ...finding, pointer: `${contractPrefix}${finding.pointer}` }
+              : finding,
+            `${stage.id} ${index}`,
+            fields,
+            xmlIndex,
+            xml,
+            jsonPrefix,
+          ),
         ),
       ),
-    [stages, fields, xmlIndex, xml, jsonPrefix],
+    [stages, fields, xmlIndex, xml, jsonPrefix, contractPrefix],
   );
   const findings = useMemo(() => rows.map((row) => ({ ...row.finding, field: row.field })), [rows]);
 
@@ -474,7 +579,7 @@ function Validating({ invoice, presetId }: { invoice: Invoice; presetId: PresetI
             label="Resize the pipeline and the findings"
             defaultFirst={50}
             className="flex-1 pt-1.5"
-            first={<StageList stages={stages} formatId={formatId} />}
+            first={<StageList stages={stages} formatId={formatId} choice={{ skipped, onToggle }} />}
             second={
               <FindingsPanel
                 stages={stages}
@@ -518,17 +623,23 @@ function Validating({ invoice, presetId }: { invoice: Invoice; presetId: PresetI
         >
           {stalled ? error : actionLine(stages, counts, busy)}
         </p>
-        <button
-          type="button"
-          onClick={() => store.dispatch({ type: "goToStep", step: "send" })}
-          className={`ml-auto rounded-m px-3 py-1.5 text-xs font-semibold ${
-            blocking > 0
-              ? "border border-warning bg-warning-soft text-warning-ink"
-              : "bg-brand text-bunker"
-          }`}
-        >
-          {blocking > 0 ? "Send anyway" : "Continue to Send"}
-        </button>
+        {pasted ? (
+          <p className="ml-auto text-[11px] text-muted">
+            Send is off for a pasted payload — this journey ends here.
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={() => store.dispatch({ type: "goToStep", step: "send" })}
+            className={`ml-auto rounded-m px-3 py-1.5 text-xs font-semibold ${
+              blocking > 0
+                ? "border border-warning bg-warning-soft text-warning-ink"
+                : "bg-brand text-bunker"
+            }`}
+          >
+            {blocking > 0 ? "Send anyway" : "Continue to Send"}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -536,15 +647,15 @@ function Validating({ invoice, presetId }: { invoice: Invoice; presetId: PresetI
 
 export function StepValidate() {
   const workflow = useStore((state) => state.workflow);
-  const { invoice, presetId } = workflow;
+  const { invoice, presetId, pasted } = workflow;
 
-  if (!invoice || !presetId) {
+  if (!invoice || (!presetId && !pasted)) {
     return (
       <p className="p-6 text-sm text-muted">
-        No invoice loaded — pick a preset in Setup to validate one.
+        No invoice loaded — pick a preset in Setup, or paste a payload, to validate one.
       </p>
     );
   }
 
-  return <Validating invoice={invoice} presetId={presetId} />;
+  return <Validating invoice={invoice} presetId={presetId} pasted={pasted} />;
 }

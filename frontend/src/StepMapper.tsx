@@ -5,7 +5,7 @@ import { prewarmValidation } from "./validation";
 
 export function StepMapper() {
   const workflow = useStore((state) => state.workflow);
-  const { invoice, presetId, formatId } = workflow;
+  const { invoice, presetId, pasted, formatId } = workflow;
 
   // Warm the active format's Schematron SEFs (and the SaxonJS runtime) while the user edits,
   // so the first Validate run does not pay the cold start. Idle-scheduled to stay out of the
@@ -19,10 +19,10 @@ export function StepMapper() {
     return () => window.clearTimeout(handle);
   }, [formatId]);
 
-  if (!invoice || !presetId) {
+  if (!invoice || (!presetId && !pasted)) {
     return (
       <p className="p-6 text-sm text-muted">
-        No invoice loaded — pick a preset in Setup to compose one.
+        No invoice loaded — pick a preset in Setup, or paste a payload, to compose one.
       </p>
     );
   }
@@ -43,7 +43,7 @@ export function StepMapper() {
           onClick={() => store.dispatch({ type: "goToStep", step: "setup" })}
           className="rounded-m border border-line px-3 py-1.5 text-xs font-medium text-muted hover:border-brand hover:text-ink"
         >
-          Change preset
+          {pasted ? "Back to Setup" : "Change preset"}
         </button>
       </div>
     </div>

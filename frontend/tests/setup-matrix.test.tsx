@@ -97,7 +97,8 @@ describe("preset matrix", () => {
     render(<WorkflowPane />);
     const rows = within(picker()).getAllByRole("rowheader").length;
     expect(rows).toBe(new Set(listPresets().map((meta) => meta.country)).size);
-    expect(within(picker()).getAllByRole("button")).toHaveLength(listPresets().length);
+    // One button per preset, plus the "paste your own payload" card above the matrix.
+    expect(within(picker()).getAllByRole("button")).toHaveLength(listPresets().length + 1);
   });
 
   it("renders a column per audience, consumer first", () => {

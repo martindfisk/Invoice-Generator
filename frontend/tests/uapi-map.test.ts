@@ -150,7 +150,7 @@ describe("toInvoiceTransaction", () => {
     expect(operation.entries[2].data.vat).toEqual({
       type: "VAT_EXEMPTION",
       code: "CAUSE_7",
-      reason: undefined,
+      reason: "Non imponibile art. 8 c. 1 lett. c) DPR 633/1972 - dichiarazione d'intento",
     });
     expect(operation.breakdown[2]).toEqual({
       type: "VAT_EXEMPTION",

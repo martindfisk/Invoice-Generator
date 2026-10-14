@@ -1,6 +1,8 @@
 import type { ApiCall, CallMode } from "./api-log";
+import { add, format } from "./decimal";
 import { FORMATS, getFormat } from "./formats";
 import { getField, setField, type FieldId, type FormatId, type Invoice } from "./model";
+import { blankBase, isPasteCountry, type PastedCountry, type PastedSellerSource } from "./pasted";
 import { preset, type PresetId } from "./presets";
 import type {
   ArtifactKind,
@@ -14,8 +16,11 @@ import {
   buildOperation,
   operationIsLossy,
   stringifyOperation,
+  unwrapPayload,
   type Operation,
 } from "./uapi-json";
+import type { Party } from "./model";
+import type { UapiContext } from "./uapi-map";
 import type { StageResult } from "./validation";
 
 export type Step = "setup" | "mapper" | "validate" | "send";
@@ -111,9 +116,28 @@ export type SendState = {
   archiveError: string | null;
 };
 
+// A payload pasted in Setup instead of a preset. The text is the single source: the model is
+// re-derived from it (the JSON pane is the only editable one), the predicted XML and the
+// fields follow, and Send is off — this journey ends at Validate.
+export type PastedPayload = {
+  text: string;
+  country: PastedCountry;
+  formatId: FormatId;
+  label: "TRANSACTION::INVOICE" | "TRANSACTION::CORRECTION";
+  // Where the operation sits inside the pasted text: "" for a bare operation, "/operation" for
+  // a TRANSACTION record, "/content/operation" for a whole POST /records body.
+  prefix: string;
+  sellerSource: PastedSellerSource;
+  sellerName: string;
+  lookupNote: string | null;
+  vatContext: UapiContext;
+  at: number;
+};
+
 export type WorkflowState = {
   step: Step;
   presetId: PresetId | null;
+  pasted: PastedPayload | null;
   invoice: Invoice | null;
   formatId: FormatId;
   selection: Selection;
@@ -138,6 +162,14 @@ export type CorrectionTarget = {
 
 export type WorkflowAction =
   | { type: "choosePreset"; presetId: PresetId; fresh?: boolean }
+  | { type: "loadPayload"; text: string; country: PastedCountry; formatId: FormatId; at?: number }
+  | {
+      type: "pastedLookup";
+      seller?: Party;
+      source: PastedSellerSource;
+      ctx: UapiContext;
+      note: string | null;
+    }
   | { type: "goToStep"; step: Step }
   | { type: "setFormat"; formatId: FormatId }
   | { type: "select"; selection: Selection }
@@ -229,6 +261,7 @@ const LEGACY_PANES: Record<string, Panes> = {
 type Persisted = {
   step: Step;
   presetId: PresetId | null;
+  pasted: PastedPayload | null;
   formatId: FormatId;
   panes: Panes;
   viewVersion: number;
@@ -542,6 +575,23 @@ function reason(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+// The operation inside a pasted text, read at the prefix unwrapPayload found it under.
+export function operationBody(text: string, prefix: string): unknown {
+  let body: unknown;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+  for (const segment of prefix.split("/").filter(Boolean)) {
+    body =
+      body !== null && typeof body === "object"
+        ? (body as Record<string, unknown>)[segment]
+        : undefined;
+  }
+  return body;
+}
+
 function droppedNotice(edit: EditState): string | null {
   if (edit.lossy) return LOSS_NOTICE;
   if (edit.jsonLossy) return JSON_LOSS_NOTICE;
@@ -556,6 +606,7 @@ export function freshWorkflow(): WorkflowState {
   return {
     step: "setup",
     presetId: null,
+    pasted: null,
     invoice: null,
     formatId: firstFormatId(),
     selection: null,
@@ -568,9 +619,37 @@ export function freshWorkflow(): WorkflowState {
   };
 }
 
+export const PASTED_SEND_NOTE =
+  "A pasted payload is not transmitted from here — this journey ends at Validate. To send, " +
+  "pick a scenario in Setup, or post the payload with your own client.";
+
 export function stepLock(state: WorkflowState, step: Step): string | undefined {
   if (step === "setup" || state.presetId !== null) return undefined;
+  if (state.pasted !== null) return step === "send" ? PASTED_SEND_NOTE : undefined;
   return "Pick a preset in Setup first — every later step works on that invoice";
+}
+
+// The text decides everything: parsed, unwrapped, applied onto an empty base for the country.
+// Returns the state unchanged with the reason when the text is not a payload, so the dialog
+// can refuse before dispatching and the reducer never holds half a load.
+export function loadPasted(
+  text: string,
+  country: PastedCountry,
+  formatId: FormatId,
+  seller?: Party,
+  ctx?: UapiContext,
+): { invoice: Invoice; label: PastedPayload["label"]; prefix: string } {
+  const unwrapped = unwrapPayload(JSON.parse(text));
+  const base = blankBase(country, formatId, seller);
+  const applied = applyOperation(unwrapped.operation, base, ctx ?? { country });
+  // The operation carries no BT-106; a preset's base supplies it, an empty base cannot, so the
+  // sum of the lines stands in — which is what BR-CO-10 demands of it anyway.
+  const lineExtension = applied.lines.reduce((sum, line) => add(sum, line.netAmount), "0");
+  const invoice: Invoice = {
+    ...applied,
+    totals: { ...applied.totals, lineExtension: format(lineExtension, 2) },
+  };
+  return { invoice, label: unwrapped.label, prefix: unwrapped.prefix };
 }
 
 export function workflowReducer(state: WorkflowState, action: WorkflowAction): WorkflowState {
@@ -586,6 +665,7 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
       return {
         ...state,
         presetId: action.presetId,
+        pasted: null,
         invoice,
         formatId: invoice.format,
         step: "mapper",
@@ -594,6 +674,84 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
         edit: freshEdit(),
         validation: freshValidation(),
         send: freshSend(),
+      };
+    }
+    case "loadPayload": {
+      let loaded: ReturnType<typeof loadPasted>;
+      try {
+        loaded = loadPasted(action.text, action.country, action.formatId);
+      } catch {
+        return state;
+      }
+      const seller = loaded.invoice.seller;
+      return {
+        ...state,
+        presetId: null,
+        pasted: {
+          text: action.text,
+          country: action.country,
+          formatId: action.formatId,
+          label: loaded.label,
+          prefix: loaded.prefix,
+          sellerSource: "placeholder",
+          sellerName: seller.name,
+          lookupNote: null,
+          vatContext: { country: action.country },
+          at: action.at ?? Date.now(),
+        },
+        invoice: loaded.invoice,
+        formatId: action.formatId,
+        step: "mapper",
+        selection: null,
+        groups: { ...state.groups, open: {} },
+        edit: {
+          ...freshEdit(),
+          source: "json",
+          json: action.text,
+          jsonLossy: operationIsLossy(
+            loaded.invoice,
+            operationBody(action.text, loaded.prefix),
+            "",
+          ),
+        },
+        validation: freshValidation(),
+        send: freshSend(),
+      };
+    }
+    case "pastedLookup": {
+      const pasted = state.pasted;
+      if (!pasted || !state.invoice) return state;
+      let loaded: ReturnType<typeof loadPasted>;
+      try {
+        loaded = loadPasted(
+          pasted.text,
+          pasted.country,
+          pasted.formatId,
+          action.seller,
+          action.ctx,
+        );
+      } catch {
+        return state;
+      }
+      return {
+        ...state,
+        invoice: loaded.invoice,
+        pasted: {
+          ...pasted,
+          sellerSource: action.seller ? action.source : "placeholder",
+          sellerName: loaded.invoice.seller.name,
+          lookupNote: action.note,
+          vatContext: action.ctx,
+        },
+        edit: {
+          ...state.edit,
+          jsonLossy: operationIsLossy(
+            loaded.invoice,
+            operationBody(pasted.text, pasted.prefix),
+            "",
+          ),
+        },
+        validation: freshValidation(),
       };
     }
     case "goToStep":
@@ -626,7 +784,8 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
         ? state
         : { ...state, groups: { ...state.groups, showUncarried: action.show } };
     case "editField": {
-      if (!state.invoice) return state;
+      // A pasted payload is edited in its JSON pane only — the text is the single source.
+      if (!state.invoice || state.pasted) return state;
       if (getField(state.invoice, action.field) === action.value) return state;
       let invoice: Invoice;
       try {
@@ -642,7 +801,7 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
       };
     }
     case "editXml": {
-      if (!state.invoice || state.edit.xml === action.text) return state;
+      if (!state.invoice || state.pasted || state.edit.xml === action.text) return state;
       const plugin = getFormat(state.formatId);
       let parsed: Invoice;
       try {
@@ -689,10 +848,25 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
           validation: freshValidation(),
         };
       }
-      const prefix = buildOperation(state.invoice, state.correctionTarget?.id ?? null).prefix;
+      const prefix = state.pasted
+        ? state.pasted.prefix
+        : buildOperation(state.invoice, state.correctionTarget?.id ?? null).prefix;
       let invoice: Invoice;
+      let pasted = state.pasted;
       try {
-        invoice = applyOperation(parsed, state.invoice);
+        if (pasted) {
+          const loaded = loadPasted(
+            action.text,
+            pasted.country,
+            pasted.formatId,
+            state.invoice.seller,
+            pasted.vatContext,
+          );
+          invoice = loaded.invoice;
+          pasted = { ...pasted, text: action.text, label: loaded.label, prefix: loaded.prefix };
+        } else {
+          invoice = applyOperation(parsed, state.invoice);
+        }
       } catch (error) {
         return {
           ...state,
@@ -703,6 +877,7 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
       return {
         ...state,
         invoice,
+        pasted,
         edit: {
           source: "json",
           xml: null,
@@ -710,7 +885,9 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
           lossy: false,
           json: action.text,
           jsonError: null,
-          jsonLossy: operationIsLossy(invoice, parsed, prefix),
+          jsonLossy: pasted
+            ? operationIsLossy(invoice, operationBody(action.text, pasted.prefix), "")
+            : operationIsLossy(invoice, parsed, prefix),
           notice: state.edit.lossy ? LOSS_NOTICE : state.edit.notice,
         },
         validation: freshValidation(),
@@ -784,6 +961,7 @@ export function persistWorkflow(state: WorkflowState): void {
   const persisted: Persisted = {
     step: state.step,
     presetId: state.presetId,
+    pasted: state.pasted,
     formatId: state.formatId,
     panes: state.panes,
     viewVersion: VIEW_VERSION,
@@ -918,7 +1096,7 @@ export function initialWorkflow(): WorkflowState {
     // mismatch guards need, so it is dropped rather than trusted.
     correctionTarget: readCorrectionTarget(saved.correctionTarget),
   };
-  if (!saved.presetId) return shell;
+  if (!saved.presetId) return saved.pasted ? restorePasted(shell, saved) : shell;
 
   let fallback: Invoice;
   try {
@@ -939,6 +1117,50 @@ export function initialWorkflow(): WorkflowState {
     send: restored ? restoreSend(saved.send) : freshSend(),
     formatId: knownFormat(saved.formatId) ? saved.formatId : fallback.format,
     step: migrateStep(saved.step),
+  };
+}
+
+// A pasted payload is rebuilt from its text, never trusted as a blob: the text is what the
+// user authored, the model is derived. The seller a LIVE lookup supplied rides in the saved
+// invoice and is kept when that blob is sound; the lookup itself is not repeated on reload.
+function restorePasted(shell: WorkflowState, saved: Partial<Persisted>): WorkflowState {
+  const pasted = saved.pasted;
+  if (
+    !pasted ||
+    typeof pasted.text !== "string" ||
+    !isPasteCountry(pasted.country) ||
+    !knownFormat(pasted.formatId)
+  ) {
+    return shell;
+  }
+  const seller =
+    saved.viewVersion === VIEW_VERSION &&
+    saved.invoice &&
+    typeof saved.invoice === "object" &&
+    pasted.sellerSource === "taxpayer"
+      ? (saved.invoice as Invoice).seller
+      : undefined;
+  const loaded = workflowReducer(shell, {
+    type: "loadPayload",
+    text: pasted.text,
+    country: pasted.country,
+    formatId: pasted.formatId,
+    at: typeof pasted.at === "number" ? pasted.at : Date.now(),
+  });
+  if (loaded.pasted === null) return shell;
+  const restored = seller
+    ? workflowReducer(loaded, {
+        type: "pastedLookup",
+        seller,
+        source: "taxpayer",
+        ctx: pasted.vatContext ?? { country: pasted.country },
+        note: pasted.lookupNote ?? null,
+      })
+    : loaded;
+  return {
+    ...restored,
+    formatId: knownFormat(saved.formatId) ? saved.formatId : pasted.formatId,
+    step: migrateStep(saved.step) === "send" ? "validate" : migrateStep(saved.step),
   };
 }
 
@@ -992,7 +1214,17 @@ function composeOperationUncached(state: WorkflowState): OperationView {
       text: "",
     };
   }
-  const derived = buildOperation(state.invoice, state.correctionTarget?.id ?? null);
+  const derived = state.pasted
+    ? {
+        ...buildOperation(state.invoice, null),
+        label: state.pasted.label,
+        // Field pointers address the invoice inside the pasted text: under the record/body
+        // prefix, and one level deeper for a correction's `data`.
+        prefix:
+          state.pasted.prefix + (state.pasted.label === "TRANSACTION::CORRECTION" ? "/data" : ""),
+        correctionPending: false,
+      }
+    : buildOperation(state.invoice, state.correctionTarget?.id ?? null);
   const edited = state.edit.json;
   if (edited === null) {
     return { ...derived, text: derived.error ? "" : stringifyOperation(derived.value) };

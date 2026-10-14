@@ -387,7 +387,8 @@ function italianB2bSdi(): Invoice {
         unitCode: "C62",
         unitPriceNet: "800.00",
         netAmount: "800.00",
-        vat: { category: "E", rate: "0.00", natura: "N3.5" },
+        // BT-120 on the line as well: entries[].data.vat.reason is the operation's carrier.
+        vat: { category: "E", rate: "0.00", natura: "N3.5", reason: INTENTO_REASON },
         it: {
           altriDatiGestionali: {
             tipoDato: "INTENTO",

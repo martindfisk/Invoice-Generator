@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { checkModel } from "./model-rules";
+import { PastePayloadDialog } from "./PastePayloadDialog";
 import { listPresets, preset, type PresetMeta } from "./presets";
 import { store, useStore } from "./store";
 import { useIsWide } from "./use-media";
@@ -213,8 +215,31 @@ function CountryList({ presets, presetId }: { presets: PresetMeta[]; presetId: s
   );
 }
 
+function PasteCard({ active, onOpen }: { active: boolean; onOpen: () => void }) {
+  return (
+    <button
+      type="button"
+      data-paste-card
+      aria-pressed={active}
+      onClick={onOpen}
+      className={`flex w-full flex-col gap-1 rounded-l border-2 border-dashed bg-surface p-3 text-left shadow-s transition-colors ${
+        active ? "border-brand bg-select-bg" : "border-line hover:border-brand"
+      }`}
+    >
+      <span className="text-sm font-semibold text-ink">Paste your own payload</span>
+      <span className="text-xs text-muted">
+        Run a self-authored fiskaly JSON operation through the Mapper and the validation layers — BT
+        references, predicted XML, contract and Schematron checks — without a full round trip. Send
+        stays off.
+      </span>
+    </button>
+  );
+}
+
 export function StepSetup() {
   const presetId = useStore((state) => state.workflow.presetId);
+  const pasted = useStore((state) => state.workflow.pasted);
+  const [pasting, setPasting] = useState(false);
   const transmitted = useStore((state) => state.workflow.send.outcome === "transmitted");
   const wide = useIsWide("(min-width: 1024px)");
   const presets = listPresets();
@@ -236,6 +261,21 @@ export function StepSetup() {
         >
           Last invoice transmitted. Pick any scenario to start the next one — re-picking the
           highlighted card resumes what you just sent, diff and all.
+        </p>
+      )}
+      <PasteCard active={pasted !== null} onOpen={() => setPasting(true)} />
+      <PastePayloadDialog open={pasting} onClose={() => setPasting(false)} />
+      {pasted && (
+        <p className="flex flex-wrap items-center gap-2 rounded-l border border-line bg-surface px-3 py-2 text-xs text-muted">
+          A pasted {pasted.label} for {pasted.country} is loaded.
+          <button
+            type="button"
+            onClick={() => store.dispatch({ type: "goToStep", step: "mapper" })}
+            className="rounded-m border border-line px-2 py-0.5 font-medium text-muted hover:border-brand hover:text-ink"
+          >
+            Back to the Mapper
+          </button>
+          Picking a scenario below replaces it.
         </p>
       )}
       {presetId && (

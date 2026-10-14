@@ -108,7 +108,8 @@
         },
         "vat": {
           "type": "VAT_EXEMPTION",
-          "code": "CAUSE_7"
+          "code": "CAUSE_7",
+          "reason": "Non imponibile art. 8 c. 1 lett. c) DPR 633/1972 - dichiarazione d'intento"
         }
       },
       "details": {

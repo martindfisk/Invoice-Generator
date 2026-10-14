@@ -29,6 +29,12 @@ flowchart TB
 
 ## The stages
 
+Every stage has a checkbox in the pipeline list. An unticked stage is reported as **skipped**
+(status `skipped`, note "unticked in the pipeline list") rather than run, the choice is remembered
+per browser (`validation:skipped`), and the summary line counts skipped stages apart from stages
+that could not run. A pasted payload's contract stage checks the operation at the prefix it was
+pasted under (`/operation`, `/content/operation`) and re-roots its pointers for the JSON pane.
+
 | Stage                           | Engine & where                                                                                                                         | What it checks                                                                                                                                                                        | Notes                                                                                                                                                                                 |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | fiskaly API contract            | `jsonschema` (Draft 2020-12) on the proxy, schema compiled from the active OpenAPI spec's `InvoiceTransaction`/`CorrectionTransaction` | The composed JSON — hand edits included — against what the API itself would reject                                                                                                    | Keyed on spec _content_, not country; runs first, and still runs when the XML writer fails (an unrelated writer limitation must not silence the one stage that predicts rejection)    |

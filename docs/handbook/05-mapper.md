@@ -13,6 +13,12 @@ XML is a _prediction_ of what fiskaly will generate.
 | **fiskaly JSON** (`JsonView`) | The `TRANSACTION::INVOICE` (or `::CORRECTION`) operation, with fate marks and the spec-coverage line                                               | yes — free-text JSON editing                       | no — it is the artifact |
 | **Predicted XML** (`XmlView`) | The chosen format's rendering, generated in the browser                                                                                            | yes — free-text XML editing                        | yes                     |
 
+For a **pasted payload** the JSON pane is the single source: the fields and the XML are
+read-only (a hint says so), the header names the seller's origin (taxpayer or placeholder), and a
+banner under the JSON header lists the pointers the predicted XML cannot reflect
+(`lossyPointers`), so a key fiskaly accepts but no writer renders is named rather than silently
+dropped. The contract check still sees every key.
+
 A format switch (UBL · XRECHNUNG · CII · FATTURAPA) re-renders the XML pane from the same model;
 only formats whose writer accepts the invoice are offered (`unsupportedReason`,
 [03](03-mappings.md#the-format-plugin-seam)). Pane visibility and layout ratios persist per user.

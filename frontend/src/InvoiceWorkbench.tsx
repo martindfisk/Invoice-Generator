@@ -5,9 +5,10 @@ import { InvoiceViewer } from "./InvoiceViewer";
 import type { FieldId, FormatId, Invoice } from "./model";
 import { listPresets, type PresetId } from "./presets";
 import { store, useStore } from "./store";
-import { CORRECTION_PENDING_NOTE } from "./uapi-json";
+import { formatLabel, sellerNote } from "./pasted";
+import { CORRECTION_PENDING_NOTE, lossyPointers } from "./uapi-json";
 import type { Finding } from "./validation";
-import { composeOperation } from "./workflow";
+import { composeOperation, operationBody } from "./workflow";
 
 const XML_DEBOUNCE_MS = 400;
 
@@ -50,15 +51,24 @@ function writeFailure(
 
 export type InvoiceWorkbenchProps = {
   invoice: Invoice;
-  presetId: PresetId;
+  presetId: PresetId | null;
   findings?: Finding[];
   onXml?: (xml: string, error: string | null) => void;
 };
 
 export function InvoiceWorkbench({ invoice, presetId, findings, onXml }: InvoiceWorkbenchProps) {
   const workflow = useStore((state) => state.workflow);
-  const { formatId, edit } = workflow;
+  const { formatId, edit, pasted } = workflow;
   const renders = useMemo(() => renderAll(invoice), [invoice]);
+  // Which keys of the pasted text the predicted XML cannot reflect — named one by one, so the
+  // banner says what was dropped rather than only that something was.
+  const lost = useMemo(
+    () =>
+      pasted && edit.json !== null && edit.jsonError === null
+        ? lossyPointers(invoice, operationBody(edit.json, pasted.prefix), "")
+        : [],
+    [pasted, edit.json, edit.jsonError, invoice],
+  );
   // One timer and one pending text per editor: a field edit must not silently discard XML or
   // JSON typed moments earlier in another pane — it flushes them first, so both edits land.
   const xmlTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -105,7 +115,10 @@ export function InvoiceWorkbench({ invoice, presetId, findings, onXml }: Invoice
 
   const operation = composeOperation(workflow);
 
-  const meta = listPresets().find((candidate) => candidate.id === presetId);
+  const meta = presetId ? listPresets().find((candidate) => candidate.id === presetId) : undefined;
+  const title = pasted
+    ? `Pasted payload · ${pasted.country} · ${formatLabel(pasted.formatId)}`
+    : (meta?.label ?? presetId ?? "");
   const available: FormatPlugin[] = [...renders.entries()]
     .filter(([, render]) => render.xml !== undefined)
     .map(([id]) => FORMATS[id]);
@@ -129,9 +142,16 @@ export function InvoiceWorkbench({ invoice, presetId, findings, onXml }: Invoice
   return (
     <>
       <header className="flex shrink-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
-        <h2 className="text-sm font-semibold text-ink">{meta?.label ?? presetId}</h2>
+        <h2 className="text-sm font-semibold text-ink">{title}</h2>
         {meta && <span className="font-mono text-[11px] text-muted">{meta.formatLabel}</span>}
         {meta && <span className="text-[11px] text-muted">· {meta.legalBasis}</span>}
+        {pasted && <span className="font-mono text-[11px] text-muted">{pasted.label}</span>}
+        {pasted && (
+          <span data-seller-source={pasted.sellerSource} className="text-[11px] text-muted">
+            · {sellerNote(pasted.sellerSource, invoice.seller, pasted.country)}
+            {pasted.lookupNote ? ` ${pasted.lookupNote}` : ""}
+          </span>
+        )}
       </header>
       <InvoiceViewer
         invoice={invoice}
@@ -145,8 +165,10 @@ export function InvoiceWorkbench({ invoice, presetId, findings, onXml }: Invoice
         jsonNote={operation.correctionPending ? CORRECTION_PENDING_NOTE : null}
         jsonPrefix={operation.prefix}
         edit={edit}
-        presetLabel={meta?.label ?? presetId}
-        country={meta?.country}
+        presetLabel={pasted ? "pasted payload" : (meta?.label ?? presetId ?? "")}
+        country={pasted?.country ?? meta?.country}
+        readOnly={pasted !== null}
+        lossyPointers={lost}
         findings={findings}
         onFormat={(next) => store.dispatch({ type: "setFormat", formatId: next })}
         onEditField={onEditField}

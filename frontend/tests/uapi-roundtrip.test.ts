@@ -169,7 +169,12 @@ describe("fromInvoiceTransaction edits", () => {
 
   it("keeps Natura while the exemption code is the one the base produces", () => {
     const invoice = fromInvoiceTransaction(operation(), base, IT_CONTEXT);
-    expect(invoice.lines[2].vat).toEqual({ category: "E", rate: "0.00", natura: "N3.5" });
+    expect(invoice.lines[2].vat).toEqual({
+      category: "E",
+      rate: "0.00",
+      natura: "N3.5",
+      reason: "Non imponibile art. 8 c. 1 lett. c) DPR 633/1972 - dichiarazione d'intento",
+    });
     expect(invoice.vatBreakdown[2].natura).toBe("N3.5");
   });
 

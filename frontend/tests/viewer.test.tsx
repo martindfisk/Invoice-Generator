@@ -55,7 +55,8 @@ describe("workflow pane", () => {
   it("renders one card per preset the domain layer exposes", () => {
     render(<WorkflowPane />);
     const picker = screen.getByRole("region", { name: "Preset picker" });
-    expect(within(picker).getAllByRole("button")).toHaveLength(listPresets().length);
+    // One button per preset, plus the "paste your own payload" card above the matrix.
+    expect(within(picker).getAllByRole("button")).toHaveLength(listPresets().length + 1);
     for (const meta of listPresets()) {
       expect(presetCard(meta.id)).toBeInTheDocument();
     }

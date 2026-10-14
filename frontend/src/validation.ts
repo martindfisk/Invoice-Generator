@@ -30,7 +30,7 @@ export type Finding = {
   pointer?: string;
 };
 
-export type StageStatus = "pending" | "running" | "passed" | "failed" | "unavailable";
+export type StageStatus = "pending" | "running" | "passed" | "failed" | "unavailable" | "skipped";
 
 export type StageResult = {
   id: FindingSource;
@@ -92,6 +92,8 @@ function settle(id: FindingSource, findings: Finding[], startedAt: number): Stag
 // The XSD, Schematron and SDI stages inspect a document fiskaly has not produced: the browser's
 // own rendering of the model. Their notes say so, so a green run is never mistaken for fiskaly
 // having accepted anything.
+export const SKIPPED_NOTE = "Skipped — unticked in the pipeline list.";
+
 export const PREDICTED_DOCUMENT_NOTE =
   "Checks the XML this browser predicts fiskaly will generate; fiskaly's transmitted document is fetched in Send.";
 
@@ -120,6 +122,8 @@ export function checkWellFormed(xml: string): Finding[] {
 export type ValidationInput = {
   invoice: Invoice;
   formatId: FormatId;
+  // Stages the user unticked in the pipeline list. They are reported as skipped, not run.
+  skip?: ReadonlySet<FindingSource>;
   xml: string;
   // Why the XML is empty when the format's writer refused the invoice. The XML-inspecting stages
   // then report unavailable with this reason instead of the whole pipeline being skipped — the
@@ -182,6 +186,12 @@ export async function runValidation(
       : null;
   for (const stage of stagesFor(input.formatId)) {
     if (input.signal?.aborted) break;
+    if (input.skip?.has(stage.id)) {
+      const skipped: StageResult = { ...pending(stage.id), status: "skipped", note: SKIPPED_NOTE };
+      results.push(skipped);
+      onStage?.(skipped);
+      continue;
+    }
     if (writerNote !== null && XML_STAGES.has(stage.id)) {
       const skipped = unavailable(stage.id, writerNote);
       results.push(skipped);

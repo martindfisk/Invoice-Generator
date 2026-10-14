@@ -213,6 +213,7 @@ describe("workflow persistence", () => {
       "formatId",
       "invoice",
       "panes",
+      "pasted",
       "presetId",
       "send",
       "step",

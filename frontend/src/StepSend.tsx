@@ -23,7 +23,7 @@ import {
   type Transport,
 } from "./uapi-client";
 import { CORRECTION_BLOCKED_NOTE } from "./uapi-json";
-import { composeOperation, type SendOutcome } from "./workflow";
+import { composeOperation, PASTED_SEND_NOTE, type SendOutcome } from "./workflow";
 import { XmlView } from "./XmlView";
 
 const POLL_BUDGET_MS = 60_000;
@@ -139,7 +139,15 @@ function ModeBanner({ mode, environment }: { mode: string; environment?: string 
 export function StepSend() {
   const invoice = useStore((state) => state.workflow.invoice);
   const presetId = useStore((state) => state.workflow.presetId);
+  const pasted = useStore((state) => state.workflow.pasted);
 
+  if (invoice && pasted) {
+    return (
+      <p role="status" className="p-6 text-sm text-muted">
+        {PASTED_SEND_NOTE}
+      </p>
+    );
+  }
   if (!invoice || !presetId) {
     return (
       <p className="p-6 text-sm text-muted">
